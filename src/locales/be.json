@@ -1,0 +1,38 @@
+{
+  "appTitle": "Мае малітвы",
+  "searchPlaceholder": "Пошук...",
+  "filterByTags": "Фільтр па тэгах",
+  "done": "Гатова",
+  "edit": "Рэдагаваць",
+  "delete": "Выдаліць",
+  "noNotesFound": "Нататак не знойдзена",
+  "confirmDeletion": "Пацвердзіце выдаленне",
+  "deleteConfirmationMessage": "Вы ўпэўнены, што хочаце назаўсёды выдаліць нататку \"{title}\"?",
+  "cancel": "Адмена",
+  "title": "Назва",
+  "tags": "Тэгі",
+  "tagsHint": "Абярыце або ўвядзіце новыя тэгі",
+  "editing": "Рэдагаванне",
+  "newNote": "Новая нататка",
+  "loading": "Загрузка...",
+  "noteNotFound": "Нататка не знойдзена",
+  "settings": "Налады",
+  "appearance": "Знешні выгляд",
+  "darkTheme": "Цёмная тэма",
+  "themeIs": "Зараз выкарыстоўваецца {themeName} тэма",
+  "themeNames": {
+    "light": "светлая",
+    "dark": "цёмная"
+  },
+  "fontSize": "Памер тэксту",
+  "fontSizeHint": "Наладзьце памер шрыфту ў дадатку",
+  "preview": "Папярэдні прагляд",
+  "language": "Мова",
+  "textStyle": "Стыль тэксту",
+  "style": {
+    "normal": "Звычайны",
+    "h1": "Загаловак 1",
+    "h2": "Загаловак 2",
+    "rubric": "Рубрыка"
+  }
+}

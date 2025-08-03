@@ -1,0 +1,41 @@
+{
+  "appTitle": "Мои молитвы",
+  "searchPlaceholder": "Поиск...",
+  "filterByTags": "Фильтр по тегам",
+  "done": "Готово",
+  "notesFound_one": "{count} заметка найдена",
+  "notesFound_few": "{count} заметки найдено",
+  "notesFound_many": "{count} заметок найдено",
+  "edit": "Редактировать",
+  "delete": "Удалить",
+  "noNotesFound": "Заметок не найдено",
+  "confirmDeletion": "Подтвердите удаление",
+  "deleteConfirmationMessage": "Вы уверены, что хотите навсегда удалить заметку \"{title}\"?",
+  "cancel": "Отмена",
+  "title": "Название",
+  "tags": "Теги",
+  "tagsHint": "Выберите или введите новые теги",
+  "editing": "Редактирование",
+  "newNote": "Новая заметка",
+  "loading": "Загрузка...",
+  "noteNotFound": "Заметка не найдена",
+  "settings": "Настройки",
+  "appearance": "Внешний вид",
+  "darkTheme": "Тёмная тема",
+  "themeIs": "Сейчас используется {themeName} тема",
+  "themeNames": {
+    "light": "светлая",
+    "dark": "тёмная"
+  },
+  "fontSize": "Размер текста",
+  "fontSizeHint": "Настройте размер шрифта в приложении",
+  "preview": "Предпросмотр",
+  "language": "Язык",
+  "textStyle": "Стиль текста",
+  "style": {
+    "normal": "Обычный",
+    "h1": "Заголовок 1",
+    "h2": "Заголовок 2",
+    "rubric": "Рубрика"
+  }
+}

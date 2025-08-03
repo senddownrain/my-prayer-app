@@ -1,0 +1,75 @@
+html {
+  overflow-y: auto !important;
+}
+
+/* --- Правила масштабирования (остаются без изменений) --- */
+.note-content-area p,
+.note-content-area div,
+.note-content-area h1,
+.note-content-area h2,
+.note-content-area h3,
+.note-content-area .text-body-1,
+.note-content-area .text-caption {
+  transition: font-size 0.2s ease-in-out, line-height 0.2s ease-in-out;
+}
+/* ... (все остальные правила для h1, h2, p и т.д. остаются как были) ... */
+.note-content-area p,
+.note-content-area div,
+.note-content-area .text-body-1,
+.note-content-area .text-caption {
+  font-size: calc(1rem * var(--font-size-multiplier, 1)) !important;
+  line-height: calc(1.5 * var(--font-size-multiplier, 1)) !important;
+}
+.note-content-area h1 {
+  font-size: calc(1.8rem * var(--font-size-multiplier, 1)) !important;
+  font-weight: 500;
+  line-height: 1.2 !important; 
+}
+.note-content-area h2 {
+  font-size: calc(1.4rem * var(--font-size-multiplier, 1)) !important;
+  font-weight: 500;
+  line-height: 1.2 !important;
+}
+.note-content-area h3 {
+  font-size: calc(1.1rem * var(--font-size-multiplier, 1)) !important;
+}
+
+/* --- ГЛАВНОЕ ИЗМЕНЕНИЕ: Стили для Рубрики (h3) --- */
+
+/* 1. БАЗОВЫЙ стиль для h3, который работает ВЕЗДЕ (включая редактор) */
+/* У него НЕТ больших отступов. */
+.ProseMirror h3 {
+  color: #B71C1C !important;
+  font-weight: 500 !important;
+  font-style: italic !important;
+  line-height: 1.2 !important;
+}
+
+/* 2. УЛУЧШЕННЫЙ стиль, который добавляет отступы ТОЛЬКО на странице просмотра */
+.note-content-area.is-view-mode .ProseMirror h3 {
+  margin-top: 1em !important;
+  margin-bottom: 0.5em !important;
+}
+
+/* 3. Адаптация цвета для темной темы (работает везде) */
+.v-theme--dark .ProseMirror h3 {
+  color: #E57373 !important;
+}
+
+/* 4. Отдельный стиль для меню редактора (остается без изменений) */
+.EditorRubricMenu h3 {
+  font-size: 1.1rem !important;
+  font-weight: 500 !important;
+  font-style: italic !important;
+  margin: 0 !important;
+  line-height: 1.2 !important;
+}
+
+/* --- Общие стили для контента из редактора --- */
+.ProseMirror p {
+  margin-bottom: 0;
+}
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 24px;
+}
