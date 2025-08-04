@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
-// ✅ Импортируем 'enablePersistence' и 'getFirestore'
-import { getFirestore, enablePersistence } from "firebase/firestore";
+// ✅ --- ШАГ 1: Исправляем импорт ---
+// Меняем enablePersistence на enableIndexedDbPersistence
+import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
 
 const firebaseConfig = {
   // ... ваша конфигурация Firebase без изменений ...
@@ -13,14 +14,11 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-
-// ✅ --- АКТИВАЦИЯ ОФФЛАЙН-РЕЖИМА --- ✅
-// Получаем доступ к Firestore
 const db = getFirestore(app);
 
-// Пытаемся включить кэширование данных.
-// Это нужно сделать один раз до любых других операций с базой.
-enablePersistence(db)
+// ✅ --- ШАГ 2: Исправляем вызов функции ---
+// Также меняем enablePersistence на enableIndexedDbPersistence
+enableIndexedDbPersistence(db)
   .catch((err) => {
       if (err.code == 'failed-precondition') {
           // Скорее всего, открыто несколько вкладок. Оффлайн будет работать только в одной.
