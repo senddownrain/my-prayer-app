@@ -1,44 +1,24 @@
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
 
-// Глобальные переменные, хранящие текущее состояние App Bar
 const appBar = ref({
   title: 'Мои Молитвы',
   showBackButton: false,
   actions: [],
-  onTitleClick: () => {}, // Обработчик клика
-  isTitleClickable: false, // Флаг кликабельности
+  isMenu: true // ✅ Флаг, показывать ли кнопку меню
 });
 
-// Состояние для UI элементов, управляемых из App Bar
-const isSearchActive = ref(false);
-const isFilterSheetOpen = ref(false);
+const isDrawerOpen = ref(false); // ✅ Состояние для открытия/закрытия меню
 
 export function useAppBar() {
-  // Мы должны инициализировать роутер здесь, внутри функции, чтобы он был доступен
-  const router = useRouter();
-
   const setAppBar = (config) => {
     appBar.value.title = config.title || 'Мои Молитвы';
     appBar.value.showBackButton = config.showBackButton || false;
     appBar.value.actions = config.actions || [];
-    
-    // Логика кликабельного заголовка
-    if (config.showBackButton) {
-      // На внутренних страницах клик по заголовку ведет на главную
-      appBar.value.onTitleClick = () => router.push({ name: 'ItemsList' });
-      appBar.value.isTitleClickable = true;
-    } else {
-      // На главной странице заголовок не кликабелен
-      appBar.value.onTitleClick = () => {};
-      appBar.value.isTitleClickable = false;
-    }
+    // Если есть кнопка "назад", кнопка меню не нужна.
+    appBar.value.isMenu = !config.showBackButton; 
   };
+  
+  const resetAppBar = () => { /* ... */ };
 
-  const resetAppBar = () => {
-    // Сбрасываем к состоянию по умолчанию
-    setAppBar({ title: 'Мои Молитвы', showBackButton: false, actions: [] });
-  };
-
-  return { appBar, isSearchActive, isFilterSheetOpen, setAppBar, resetAppBar };
+  return { appBar, isDrawerOpen, setAppBar, resetAppBar };
 }

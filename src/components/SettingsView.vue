@@ -50,21 +50,51 @@
         ></v-select>
       </v-list-item>
     </v-list>
+
+     <!-- ✅ --- НОВЫЙ РАЗДЕЛ: НАСТРОЙКА КАТЕГОРИЙ --- ✅ -->
+    <v-divider class="my-4"></v-divider>
+    <v-list-subheader>Категории в меню</v-list-subheader>
+    <v-list-item v-for="(cat, index) in settings.menuCategories" :key="index">
+      <v-list-item-title>{{ cat.name }}</v-list-item-title>
+      <v-list-item-subtitle>Фильтр по тегу: `{{ cat.tag }}`</v-list-item-subtitle>
+      <template v-slot:append>
+        <v-btn icon="mdi-delete-outline" variant="text" color="grey" @click="settings.removeCategory(index)"></v-btn>
+      </template>
+    </v-list-item>
+    
+    <v-card variant="tonal" class="pa-4 mt-4">
+      <h3 class="text-subtitle-1 mb-3">Добавить категорию</h3>
+      <v-form @submit.prevent="onAddCategory">
+        <v-text-field v-model="newCategory.name" label="Название категории" density="compact" variant="solo-filled" flat></v-text-field>
+        <v-autocomplete
+          v-model="newCategory.tag"
+          :items="allTags"
+          label="Выберите или введите тег"
+          density="compact"
+          variant="solo-filled"
+          flat
+          class="mt-2"
+        ></v-autocomplete>
+        <v-btn type="submit" color="primary" block class="mt-2">Добавить</v-btn>
+      </v-form>
+    </v-card>
   </v-container>
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, watch } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useAppBar } from '@/composables/useAppBar';
 import { useSettingsStore } from '@/stores/settings';
-import { useI18n } from 'vue-i18n';
-
-const { setAppBar, resetAppBar } = useAppBar();
+import { useItems } from '@/composables/useItems';
+const { setAppBar } = useAppBar();
 const settings = useSettingsStore();
-const { t, locale } = useI18n();
-
-const setupAppBar = () => { setAppBar({ title: t('settings'), showBackButton: true, actions: [] }); };
-onMounted(setupAppBar);
-onUnmounted(resetAppBar);
-watch(locale, setupAppBar);
+const { allTags } = useItems(); // Получаем все доступные теги
+const newCategory = ref({ name: '', tag: '' });
+function onAddCategory() {
+  settings.addCategory(newCategory.value);
+  newCategory.value = { name: '', tag: '' }; // Сбрасываем форму
+}
+onMounted(() => {
+  setAppBar({ title: 'Настройки', showBackButton: true });
+});
 </script>

@@ -5,7 +5,7 @@ import vuetify from './plugins/vuetify'
 import './firebase'; 
 import '@mdi/font/css/materialdesignicons.css'
 import { createPinia } from 'pinia'; 
-import './assets/main.css'; // Убедитесь, что эта строка есть
+import './styles/main.css'; // Убедитесь, что эта строка есть
 import i18n from './i18n';
 
 const pinia = createPinia(); 

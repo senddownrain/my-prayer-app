@@ -76,7 +76,6 @@ const setupAppBar = () => {
     actions: [
       { icon: 'mdi-magnify', onClick: () => { isSearchActive.value = true; } },
       { icon: 'mdi-filter-variant', onClick: () => { isFilterSheetOpen.value = true; } },
-      { icon: 'mdi-cog-outline', onClick: () => router.push({ name: 'Settings' }) }
     ]
   });
 };

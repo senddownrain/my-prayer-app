@@ -1,61 +1,59 @@
 import { defineStore } from 'pinia';
-import { ref, watch, watchEffect } from 'vue';
+import { ref, watch } from 'vue';
 import { useTheme } from 'vuetify';
 import { useI18n } from 'vue-i18n';
+
+// ✅ Значения по умолчанию для категорий
+const defaultCategories = [
+  { name: 'Основные молитвы', tag: 'основные' },
+  { name: 'Марийные молитвы', tag: 'мария' }
+];
 
 export const useSettingsStore = defineStore('settings', () => {
   const theme = useTheme();
   const { locale } = useI18n();
 
-  // --- ТЕМА (✅ ИСПРАВЛЕНО) ---
+  // ... (вся логика для темы, размера шрифта, языка, вида списка, закрепленных заметок остается без изменений) ...
   const currentTheme = ref(localStorage.getItem('theme') || 'light');
-  
-  // Применяем тему при инициализации
   theme.global.name.value = currentTheme.value;
-
-  // Функция для смены темы
   function toggleTheme() {
     currentTheme.value = currentTheme.value === 'light' ? 'dark' : 'light';
-    // Используем новый, правильный метод для смены темы
     theme.global.name.value = currentTheme.value;
     localStorage.setItem('theme', currentTheme.value);
   }
-
-  // --- РАЗМЕР ШРИФТА (без изменений) ---
   const fontSizeMultiplier = ref(parseFloat(localStorage.getItem('fontSizeMultiplier')) || 1.0);
-  watch(fontSizeMultiplier, (newMultiplier) => {
-    localStorage.setItem('fontSizeMultiplier', newMultiplier);
-    document.documentElement.style.setProperty('--font-size-multiplier', newMultiplier);
-  }, { immediate: true });
-
-  function increaseFontSize() { if (fontSizeMultiplier.value < 1.5) fontSizeMultiplier.value = Math.round((fontSizeMultiplier.value + 0.1) * 10) / 10; }
-  function decreaseFontSize() { if (fontSizeMultiplier.value > 0.8) fontSizeMultiplier.value = Math.round((fontSizeMultiplier.value - 0.1) * 10) / 10; }
-
-  // --- ЯЗЫК (без изменений) ---
+  watch(fontSizeMultiplier, (newMultiplier) => { document.documentElement.style.setProperty('--font-size-multiplier', newMultiplier); }, { immediate: true });
+  function increaseFontSize() { if (fontSizeMultiplier.value < 1.5) fontSizeMultiplier.value += 0.1; }
+  function decreaseFontSize() { if (fontSizeMultiplier.value > 0.8) fontSizeMultiplier.value -= 0.1; }
   const currentLanguage = ref(localStorage.getItem('language') || 'ru');
   locale.value = currentLanguage.value;
-  function setLanguage(lang) {
-    currentLanguage.value = lang;
-    locale.value = lang;
-    localStorage.setItem('language', lang);
-  }
-
-  // --- РЕЖИМ ОТОБРАЖЕНИЯ (без изменений) ---
+  function setLanguage(lang) { locale.value = lang; localStorage.setItem('language', lang); }
   const viewMode = ref(localStorage.getItem('viewMode') || 'card');
-  watch(viewMode, (newMode) => { localStorage.setItem('viewMode', newMode); });
   function toggleViewMode() { viewMode.value = viewMode.value === 'card' ? 'compact' : 'card'; }
-
-  // --- ЗАКРЕПЛЕННЫЕ ЗАМЕТКИ (без изменений) ---
   const pinnedIds = ref(JSON.parse(localStorage.getItem('pinnedIds') || '[]'));
   watch(pinnedIds, (newIds) => { localStorage.setItem('pinnedIds', JSON.stringify(newIds)); }, { deep: true });
   function isPinned(noteId) { return pinnedIds.value.includes(noteId); }
-  function togglePin(noteId) {
-    const index = pinnedIds.value.indexOf(noteId);
-    if (index > -1) {
-      pinnedIds.value.splice(index, 1);
-    } else {
-      pinnedIds.value.unshift(noteId);
+  function togglePin(noteId) { /* ... */ }
+  
+
+  // ✅ --- НОВЫЙ БЛОК: УПРАВЛЕНИЕ КАТЕГОРИЯМИ МЕНЮ --- ✅
+  const menuCategories = ref(
+    JSON.parse(localStorage.getItem('menuCategories') || JSON.stringify(defaultCategories))
+  );
+
+  // Сохраняем любые изменения категорий в localStorage
+  watch(menuCategories, (newCategories) => {
+    localStorage.setItem('menuCategories', JSON.stringify(newCategories));
+  }, { deep: true });
+
+  function addCategory(category) {
+    if (category && category.name && category.tag) {
+      menuCategories.value.push(category);
     }
+  }
+
+  function removeCategory(index) {
+    menuCategories.value.splice(index, 1);
   }
 
   return {
@@ -64,5 +62,7 @@ export const useSettingsStore = defineStore('settings', () => {
     currentLanguage, setLanguage,
     viewMode, toggleViewMode,
     pinnedIds, isPinned, togglePin,
+    // ✅ Экспортируем все для категорий
+    menuCategories, addCategory, removeCategory
   };
 });

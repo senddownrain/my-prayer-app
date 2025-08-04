@@ -1,36 +1,14 @@
-
 import { createRouter, createWebHistory } from 'vue-router';
 
 const routes = [
-  {
-    path: '/',
-    name: 'ItemsList',
-    component: () => import('@/components/ItemsList.vue'),
-  },
-  {
-    path: '/item/:id',
-    name: 'ItemView',
-    component: () => import('@/components/ItemView.vue'),
-    props: true,
-  },
- // --- ИЗМЕНЕНИЕ: Маршрут для РЕДАКТИРОВАНИЯ теперь ведет на ItemForm.vue ---
-  {
-    path: '/edit/:id',
-    name: 'ItemEdit',
-    component: () => import('@/components/ItemForm.vue'), // <-- Указываем новый компонент
-    props: true,
-  },
-  // --- ДОБАВЛЕНИЕ: Новый маршрут для СОЗДАНИЯ заметки ---
-  {
-    path: '/add',
-    name: 'ItemAdd',
-    component: () => import('@/components/ItemForm.vue'), // <-- Указываем тот же самый компонент
-  },
-  {
-    path: '/settings',
-    name: 'Settings',
-    component: () => import('@/components/SettingsView.vue')
-  },
+  { path: '/', name: 'ItemsList', component: () => import('@/components/ItemsList.vue') },
+  { path: '/item/:id', name: 'ItemView', component: () => import('@/components/ItemView.vue'), props: true },
+  { path: '/edit/:id', name: 'ItemEdit', component: () => import('@/components/ItemForm.vue'), props: true },
+  { path: '/add', name: 'ItemAdd', component: () => import('@/components/ItemForm.vue') },
+  { path: '/settings', name: 'Settings', component: () => import('@/components/SettingsView.vue') },
+  // ✅ --- НОВЫЕ МАРШРУТЫ --- ✅
+  { path: '/about', name: 'About', component: () => import('@/components/AboutView.vue') },
+  { path: '/admin', name: 'Admin', component: () => import('@/components/AdminView.vue') },
 ];
 
 const router = createRouter({
@@ -39,4 +17,3 @@ const router = createRouter({
 });
 
 export default router;
-
