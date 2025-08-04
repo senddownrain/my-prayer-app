@@ -1,7 +1,6 @@
 import { initializeApp } from "firebase/app";
-// ✅ --- ШАГ 1: Исправляем импорт ---
-// Меняем enablePersistence на enableIndexedDbPersistence
-import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
+// ✅ 1. Импортируем initializeFirestore и persistentLocalCache
+import { initializeFirestore, persistentLocalCache } from "firebase/firestore";
 
 const firebaseConfig = {
   // ... ваша конфигурация Firebase без изменений ...
@@ -14,20 +13,15 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
 
-// ✅ --- ШАГ 2: Исправляем вызов функции ---
-// Также меняем enablePersistence на enableIndexedDbPersistence
-enableIndexedDbPersistence(db)
-  .catch((err) => {
-      if (err.code == 'failed-precondition') {
-          // Скорее всего, открыто несколько вкладок. Оффлайн будет работать только в одной.
-          console.warn('Persistence failed, likely due to multiple tabs. Offline mode will work in one tab only.');
-      } else if (err.code == 'unimplemented') {
-          // Браузер не поддерживает эту функцию.
-          console.error('The current browser does not support all of the features required to enable persistence.');
-      }
-  });
+// ✅ 2. Используем НОВЫЙ метод инициализации с настройками кэша
+// Это заменяет и getFirestore(), и enableIndexedDbPersistence()
+const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    // Можно добавить настройки, например, для работы в нескольких вкладках
+    // tabManager: 'multi-tab' 
+  })
+});
 
 // Экспортируем db, как и раньше
 export { db };

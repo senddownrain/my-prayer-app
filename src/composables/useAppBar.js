@@ -1,43 +1,44 @@
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 // Глобальные переменные, хранящие текущее состояние App Bar
-const title = ref('Мои заметки');
-const showBackButton = ref(false);
-const actions = ref([]); // Массив кнопок (иконок) действий
+const appBar = ref({
+  title: 'Мои Молитвы',
+  showBackButton: false,
+  actions: [],
+  onTitleClick: () => {}, // Обработчик клика
+  isTitleClickable: false, // Флаг кликабельности
+});
 
 // Состояние для UI элементов, управляемых из App Bar
 const isSearchActive = ref(false);
 const isFilterSheetOpen = ref(false);
 
 export function useAppBar() {
+  // Мы должны инициализировать роутер здесь, внутри функции, чтобы он был доступен
+  const router = useRouter();
 
-  // Функция, которую вызывают страницы, чтобы настроить App Bar под себя
-  const setAppBar = (options) => {
-    title.value = options.title || 'Мои заметки';
-    showBackButton.value = options.showBackButton || false;
-    actions.value = options.actions || [];
-  };
-
-  // Функция для сброса App Bar к состоянию по умолчанию (для главной страницы)
-  // Вызывается, когда пользователь уходит со страницы просмотра или редактирования
-  const resetAppBar = () => {
-    title.value = 'Мои заметки';
-    showBackButton.value = false;
-    actions.value = [];
-  };
-
-  return {
-    // Состояние App Bar
-    title,
-    showBackButton,
-    actions,
+  const setAppBar = (config) => {
+    appBar.value.title = config.title || 'Мои Молитвы';
+    appBar.value.showBackButton = config.showBackButton || false;
+    appBar.value.actions = config.actions || [];
     
-    // Состояние связанных UI элементов
-    isSearchActive,
-    isFilterSheetOpen,
-
-    // Функции для управления
-    setAppBar,
-    resetAppBar,
+    // Логика кликабельного заголовка
+    if (config.showBackButton) {
+      // На внутренних страницах клик по заголовку ведет на главную
+      appBar.value.onTitleClick = () => router.push({ name: 'ItemsList' });
+      appBar.value.isTitleClickable = true;
+    } else {
+      // На главной странице заголовок не кликабелен
+      appBar.value.onTitleClick = () => {};
+      appBar.value.isTitleClickable = false;
+    }
   };
+
+  const resetAppBar = () => {
+    // Сбрасываем к состоянию по умолчанию
+    setAppBar({ title: 'Мои Молитвы', showBackButton: false, actions: [] });
+  };
+
+  return { appBar, isSearchActive, isFilterSheetOpen, setAppBar, resetAppBar };
 }

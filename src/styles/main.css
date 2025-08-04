@@ -1,75 +1,88 @@
-html {
-  overflow-y: auto !important;
+/* Базовый сброс и переменные */
+:root {
+  --font-size-multiplier: 1.0;
 }
 
-/* --- Правила масштабирования (остаются без изменений) --- */
-.note-content-area p,
-.note-content-area div,
-.note-content-area h1,
-.note-content-area h2,
-.note-content-area h3,
-.note-content-area .text-body-1,
-.note-content-area .text-caption {
-  transition: font-size 0.2s ease-in-out, line-height 0.2s ease-in-out;
-}
-/* ... (все остальные правила для h1, h2, p и т.д. остаются как были) ... */
-.note-content-area p,
-.note-content-area div,
-.note-content-area .text-body-1,
-.note-content-area .text-caption {
-  font-size: calc(1rem * var(--font-size-multiplier, 1)) !important;
-  line-height: calc(1.5 * var(--font-size-multiplier, 1)) !important;
-}
-.note-content-area h1 {
-  font-size: calc(1.8rem * var(--font-size-multiplier, 1)) !important;
-  font-weight: 500;
-  line-height: 1.2 !important; 
-}
+/* Стили для контента из редактора */
 .note-content-area h2 {
-  font-size: calc(1.4rem * var(--font-size-multiplier, 1)) !important;
+  font-size: calc(1.75rem * var(--font-size-multiplier));
+  line-height: 1.4;
+  margin: 1.5em 0 0.5em;
   font-weight: 500;
-  line-height: 1.2 !important;
 }
+
 .note-content-area h3 {
-  font-size: calc(1.1rem * var(--font-size-multiplier, 1)) !important;
+  font-size: calc(1.25rem * var(--font-size-multiplier));
+  line-height: 1.4;
+  margin: 1.5em 0 0.5em;
+  font-weight: 500;
 }
 
-/* --- ГЛАВНОЕ ИЗМЕНЕНИЕ: Стили для Рубрики (h3) --- */
-
-/* 1. БАЗОВЫЙ стиль для h3, который работает ВЕЗДЕ (включая редактор) */
-/* У него НЕТ больших отступов. */
-.ProseMirror h3 {
-  color: #B71C1C !important;
-  font-weight: 500 !important;
-  font-style: italic !important;
-  line-height: 1.2 !important;
+.note-content-area p {
+  font-size: calc(1rem * var(--font-size-multiplier));
+  line-height: 1.7;
+  margin-bottom: 1em;
 }
 
-/* 2. УЛУЧШЕННЫЙ стиль, который добавляет отступы ТОЛЬКО на странице просмотра */
-.note-content-area.is-view-mode .ProseMirror h3 {
-  margin-top: 1em !important;
-  margin-bottom: 0.5em !important;
+.note-content-area .rubric {
+  color: rgb(var(--v-theme-error));
+  font-style: italic;
+  text-align: center;
 }
 
-/* 3. Адаптация цвета для темной темы (работает везде) */
-.v-theme--dark .ProseMirror h3 {
-  color: #E57373 !important;
+/* Правило для выравнивания по ширине */
+.note-content-area p[style*="text-align: justify;"],
+.note-content-area h2[style*="text-align: justify;"],
+.note-content-area h3[style*="text-align: justify;"] {
+  text-align: justify;
 }
 
-/* 4. Отдельный стиль для меню редактора (остается без изменений) */
-.EditorRubricMenu h3 {
-  font-size: 1.1rem !important;
-  font-weight: 500 !important;
-  font-style: italic !important;
-  margin: 0 !important;
-  line-height: 1.2 !important;
+/* Правило для переноса текста в заголовках карточек и списков */
+.v-card-title, .v-list-item-title {
+  white-space: normal !important;
+  word-break: break-word;
+  line-height: 1.4;
 }
 
-/* --- Общие стили для контента из редактора --- */
-.ProseMirror p {
-  margin-bottom: 0;
+/* Убираем лишние отступы на мобильных устройствах */
+@media (max-width: 600px) {
+  .v-container {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .v-card-text {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .v-card-title {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .v-list-item {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
 }
-.ProseMirror ul,
-.ProseMirror ol {
-  padding-left: 24px;
+
+/* Дополнительные стили для редактора */
+.editor-container {
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 4px;
 }
+.editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 4px 8px;
+  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+.editor-toolbar .v-btn.v-btn--active {
+  background-color: rgba(var(--v-theme-primary), 0.1);
+}
+.ProseMirror {
+  padding: 12px 16px;
+  min-height: 200px;
+  outline: none;
+}
+.ProseMirror p { margin-bottom: 0; }
+.ProseMirror-focused { border-color: transparent; box-shadow: none; }

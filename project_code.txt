@@ -29,186 +29,243 @@
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.5",
     "vite": "^5.2.13",
-    "vite-plugin-pwa": "^0.20.0",
+    "vite-plugin-pwa": "^0.20.5",
     "vite-plugin-vuetify": "^2.0.3"
   }
 }
 
 ```
 
+### vite.config.js
+```
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import { VitePWA } from 'vite-plugin-pwa'
+import path from 'path'
+
+export default defineConfig({
+  plugins: [
+    vue(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      manifest: {
+        name: 'Мои Молитвы',
+        short_name: 'Молитвы',
+        description: 'Личный сборник молитв и заметок',
+        background_color: '#ffffff',
+        theme_color: '#1867C0',
+        icons: [
+          {
+            src: 'pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png'
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png'
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable'
+          }
+        ]
+      }
+    })
+  ],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+})
+```
+
 ### src/App.vue
 ```
 <template>
-  <v-app>
+  <v-app :theme="settings.currentTheme">
     <v-layout>
-      <v-app-bar app color="surface" elevation="2" class="px-2">
-        <v-btn v-if="showBackButton" icon="mdi-arrow-left" @click="router.back()"></v-btn>
-        <v-toolbar-title v-if="!isSearchActive">{{ title }}</v-toolbar-title>
-        <v-text-field
-          v-else
-          v-model="search"
-          :placeholder="$t('searchPlaceholder')"
-          variant="solo-filled"
-          density="compact"
-          hide-details
-          autofocus
-          @blur="isSearchActive = false"
-        ></v-text-field>
+      <v-app-bar :elevation="2" app>
+        <v-app-bar-nav-icon v-if="appBar.showBackButton" @click="router.back()">
+          <v-icon>mdi-arrow-left</v-icon>
+        </v-app-bar-nav-icon>
+        
+        <div @click="appBar.onTitleClick" :style="{ cursor: appBar.isTitleClickable ? 'pointer' : 'default' }">
+          <v-toolbar-title>{{ appBar.title }}</v-toolbar-title>
+        </div>
+        
         <v-spacer></v-spacer>
-        <template v-for="action in actions" :key="action.icon">
-          <v-btn :icon="action.icon" @click="action.onClick"></v-btn>
-        </template>
+        
+        <v-fade-transition>
+          <v-text-field
+            v-if="isSearchActive"
+            v-model="search"
+            :placeholder="$t('searchPlaceholder')"
+            variant="solo"
+            density="compact"
+            hide-details
+            single-line
+            autofocus
+            @blur="isSearchActive = false"
+            class="app-bar-search"
+          ></v-text-field>
+        </v-fade-transition>
+        
+        <v-btn v-for="action in appBar.actions" :key="action.icon" icon @click="action.onClick">
+          <v-icon>{{ action.icon }}</v-icon>
+        </v-btn>
       </v-app-bar>
+
       <v-main>
-        <router-view />
+        <router-view v-slot="{ Component }">
+          <v-fade-transition mode="out-in">
+            <component :is="Component" />
+          </v-fade-transition>
+        </router-view>
+        <FilterSheet />
       </v-main>
-      <v-bottom-sheet v-model="isFilterSheetOpen">
-        <v-card class="pa-4">
-          <v-card-title>{{ $t('filterByTags') }}</v-card-title>
-          <v-card-text>
-            <div v-if="allTags.length === 0" class="text-grey pa-2">Нет тегов для выбора</div>
-            <v-chip-group v-else v-model="selectedTags" column multiple>
-              <v-chip
-                v-for="tag in allTags"
-                :key="tag"
-                :value="tag"
-                filter
-                variant="outlined"
-                class="ma-1"
-                size="large"
-              >
-                {{ tag }}
-              </v-chip>
-            </v-chip-group>
-          </v-card-text>
-          <v-card-actions>
-            <v-spacer></v-spacer>
-            <v-btn color="primary" variant="text" @click="isFilterSheetOpen = false">{{ $t('done') }}</v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-bottom-sheet>
     </v-layout>
   </v-app>
 </template>
 
 <script setup>
 import { useRouter } from 'vue-router';
+import { useSettingsStore } from '@/stores/settings';
 import { useAppBar } from '@/composables/useAppBar';
 import { useFilters } from '@/composables/useFilters';
-import { useItems } from '@/composables/useItems';
-import { useSettingsStore } from '@/stores/settings'
+import FilterSheet from '@/components/FilterSheet.vue'; // Импортируем новый компонент
+
+const settings = useSettingsStore();
 const router = useRouter();
-const { title, showBackButton, actions, isSearchActive, isFilterSheetOpen } = useAppBar();
-const { search, selectedTags } = useFilters();
-const { allTags } = useItems();
-useSettingsStore();
+const { appBar, isSearchActive } = useAppBar();
+const { search } = useFilters();
 </script>
+
+<style scoped>
+.app-bar-search {
+  max-width: 300px;
+}
+</style>
 ```
 
 ### src/components/Editor.vue
 ```
 <template>
   <div v-if="editor" class="editor-container">
-    <div class="toolbar">
-      <v-menu location="bottom">
-        <template v-slot:activator="{ props }">
-          <v-btn v-bind="props" variant="text" class="mr-1" size="small">
-            {{ currentStyleName }}
-            <v-icon right>mdi-menu-down</v-icon>
-          </v-btn>
-        </template>
-        <v-list density="compact">
-          <v-list-item @click="editor.chain().focus().setParagraph().run()" :class="{ 'is-active': editor.isActive('paragraph') }">
-            <v-list-item-title>{{ $t('style.normal') }}</v-list-item-title>
-          </v-list-item>
-          <v-list-item @click="editor.chain().focus().toggleHeading({ level: 1 }).run()" :class="{ 'is-active': editor.isActive('heading', { level: 1 }) }">
-            <v-list-item-title>{{ $t('style.h1') }}</v-list-item-title>
-          </v-list-item>
-          <v-list-item @click="editor.chain().focus().toggleHeading({ level: 2 }).run()" :class="{ 'is-active': editor.isActive('heading', { level: 2 }) }">
-            <v-list-item-title>{{ $t('style.h2') }}</v-list-item-title>
-          </v-list-item>
-          <v-list-item @click="editor.chain().focus().toggleHeading({ level: 3 }).run()" :class="{ 'is-active': editor.isActive('heading', { level: 3 }) }">
-            <v-list-item-title class="EditorRubricMenu"><h3>{{ $t('style.rubric') }}</h3></v-list-item-title>
-          </v-list-item>
-        </v-list>
-      </v-menu>
-      <v-divider vertical class="mx-2"></v-divider>
-      <v-btn @click="editor.chain().focus().toggleBold().run()" :class="{ 'is-active': editor.isActive('bold') }" icon="mdi-format-bold" size="small" variant="text"></v-btn>
-      <v-btn @click="editor.chain().focus().toggleItalic().run()" :class="{ 'is-active': editor.isActive('italic') }" icon="mdi-format-italic" size="small" variant="text"></v-btn>
-      <v-btn @click="editor.chain().focus().toggleBulletList().run()" :class="{ 'is-active': editor.isActive('bulletList') }" icon="mdi-format-list-bulleted" size="small" variant="text"></v-btn>
-      <v-btn @click="editor.chain().focus().toggleOrderedList().run()" :class="{ 'is-active': editor.isActive('orderedList') }" icon="mdi-format-list-numbered" size="small" variant="text"></v-btn>
+    <div class="editor-toolbar">
+      <v-btn-toggle v-model="textStyle" mandatory density="compact" variant="outlined">
+        <v-btn value="paragraph">{{ $t('style.normal') }}</v-btn>
+        <v-btn value="heading-2">{{ $t('style.h2') }}</v-btn>
+        <v-btn value="heading-3">{{ $t('style.h3') }}</v-btn>
+        <v-btn value="rubric">{{ $t('style.rubric') }}</v-btn>
+      </v-btn-toggle>
+
+      <v-spacer></v-spacer>
+      
+      <v-btn-toggle density="compact" variant="outlined">
+        <v-btn @click="editor.chain().focus().setTextAlign('left').run()" :class="{ 'v-btn--active': editor.isActive({ textAlign: 'left' }) }" icon="mdi-format-align-left"></v-btn>
+        <v-btn @click="editor.chain().focus().setTextAlign('center').run()" :class="{ 'v-btn--active': editor.isActive({ textAlign: 'center' }) }" icon="mdi-format-align-center"></v-btn>
+        <v-btn @click="editor.chain().focus().setTextAlign('justify').run()" :class="{ 'v-btn--active': editor.isActive({ textAlign: 'justify' }) }" icon="mdi-format-align-justify"></v-btn>
+      </v-btn-toggle>
     </div>
     <editor-content :editor="editor" />
   </div>
 </template>
 
 <script setup>
-import { useEditor, EditorContent } from '@tiptap/vue-3'
-import StarterKit from '@tiptap/starter-kit'
-import { watch, onBeforeUnmount, computed } from 'vue'
-import { useI18n } from 'vue-i18n';
+import { ref, watch, onBeforeUnmount, onMounted } from 'vue';
+import { useEditor, EditorContent } from '@tiptap/vue-3';
+import StarterKit from '@tiptap/starter-kit';
+import TextAlign from '@tiptap/extension-text-align';
 
-const { t } = useI18n();
+const props = defineProps({ modelValue: { type: String, default: '' } });
+const emit = defineEmits(['update:modelValue']);
 
-const props = defineProps({
-  modelValue: { type: String, default: '' },
-})
-const emit = defineEmits(['update:modelValue'])
 const editor = useEditor({
   content: props.modelValue,
-  extensions: [ StarterKit ],
-  onUpdate: ({ editor }) => {
-    emit('update:modelValue', editor.getHTML())
-  },
-})
+  extensions: [
+    StarterKit.configure({ heading: { levels: [2, 3] } }),
+    TextAlign.configure({ types: ['heading', 'paragraph'] }),
+  ],
+  onUpdate: () => { emit('update:modelValue', editor.value.getHTML()); },
+});
 
-const currentStyleName = computed(() => {
-  if (!editor.value) return t('style.normal');
-  if (editor.value.isActive('heading', { level: 1 })) return t('style.h1');
-  if (editor.value.isActive('heading', { level: 2 })) return t('style.h2');
-  if (editor.value.isActive('heading', { level: 3 })) return t('style.rubric');
-  return t('style.normal');
-})
+const textStyle = ref('paragraph');
 
-watch(() => props.modelValue, (newValue) => {
-  if (editor.value && editor.value.getHTML() !== newValue) {
-    editor.value.commands.setContent(newValue, false)
+watch(() => props.modelValue, (value) => {
+  if (editor.value && editor.value.getHTML() !== value) {
+    editor.value.commands.setContent(value, false);
   }
-})
+});
 
-onBeforeUnmount(() => {
-  if (editor.value) {
-    editor.value.destroy()
+watch(textStyle, (newStyle) => {
+  if (!editor.value) return;
+  const chain = editor.value.chain().focus();
+  
+  const isRubric = editor.value.getAttributes('paragraph').class === 'rubric';
+
+  if (newStyle === 'paragraph') {
+    chain.setParagraph().run();
+  } else if (newStyle === 'heading-2') {
+    chain.toggleHeading({ level: 2 }).run();
+  } else if (newStyle === 'heading-3') {
+    chain.toggleHeading({ level: 3 }).run();
+  } else if (newStyle === 'rubric') {
+    if (isRubric) {
+        chain.setParagraph().run(); // Снимаем стиль
+    } else {
+        chain.setParagraph().setNode('paragraph', { class: 'rubric' }).run(); // Применяем
+    }
   }
-})
+});
+
+onBeforeUnmount(() => { if (editor.value) editor.value.destroy(); });
 </script>
+```
 
-<style>
-.editor-container {
-  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  border-radius: 4px;
-  transition: all 0.2s ease-in-out;
-}
-.editor-container:focus-within {
-  border-color: rgb(var(--v-theme-primary));
-  box-shadow: 0 0 0 2px rgba(var(--v-theme-primary), 0.2);
-}
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  padding: 4px 8px;
-  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-}
-.toolbar .v-btn.is-active {
-  background-color: rgba(var(--v-theme-primary), 0.1);
-}
-.ProseMirror {
-  padding: 12px 16px;
-  min-height: 200px;
-  outline: none;
-}
-</style>
+### src/components/FilterSheet.vue
+```
+<template>
+  <v-bottom-sheet v-model="isFilterSheetOpen">
+    <v-card class="pa-4">
+      <v-card-title>{{ $t('filterByTags') }}</v-card-title>
+      <v-card-text>
+        <div v-if="allTags.length === 0" class="text-grey pa-2">Нет тегов для выбора</div>
+        <v-chip-group v-else v-model="selectedTags" column multiple>
+          <v-chip
+            v-for="tag in allTags"
+            :key="tag"
+            :value="tag"
+            filter
+            variant="outlined"
+            class="ma-1"
+            size="large"
+          >
+            {{ tag }}
+          </v-chip>
+        </v-chip-group>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn color="primary" variant="text" @click="isFilterSheetOpen = false">{{ $t('done') }}</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-bottom-sheet>
+</template>
+
+<script setup>
+import { useAppBar } from '@/composables/useAppBar';
+import { useFilters } from '@/composables/useFilters';
+import { useItems } from '@/composables/useItems';
+
+const { isFilterSheetOpen } = useAppBar();
+const { selectedTags } = useFilters();
+const { allTags } = useItems();
+</script>
 ```
 
 ### src/components/ItemForm.vue
@@ -216,69 +273,45 @@ onBeforeUnmount(() => {
 <template>
   <v-container>
     <v-form v-if="isFormReady" @submit.prevent="handleSave">
-      <v-text-field 
-        v-model="form.title" 
-        :label="$t('title')" 
-        variant="outlined" 
-        class="mb-4"
-      ></v-text-field>
-      
-      <!-- Языковые вкладки -->
+      <v-text-field v-model="form.title" :label="$t('title')" variant="outlined" class="mb-4"></v-text-field>
+      <v-text-field v-model="form.source" :label="$t('source')" variant="outlined" class="mb-4" clearable></v-text-field>
+
       <v-tabs v-model="currentLangTab" bg-color="primary" class="mb-1">
         <v-tab value="be">Бел</v-tab>
         <v-tab value="ru">Рус</v-tab>
         <v-tab value="la">Lat</v-tab>
       </v-tabs>
       <v-window v-model="currentLangTab">
-        <v-window-item value="be">
-          <Editor v-model="form.textVersions.be" />
-        </v-window-item>
-        <v-window-item value="ru">
-          <Editor v-model="form.textVersions.ru" />
-        </v-window-item>
-        <v-window-item value="la">
-          <Editor v-model="form.textVersions.la" />
-        </v-window-item>
+        <v-window-item value="be"><Editor v-model="form.textVersions.be" /></v-window-item>
+        <v-window-item value="ru"><Editor v-model="form.textVersions.ru" /></v-window-item>
+        <v-window-item value="la"><Editor v-model="form.textVersions.la" /></v-window-item>
       </v-window>
 
       <v-combobox
-        v-model="form.tags"
-        :items="allTags"
-        :label="$t('tags')"
-        :hint="$t('tagsHint')"
-        multiple
-        chips
-        clearable
-        variant="outlined"
-        class="mt-4"
+        v-model="form.tags" :items="allTags" :label="$t('tags')"
+        multiple chips clearable variant="outlined" class="mt-4"
       ></v-combobox>
 
-      <v-btn @click="isLinkDialogOpen = true" class="mt-4">
-        <v-icon left>mdi-link</v-icon>
-        Связать с заметкой
-      </v-btn>
+      <v-divider class="my-4"></v-divider>
+      <h3 class="text-subtitle-1 mb-2">Связанные заметки</h3>
+      <div v-if="form.linkedNoteIds && form.linkedNoteIds.length > 0" class="mb-3">
+        <v-chip v-for="linkedNote in currentlyLinkedNotes" :key="linkedNote.id" class="mr-2 mb-2" closable @click:close="removeLink(linkedNote.id)">
+          {{ linkedNote.title }}
+        </v-chip>
+      </div>
+      <v-btn @click="isLinkDialogOpen = true" prepend-icon="mdi-link-plus">Добавить связь</v-btn>
     </v-form>
     
-    <div v-else class="text-center mt-16">
-      <v-progress-circular indeterminate color="primary"></v-progress-circular>
-      <p class="mt-4">{{ $t('loading') }}</p>
-    </div>
+    <div v-else class="text-center mt-16"><v-progress-circular indeterminate color="primary"></v-progress-circular></div>
 
-    <!-- Диалог ссылок -->
     <v-dialog v-model="isLinkDialogOpen" max-width="500px">
       <v-card>
-        <v-card-title>Выберите заметку для ссылки</v-card-title>
+        <v-card-title>Выберите заметку для связи</v-card-title>
         <v-list>
-          <v-list-item
-            v-for="note in linkableNotes"
-            :key="note.id"
-            :title="note.title"
-            @click="copyLink(note)"
-          ></v-list-item>
+          <v-list-item v-for="note in availableNotesToLink" :key="note.id" :title="note.title" @click="addLink(note.id)"></v-list-item>
         </v-list>
       </v-card>
     </v-dialog>
-    <v-snackbar v-model="showLinkCopied" :timeout="2000">Ссылка скопирована!</v-snackbar>
   </v-container>
 </template>
 
@@ -295,40 +328,35 @@ const router = useRouter();
 const { t } = useI18n();
 const { items, addItem, updateItem, allTags } = useItems();
 const { setAppBar, resetAppBar } = useAppBar();
-
 const isEditMode = computed(() => !!props.id);
 const isFormReady = ref(false);
 const currentLangTab = ref('be');
 
 const form = ref({
   title: '',
+  source: '',
   textVersions: { ru: '', be: '', la: '' },
-  tags: [] 
+  tags: [],
+  linkedNoteIds: []
 });
 
-// --- Ссылки ---
 const isLinkDialogOpen = ref(false);
-const showLinkCopied = ref(false);
-const linkableNotes = computed(() => items.value.filter(item => item.id !== props.id));
-function copyLink(note) {
-  const linkHtml = `<a href="/items/${note.id}">${note.title}</a>`;
-  navigator.clipboard.writeText(linkHtml);
-  isLinkDialogOpen.value = false;
-  showLinkCopied.value = true;
-}
+const currentlyLinkedNotes = computed(() => form.value.linkedNoteIds?.map(id => items.value.find(item => item.id === id)).filter(Boolean) || []);
+const availableNotesToLink = computed(() => items.value.filter(item => item.id !== props.id && !form.value.linkedNoteIds?.includes(item.id)));
+function addLink(noteId) { form.value.linkedNoteIds.push(noteId); isLinkDialogOpen.value = false; }
+function removeLink(noteId) { form.value.linkedNoteIds = form.value.linkedNoteIds.filter(id => id !== noteId); }
 
 async function handleSave() {
-  if (!form.value.title) { return; }
+  if (!form.value.title) return;
   const dataToSave = {
     title: form.value.title,
+    source: form.value.source || '',
     textVersions: form.value.textVersions,
-    tags: form.value.tags
+    tags: form.value.tags,
+    linkedNoteIds: form.value.linkedNoteIds || []
   };
-  if (isEditMode.value) {
-    await updateItem(props.id, dataToSave);
-  } else {
-    await addItem(dataToSave);
-  }
+  if (isEditMode.value) await updateItem(props.id, dataToSave);
+  else await addItem(dataToSave);
   router.push({ name: 'ItemsList' });
 }
 
@@ -342,13 +370,11 @@ onMounted(() => {
     watch(items, (newItems) => {
       const itemToEdit = newItems.find(i => i.id === props.id);
       if (itemToEdit) {
-        const textVersions = itemToEdit.textVersions || { ru: itemToEdit.text || '', be: '', la: '' };
-        form.value = { ...itemToEdit, textVersions, tags: itemToEdit.tags || [] };
+        form.value = { ...itemToEdit, source: itemToEdit.source || '', tags: itemToEdit.tags || [], textVersions: itemToEdit.textVersions || {}, linkedNoteIds: itemToEdit.linkedNoteIds || [] };
         isFormReady.value = true;
       }
     }, { immediate: true });
   } else {
-    form.value = { title: '', textVersions: { ru: '', be: '', la: '' }, tags: [] };
     isFormReady.value = true;
   }
 });
@@ -360,67 +386,47 @@ onUnmounted(resetAppBar);
 ```
 <template>
   <v-container>
-    <!-- ШАГ 1: Показываем загрузчик, пока данные не пришли -->
-    <div v-if="isLoading" class="text-center mt-16">
-      <v-progress-circular indeterminate color="primary" size="64"></v-progress-circular>
-      <p class="mt-4 text-grey-darken-1">{{ $t('loading') }}</p>
-    </div>
-
-    <!-- ШАГ 2: Показываем контент, ТОЛЬКО когда загрузка завершена -->
+    <div v-if="isLoading" class="text-center mt-16"><v-progress-circular indeterminate color="primary" size="64"></v-progress-circular></div>
     <div v-else>
-      <!-- Карточка заметки -->
-      <v-card
-        v-for="item in filteredItems"
-        :key="item.id"
-        class="mb-4"
-        elevation="2"
-        @click="viewItem(item.id)"
-      >
-        <v-card-title class="font-weight-bold">{{ item.title }}</v-card-title>
-        <v-card-text class="pb-0">
-          <p class="mb-4 text-medium-emphasis">{{ getPreviewText(item) }}</p>
-          <v-chip-group>
-            <v-chip v-for="tag in item.tags" :key="tag" size="small" color="primary" variant="tonal">
-              {{ tag }}
-            </v-chip>
-          </v-chip-group>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="grey-darken-1" variant="text" @click.stop="navigateToEdit(item.id)">{{ $t('edit') }}</v-btn>
-          <v-btn color="error" variant="text" @click.stop="openDeleteDialog(item.id)">{{ $t('delete') }}</v-btn>
-        </v-card-actions>
-      </v-card>
-
-      <!-- Сообщение, если после фильтрации заметок нет -->
-      <div v-if="!isLoading && filteredItems.length === 0" class="text-center text-grey-darken-1 mt-16">
+      <div v-if="settings.viewMode === 'card'">
+        <v-card v-for="item in sortedAndFilteredItems" :key="item.id" class="mb-4" elevation="2">
+          <v-card-title class="font-weight-bold d-flex align-center">
+            <v-btn :icon="settings.isPinned(item.id) ? 'mdi-pin' : 'mdi-pin-outline'" :color="settings.isPinned(item.id) ? 'primary' : 'grey'" variant="text" size="small" class="mr-2" @click.stop="settings.togglePin(item.id)"></v-btn>
+            <span @click="viewItem(item.id)" class="flex-grow-1" style="cursor: pointer;">{{ item.title }}</span>
+          </v-card-title>
+          <v-card-text class="pb-0" @click="viewItem(item.id)" style="cursor: pointer;">
+            <p class="mb-4 text-medium-emphasis">{{ getPreviewText(item) }}</p>
+            <v-chip-group><v-chip v-for="tag in item.tags" :key="tag" size="small" color="primary" variant="tonal">{{ tag }}</v-chip></v-chip-group>
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn color="grey-darken-1" variant="text" @click.stop="navigateToEdit(item.id)">{{ $t('edit') }}</v-btn>
+            <v-btn color="error" variant="text" @click.stop="openDeleteDialog(item.id)">{{ $t('delete') }}</v-btn>
+          </v-card-actions>
+        </v-card>
+      </div>
+      <v-list v-else-if="settings.viewMode === 'compact'" lines="one" density="compact">
+        <v-list-item v-for="item in sortedAndFilteredItems" :key="item.id" @click="viewItem(item.id)">
+          <template v-slot:prepend>
+            <v-btn :icon="settings.isPinned(item.id) ? 'mdi-pin' : 'mdi-pin-outline'" :color="settings.isPinned(item.id) ? 'primary' : 'grey'" variant="text" size="x-small" class="mr-2" @click.stop="settings.togglePin(item.id)"></v-btn>
+          </template>
+          <v-list-item-title>{{ item.title }}</v-list-item-title>
+          <template v-slot:append>
+            <v-btn icon="mdi-pencil" variant="text" size="small" @click.stop="navigateToEdit(item.id)"></v-btn>
+            <v-btn icon="mdi-delete" variant="text" size="small" @click.stop="openDeleteDialog(item.id)"></v-btn>
+          </template>
+        </v-list-item>
+      </v-list>
+      <div v-if="!isLoading && sortedAndFilteredItems.length === 0" class="text-center text-grey-darken-1 mt-16">
         <v-icon size="48" class="mb-2">mdi-note-off-outline</v-icon>
         <p>{{ $t('noNotesFound') }}</p>
       </div>
     </div>
-
-    <!-- Кнопка "Добавить" -->
-    <v-btn 
-      icon="mdi-plus" 
-      location="bottom right" 
-      size="large" 
-      color="surface" 
-      position="fixed" 
-      variant="elevated"
-      elevation="8" 
-      class="ma-4"
-      @click="router.push({ name: 'ItemAdd' })"
-    >
-      <v-icon color="primary">mdi-plus</v-icon> 
-    </v-btn>
-
-    <!-- Диалог подтверждения удаления -->
+    <v-btn icon="mdi-plus" location="bottom right" size="large" color="surface" position="fixed" variant="elevated" elevation="8" class="ma-4" @click="router.push({ name: 'ItemAdd' })"><v-icon color="primary">mdi-plus</v-icon></v-btn>
     <v-dialog v-model="isDeleteDialogOpen" persistent max-width="400px">
       <v-card>
         <v-card-title class="text-h5">{{ $t('confirmDeletion') }}</v-card-title>
-        <v-card-text>
-          {{ $t('deleteConfirmationMessage', { title: itemToDelete ? itemToDelete.title : '' }) }}
-        </v-card-text>
+        <v-card-text>{{ $t('deleteConfirmationMessage', { title: itemToDelete ? itemToDelete.title : '' }) }}</v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn variant="text" @click="closeDeleteDialog">{{ $t('cancel') }}</v-btn>
@@ -438,96 +444,106 @@ import { useItems } from '@/composables/useItems';
 import { useFilters } from '@/composables/useFilters';
 import { useAppBar } from '@/composables/useAppBar';
 import { useI18n } from 'vue-i18n';
+import { useSettingsStore } from '@/stores/settings';
 
 const router = useRouter();
-const { t, locale } = useI18n();
+const { t } = useI18n();
 const { items, deleteItem } = useItems();
 const { search, selectedTags } = useFilters();
 const { setAppBar, resetAppBar, isSearchActive, isFilterSheetOpen } = useAppBar();
-
-// ШАГ 3: Добавляем флаг загрузки
+const settings = useSettingsStore();
 const isLoading = ref(true);
+watch(items, (newItems) => { if (newItems) isLoading.value = false; }, { immediate: true });
 
-// Наблюдаем за `items`. Как только они перестают быть пустым массивом, выключаем загрузчик.
-watch(items, (newItems) => {
-  if (Array.isArray(newItems) && newItems.length > 0) {
-    isLoading.value = false;
-  }
-}, { immediate: true });
-
-
-const setupAppBar = () => { /* ... код без изменений ... */ };
+const setupAppBar = () => {
+  setAppBar({
+    title: t('appTitle'),
+    showBackButton: false,
+    actions: [
+      { icon: 'mdi-magnify', onClick: () => { isSearchActive.value = true; } },
+      { icon: 'mdi-filter-variant', onClick: () => { isFilterSheetOpen.value = true; } },
+      { icon: 'mdi-cog-outline', onClick: () => router.push({ name: 'Settings' }) }
+    ]
+  });
+};
 onMounted(setupAppBar);
 onUnmounted(resetAppBar);
-watch(locale, setupAppBar);
+watch(t, setupAppBar);
 
 const isDeleteDialogOpen = ref(false);
 const itemToDeleteId = ref(null);
 const itemToDelete = computed(() => itemToDeleteId.value ? items.value.find(item => item.id === itemToDeleteId.value) : null);
-
 function openDeleteDialog(id) { itemToDeleteId.value = id; isDeleteDialogOpen.value = true; }
 function closeDeleteDialog() { isDeleteDialogOpen.value = false; itemToDeleteId.value = null; }
-async function confirmDeletion() { if (itemToDeleteId.value) await deleteItem(itemToDeleteId.value); closeDeleteDialog(); }
+async function confirmDeletion() { if (itemToDeleteId.value) { await deleteItem(itemToDeleteId.value); } closeDeleteDialog(); }
 
 function getPreviewText(item) {
-  let htmlContent = '';
-  if (item.textVersions && typeof item.textVersions === 'object') {
-    htmlContent = item.textVersions.ru || item.textVersions.be || item.textVersions.la || Object.values(item.textVersions).find(v => v) || '';
-  }
-  if (!htmlContent && item.text) {
-    htmlContent = item.text;
-  }
+  const htmlContent = item.textVersions?.be || item.textVersions?.ru || item.textVersions?.la || Object.values(item.textVersions || {}).find(v => v) || '';
   if (!htmlContent) return 'Нет содержимого';
   const doc = new DOMParser().parseFromString(htmlContent, 'text/html');
   const text = (doc.body.textContent || "").trim();
   return text.length > 150 ? text.substring(0, 150) + '...' : text;
 }
 
-const filteredItems = computed(() => {
-  // ШАГ 4: Не производим вычисления, пока идет загрузка
+const sortedAndFilteredItems = computed(() => {
   if (isLoading.value) return [];
-  
-  return items.value.filter(item => {
-    const searchLower = search.value.toLowerCase();
-    const contentText = getPreviewText(item).toLowerCase(); 
-    const searchMatch = !search.value || item.title.toLowerCase().includes(searchLower) || contentText.includes(searchLower);
+  const searchLower = search.value.toLowerCase().trim();
+  const filtered = items.value.filter(item => {
     const tagMatch = selectedTags.value.length === 0 || (item.tags && selectedTags.value.every(tag => item.tags.includes(tag)));
-    return searchMatch && tagMatch;
+    if (!tagMatch) return false;
+    if (searchLower) {
+      const fullText = (item.title + ' ' + Object.values(item.textVersions || {}).join(' ')).toLowerCase();
+      return fullText.includes(searchLower);
+    }
+    return true;
   });
+  return filtered.slice().sort((a, b) => (settings.isPinned(b.id) - settings.isPinned(a.id)));
 });
 
 function viewItem(id) { router.push({ name: 'ItemView', params: { id } }); }
 function navigateToEdit(id) { router.push({ name: 'ItemEdit', params: { id } }); }
 </script>
-
-<style scoped>
-.v-card {
-  transition: all 0.2s ease-out;
-}
-.v-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
-}
-</style>
 ```
 
 ### src/components/ItemView.vue
 ```
 <template>
   <v-container>
-    <div v-if="item" @click="handleContentClick">
+    <div v-if="item">
       <h1 class="text-h4 font-weight-bold mb-4">{{ item.title }}</h1>
-      <div v-for="(text, lang) in availableVersions" :key="lang" class="mb-8">
+      <div v-for="(text, lang) in availableVersions" :key="lang" class="mb-4">
         <h2 class="text-h6 font-weight-medium text-grey-darken-1 mb-2">{{ langNames[lang] }}</h2>
-        <div v-html="text" class="note-content-area is-view-mode ProseMirror"></div>
+        <div v-html="text" class="note-content-area ProseMirror"></div>
       </div>
-      <v-chip-group class="mt-4">
-        <v-chip v-for="tag in item.tags" :key="tag" class="mr-2" color="primary" variant="tonal">{{ tag }}</v-chip>
-      </v-chip-group>
+
+      <div v-if="linkedNotes.length > 0" class="mt-8">
+        <v-divider class="mb-4"></v-divider>
+        <h3 class="text-subtitle-1 font-weight-bold mb-3">Связанные заметки:</h3>
+        <v-list density="compact" class="pa-0">
+          <v-list-item
+            v-for="linkedNote in linkedNotes"
+            :key="linkedNote.id"
+            @click="router.push({ name: 'ItemView', params: { id: linkedNote.id } })"
+            class="pa-0 mb-2"
+          >
+            <template v-slot:prepend><v-icon color="grey" class="mr-2">mdi-link-variant</v-icon></template>
+            <v-list-item-title class="text-wrap font-weight-medium">{{ linkedNote.title }}</v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </div>
+
+      <div class="mt-6 text-body-2 text-medium-emphasis">
+        <div v-if="item.source">
+          <v-divider class="my-3"></v-divider>
+          <strong>Источник:</strong> {{ item.source }}
+        </div>
+        <div v-if="item.tags && item.tags.length > 0" class="mt-3">
+          <strong>Теги:</strong> {{ item.tags.join(', ') }}
+        </div>
+      </div>
     </div>
     <div v-else class="text-center text-grey-darken-1 mt-16">
-      <v-icon size="48" class="mb-2">mdi-alert-circle-outline</v-icon>
-      <p>{{ $t('noteNotFound') }}</p>
+      <v-progress-circular indeterminate color="primary"></v-progress-circular>
     </div>
   </v-container>
 </template>
@@ -543,42 +559,22 @@ const router = useRouter();
 const { items } = useItems();
 const { setAppBar, resetAppBar } = useAppBar();
 
-const item = computed(() => {
-  return items.value.find(i => i.id === props.id);
-});
-
-const availableVersions = computed(() => {
-  if (!item.value?.textVersions) return {};
-  const versions = {};
-  for (const lang in item.value.textVersions) {
-    if (item.value.textVersions[lang]) {
-      versions[lang] = item.value.textVersions[lang];
-    }
-  }
-  return versions;
-});
-
+const item = computed(() => items.value.find(i => i.id === props.id));
+const linkedNotes = computed(() => item.value?.linkedNoteIds?.map(id => items.value.find(note => note.id === id)).filter(Boolean) || []);
+const availableVersions = computed(() => item.value ? Object.fromEntries(Object.entries(item.value.textVersions).filter(([_, v]) => v)) : {});
 const langNames = { ru: 'Русский', be: 'Беларуская', la: 'Latina' };
-
-function handleContentClick(event) {
-  const link = event.target.closest('a');
-  if (link && link.pathname.startsWith('/items/')) {
-    event.preventDefault();
-    router.push(link.pathname);
-  }
-}
 
 const updateAppBarForItem = (currentItem) => {
   if (currentItem) {
     setAppBar({
       title: currentItem.title,
       showBackButton: true,
-      actions: []
+      actions: [{ icon: 'mdi-pencil', onClick: () => router.push({ name: 'ItemEdit', params: { id: currentItem.id } }) }]
     });
   }
 };
-watch(item, (newItem) => { updateAppBarForItem(newItem); }, { immediate: true });
-onMounted(() => { updateAppBarForItem(item.value); });
+
+watch(item, updateAppBarForItem, { immediate: true });
 onUnmounted(resetAppBar);
 </script>
 ```
@@ -589,27 +585,24 @@ onUnmounted(resetAppBar);
   <v-container>
     <v-list lines="two" subheader>
       <v-list-subheader>{{ $t('appearance') }}</v-list-subheader>
-      <v-list-item
-        :title="$t('darkTheme')"
-        :subtitle="$t('themeIs', { themeName: $t('themeNames.' + settings.currentTheme) })"
-      >
-        <template v-slot:prepend>
-          <v-icon>mdi-theme-light-dark</v-icon>
-        </template>
+      
+      <v-list-item :title="$t('viewMode')" :subtitle="$t('viewModeHint')">
+        <template v-slot:prepend><v-icon>mdi-view-dashboard-outline</v-icon></template>
         <template v-slot:append>
-          <v-switch
-            :model-value="settings.currentTheme === 'dark'"
-            @update:model-value="settings.toggleTheme"
-            inset
-            color="primary"
-            hide-details
-          ></v-switch>
+          <v-btn-toggle :model-value="settings.viewMode" @update:model-value="settings.toggleViewMode" mandatory variant="outlined" density="compact">
+            <v-btn value="card"><v-icon>mdi-view-grid</v-icon></v-btn>
+            <v-btn value="compact"><v-icon>mdi-view-list</v-icon></v-btn>
+          </v-btn-toggle>
         </template>
       </v-list-item>
+
+      <v-list-item :title="$t('darkTheme')" :subtitle="$t('themeIs', { themeName: $t('themeNames.' + settings.currentTheme) })">
+        <template v-slot:prepend><v-icon>mdi-theme-light-dark</v-icon></template>
+        <template v-slot:append><v-switch :model-value="settings.currentTheme === 'dark'" @update:model-value="settings.toggleTheme" inset color="primary" hide-details></v-switch></template>
+      </v-list-item>
+      
       <v-list-item :title="$t('fontSize')" :subtitle="$t('fontSizeHint')">
-        <template v-slot:prepend>
-          <v-icon>mdi-format-font-size-incr</v-icon>
-        </template>
+        <template v-slot:prepend><v-icon>mdi-format-font-size-increase</v-icon></template>
         <template v-slot:append>
           <div class="d-flex align-center">
             <v-btn icon="mdi-minus" variant="text" size="small" @click="settings.decreaseFontSize" :disabled="settings.fontSizeMultiplier <= 0.8"></v-btn>
@@ -619,30 +612,24 @@ onUnmounted(resetAppBar);
         </template>
       </v-list-item>
     </v-list>
+
     <v-divider class="my-4"></v-divider>
     <v-card variant="outlined" class="pa-4">
-      <h3 class="v-list-subheader">{{ $t('preview') }}</h3>
+      <h3 class="v-list-subheader pa-0 mb-2">{{ $t('preview') }}</h3>
       <div class="note-content-area mt-2">
-        <p class="text-body-1">
-          Это пример обычного текста. Вы можете видеть, как он изменяется в реальном времени.
-        </p>
-        <p class="text-caption mt-2">
-          А это — текст поменьше, для примера.
-        </p>
+        <p class="text-body-1">Это пример обычного текста. Вы можете видеть, как он изменяется в реальном времени.</p>
+        <p class="text-caption mt-2">А это — текст поменьше, для примера.</p>
       </div>
     </v-card>
+
     <v-divider class="my-4"></v-divider>
     <v-list>
       <v-list-subheader>{{ $t('language') }}</v-list-subheader>
       <v-list-item>
         <v-select
-          :label="$t('language')"
-          :items="[{value: 'ru', title: 'Русский'}, {value: 'be', title: 'Беларуская'}]"
-          :model-value="settings.currentLanguage"
-          @update:model-value="settings.setLanguage"
-          variant="outlined"
-          density="compact"
-          hide-details
+          :label="$t('language')" :items="[{value: 'ru', title: 'Русский'}, {value: 'be', title: 'Беларуская'}]"
+          :model-value="settings.currentLanguage" @update:model-value="settings.setLanguage"
+          variant="outlined" density="compact" hide-details
         ></v-select>
       </v-list-item>
     </v-list>
@@ -659,64 +646,58 @@ const { setAppBar, resetAppBar } = useAppBar();
 const settings = useSettingsStore();
 const { t, locale } = useI18n();
 
-const setupAppBar = () => {
-  setAppBar({
-    title: t('settings'),
-    showBackButton: true,
-    actions: []
-  });
-};
-
+const setupAppBar = () => { setAppBar({ title: t('settings'), showBackButton: true, actions: [] }); };
 onMounted(setupAppBar);
 onUnmounted(resetAppBar);
-watch(locale, setupAppBar); // Обновляем заголовок при смене языка
+watch(locale, setupAppBar);
 </script>
 ```
 
 ### src/composables/useAppBar.js
 ```
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 // Глобальные переменные, хранящие текущее состояние App Bar
-const title = ref('Мои заметки');
-const showBackButton = ref(false);
-const actions = ref([]); // Массив кнопок (иконок) действий
+const appBar = ref({
+  title: 'Мои Молитвы',
+  showBackButton: false,
+  actions: [],
+  onTitleClick: () => {}, // Обработчик клика
+  isTitleClickable: false, // Флаг кликабельности
+});
 
 // Состояние для UI элементов, управляемых из App Bar
 const isSearchActive = ref(false);
 const isFilterSheetOpen = ref(false);
 
 export function useAppBar() {
+  // Мы должны инициализировать роутер здесь, внутри функции, чтобы он был доступен
+  const router = useRouter();
 
-  // Функция, которую вызывают страницы, чтобы настроить App Bar под себя
-  const setAppBar = (options) => {
-    title.value = options.title || 'Мои заметки';
-    showBackButton.value = options.showBackButton || false;
-    actions.value = options.actions || [];
-  };
-
-  // Функция для сброса App Bar к состоянию по умолчанию (для главной страницы)
-  // Вызывается, когда пользователь уходит со страницы просмотра или редактирования
-  const resetAppBar = () => {
-    title.value = 'Мои заметки';
-    showBackButton.value = false;
-    actions.value = [];
-  };
-
-  return {
-    // Состояние App Bar
-    title,
-    showBackButton,
-    actions,
+  const setAppBar = (config) => {
+    appBar.value.title = config.title || 'Мои Молитвы';
+    appBar.value.showBackButton = config.showBackButton || false;
+    appBar.value.actions = config.actions || [];
     
-    // Состояние связанных UI элементов
-    isSearchActive,
-    isFilterSheetOpen,
-
-    // Функции для управления
-    setAppBar,
-    resetAppBar,
+    // Логика кликабельного заголовка
+    if (config.showBackButton) {
+      // На внутренних страницах клик по заголовку ведет на главную
+      appBar.value.onTitleClick = () => router.push({ name: 'ItemsList' });
+      appBar.value.isTitleClickable = true;
+    } else {
+      // На главной странице заголовок не кликабелен
+      appBar.value.onTitleClick = () => {};
+      appBar.value.isTitleClickable = false;
+    }
   };
+
+  const resetAppBar = () => {
+    // Сбрасываем к состоянию по умолчанию
+    setAppBar({ title: 'Мои Молитвы', showBackButton: false, actions: [] });
+  };
+
+  return { appBar, isSearchActive, isFilterSheetOpen, setAppBar, resetAppBar };
 }
 ```
 
@@ -740,72 +721,58 @@ export function useFilters() {
 
 ### src/composables/useItems.js
 ```
-
-import { ref, onUnmounted, computed } from 'vue';
+import { ref } from 'vue';
 import { db } from '@/firebase';
 import { 
   collection, 
   onSnapshot, 
   addDoc, 
   deleteDoc, 
+  updateDoc, 
   doc,
-  updateDoc,
+  serverTimestamp,
   query,
-  orderBy,
-  serverTimestamp
+  orderBy
 } from 'firebase/firestore';
 
-const itemsCollectionRef = collection(db, 'items');
-const itemsCollectionQuery = query(itemsCollectionRef, orderBy('createdAt', 'desc'));
+const items = ref([]);
+const allTags = ref([]);
+
+const itemsCollection = collection(db, 'items');
+// ✅ --- УБИРАЕМ СОРТИРОВКУ ПО isPinned ---
+// Возвращаемся к простой сортировке только по дате создания.
+const itemsQuery = query(itemsCollection, orderBy('createdAt', 'desc'));
+
+onSnapshot(itemsQuery, (snapshot) => {
+  items.value = snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+  allTags.value = [...new Set(items.value.flatMap(item => item.tags || []))].sort();
+});
 
 export function useItems() {
-  const items = ref([]);
 
-  const unsubscribe = onSnapshot(itemsCollectionQuery, (querySnapshot) => {
-    const firebaseItems = [];
-    querySnapshot.forEach((doc) => {
-      const item = {
-        id: doc.id,
-        createdAt: doc.data().createdAt,
-        ...doc.data()
-      };
-      firebaseItems.push(item);
+  const addItem = async (data) => {
+    // ✅ Убираем поле isPinned при создании, оно больше не нужно в базе
+    const docRef = await addDoc(itemsCollection, {
+      ...data,
+      createdAt: serverTimestamp()
     });
-    items.value = firebaseItems;
-    console.log('Данные из Firebase:', items.value);
-  });
-
-   const allTags = computed(() => {
-    const tags = new Set();
-    items.value.forEach(item => {
-      if (item.tags) {
-        item.tags.forEach(tag => tags.add(tag));
-      }
-    });
-    return Array.from(tags).sort(); // Сортируем для красивого отображения
-  });
-
-  onUnmounted(() => {
-    unsubscribe();
-  });
-
-  const addItem = async (newItemData) => {
-    await addDoc(itemsCollectionRef, {
-      ...newItemData,
-      createdAt: serverTimestamp(),
-    });
+    return docRef;
   };
 
   const deleteItem = async (id) => {
-    await deleteDoc(doc(itemsCollectionRef, id));
+    await deleteDoc(doc(db, 'items', id));
   };
 
-  const updateItem = async (id, updatedData) => {
-    const itemDocRef = doc(db, 'items', id);
-    const dataToUpdate = { ...updatedData };
+  const updateItem = async (id, data) => {
+    const dataToUpdate = { ...data };
     delete dataToUpdate.id; 
-    await updateDoc(itemDocRef, dataToUpdate);
+    await updateDoc(doc(db, 'items', id), dataToUpdate);
   };
+
+  // ✅ УДАЛЯЕМ функцию togglePin отсюда. Ее больше здесь нет.
 
   return {
     items,
@@ -813,19 +780,80 @@ export function useItems() {
     addItem,
     deleteItem,
     updateItem,
+    // И не экспортируем ее.
   };
 }
+```
 
+### src/export-code.js
+```
+const fs = require('fs');
+const path = require('path');
 
+// Список файлов и папок, которые мы хотим экспортировать
+const pathsToExport = [
+  'package.json',
+  'vite.config.js',
+  'src' // Экспортируем всю папку src
+];
+
+const outputFileName = 'project_code.txt';
+let output = '';
+
+// Функция для рекурсивного обхода папок
+function readDirectory(dirPath) {
+  const files = fs.readdirSync(dirPath);
+  for (const file of files) {
+    const filePath = path.join(dirPath, file);
+    const stat = fs.statSync(filePath);
+
+    if (stat.isDirectory()) {
+      readDirectory(filePath); // Если это папка, идем глубже
+    } else if (['.js', '.vue', '.css', '.json'].includes(path.extname(filePath))) {
+      // Если это файл с нужным расширением, добавляем его в вывод
+      const relativePath = path.relative(__dirname, filePath).replace(/\\/g, '/');
+      output += `\n### ${relativePath}\n`;
+      output += '```\n';
+      output += fs.readFileSync(filePath, 'utf-8');
+      output += '\n```\n';
+    }
+  }
+}
+
+// Основная логика
+try {
+  for (const p of pathsToExport) {
+    const fullPath = path.join(__dirname, p);
+    if (!fs.existsSync(fullPath)) continue;
+
+    const stat = fs.statSync(fullPath);
+    if (stat.isDirectory()) {
+      readDirectory(fullPath);
+    } else {
+      const relativePath = path.relative(__dirname, fullPath).replace(/\\/g, '/');
+      output += `\n### ${relativePath}\n`;
+      output += '```\n';
+      output += fs.readFileSync(fullPath, 'utf-8');
+      output += '\n```\n';
+    }
+  }
+
+  fs.writeFileSync(outputFileName, output);
+  console.log(`Проект успешно экспортирован в файл: ${outputFileName}`);
+} catch (error) {
+  console.error('Произошла ошибка при экспорте проекта:', error);
+}
 ```
 
 ### src/firebase.js
 ```
-
 import { initializeApp } from "firebase/app";
-import { initializeFirestore, persistentLocalCache } from "firebase/firestore";
+// ✅ --- ШАГ 1: Исправляем импорт ---
+// Меняем enablePersistence на enableIndexedDbPersistence
+import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
 
 const firebaseConfig = {
+  // ... ваша конфигурация Firebase без изменений ...
   apiKey: "AIzaSyDF2TD4MTcKiBChKRssauvL-nNyT4Am9N0",
   authDomain: "molitwy.firebaseapp.com",
   projectId: "molitwy",
@@ -835,14 +863,23 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const db = initializeFirestore(app, {
-  localCache: persistentLocalCache(/*{ tabManager: persistentMultipleTabManager() }*/)
-});
+const db = getFirestore(app);
 
+// ✅ --- ШАГ 2: Исправляем вызов функции ---
+// Также меняем enablePersistence на enableIndexedDbPersistence
+enableIndexedDbPersistence(db)
+  .catch((err) => {
+      if (err.code == 'failed-precondition') {
+          // Скорее всего, открыто несколько вкладок. Оффлайн будет работать только в одной.
+          console.warn('Persistence failed, likely due to multiple tabs. Offline mode will work in one tab only.');
+      } else if (err.code == 'unimplemented') {
+          // Браузер не поддерживает эту функцию.
+          console.error('The current browser does not support all of the features required to enable persistence.');
+      }
+  });
 
+// Экспортируем db, как и раньше
 export { db };
-
-
 ```
 
 ### src/i18n.js
@@ -875,11 +912,14 @@ export default i18n;
   "done": "Гатова",
   "edit": "Рэдагаваць",
   "delete": "Выдаліць",
+  "pin": "Замацаваць",
+  "unpin": "Адмацаваць",
   "noNotesFound": "Нататак не знойдзена",
   "confirmDeletion": "Пацвердзіце выдаленне",
   "deleteConfirmationMessage": "Вы ўпэўнены, што хочаце назаўсёды выдаліць нататку \"{title}\"?",
   "cancel": "Адмена",
   "title": "Назва",
+  "source": "Крыніца",
   "tags": "Тэгі",
   "tagsHint": "Абярыце або ўвядзіце новыя тэгі",
   "editing": "Рэдагаванне",
@@ -890,19 +930,18 @@ export default i18n;
   "appearance": "Знешні выгляд",
   "darkTheme": "Цёмная тэма",
   "themeIs": "Зараз выкарыстоўваецца {themeName} тэма",
-  "themeNames": {
-    "light": "светлая",
-    "dark": "цёмная"
-  },
+  "themeNames": { "light": "светлая", "dark": "цёмная" },
   "fontSize": "Памер тэксту",
   "fontSizeHint": "Наладзьце памер шрыфту ў дадатку",
+  "viewMode": "Выгляд спісу",
+  "viewModeHint": "Карткі ці кампактны спіс",
   "preview": "Папярэдні прагляд",
   "language": "Мова",
   "textStyle": "Стыль тэксту",
   "style": {
     "normal": "Звычайны",
-    "h1": "Загаловак 1",
-    "h2": "Загаловак 2",
+    "h2": "Загаловак 1",
+    "h3": "Загаловак 2",
     "rubric": "Рубрыка"
   }
 }
@@ -915,16 +954,16 @@ export default i18n;
   "searchPlaceholder": "Поиск...",
   "filterByTags": "Фильтр по тегам",
   "done": "Готово",
-  "notesFound_one": "{count} заметка найдена",
-  "notesFound_few": "{count} заметки найдено",
-  "notesFound_many": "{count} заметок найдено",
   "edit": "Редактировать",
   "delete": "Удалить",
+  "pin": "Закрепить",
+  "unpin": "Открепить",
   "noNotesFound": "Заметок не найдено",
   "confirmDeletion": "Подтвердите удаление",
   "deleteConfirmationMessage": "Вы уверены, что хотите навсегда удалить заметку \"{title}\"?",
   "cancel": "Отмена",
   "title": "Название",
+  "source": "Источник",
   "tags": "Теги",
   "tagsHint": "Выберите или введите новые теги",
   "editing": "Редактирование",
@@ -935,19 +974,18 @@ export default i18n;
   "appearance": "Внешний вид",
   "darkTheme": "Тёмная тема",
   "themeIs": "Сейчас используется {themeName} тема",
-  "themeNames": {
-    "light": "светлая",
-    "dark": "тёмная"
-  },
+  "themeNames": { "light": "светлая", "dark": "тёмная" },
   "fontSize": "Размер текста",
   "fontSizeHint": "Настройте размер шрифта в приложении",
+  "viewMode": "Вид списка",
+  "viewModeHint": "Карточки или компактный список",
   "preview": "Предпросмотр",
   "language": "Язык",
   "textStyle": "Стиль текста",
   "style": {
     "normal": "Обычный",
-    "h1": "Заголовок 1",
-    "h2": "Заголовок 2",
+    "h2": "Заголовок 1",
+    "h3": "Заголовок 2",
     "rubric": "Рубрика"
   }
 }
@@ -962,8 +1000,8 @@ import vuetify from './plugins/vuetify'
 import './firebase'; 
 import '@mdi/font/css/materialdesignicons.css'
 import { createPinia } from 'pinia'; 
-import './styles/main.css';
-import i18n from './i18n'; // <-- ИМПОРТИРУЕМ
+import './assets/main.css'; // Убедитесь, что эта строка есть
+import i18n from './i18n';
 
 const pinia = createPinia(); 
 
@@ -971,7 +1009,7 @@ createApp(App)
   .use(router)
   .use(vuetify)
   .use(pinia)
-  .use(i18n) // <-- ПОДКЛЮЧАЕМ
+  .use(i18n)
   .mount('#app')
 ```
 
@@ -1046,7 +1084,7 @@ import { useTheme } from 'vuetify';
 import { useI18n } from 'vue-i18n';
 
 export const useSettingsStore = defineStore('settings', () => {
-  // --- ТЕМА ---
+  // --- ТЕМА (без изменений) ---
   const theme = useTheme();
   const currentTheme = ref(localStorage.getItem('theme') || 'light');
   theme.global.name.value = currentTheme.value;
@@ -1058,7 +1096,7 @@ export const useSettingsStore = defineStore('settings', () => {
     currentTheme.value = currentTheme.value === 'light' ? 'dark' : 'light';
   }
 
-  // --- РАЗМЕР ШРИФТА ---
+  // --- РАЗМЕР ШРИФТА (без изменений) ---
   const fontSizeMultiplier = ref(parseFloat(localStorage.getItem('fontSizeMultiplier')) || 1.0);
   watch(fontSizeMultiplier, (newMultiplier) => {
     localStorage.setItem('fontSizeMultiplier', newMultiplier);
@@ -1077,7 +1115,7 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
-  // --- ЯЗЫК ---
+  // --- ЯЗЫК (без изменений) ---
   const { locale } = useI18n();
   const currentLanguage = ref(localStorage.getItem('language') || 'ru');
   locale.value = currentLanguage.value;
@@ -1089,6 +1127,40 @@ export const useSettingsStore = defineStore('settings', () => {
     currentLanguage.value = lang;
   }
 
+  // --- РЕЖИМ ОТОБРАЖЕНИЯ (без изменений) ---
+  const viewMode = ref(localStorage.getItem('viewMode') || 'card');
+  watch(viewMode, (newMode) => {
+    localStorage.setItem('viewMode', newMode);
+  });
+  function toggleViewMode() {
+    viewMode.value = viewMode.value === 'card' ? 'compact' : 'card';
+  }
+  
+  // ✅ --- НОВЫЙ БЛОК: УПРАВЛЕНИЕ ЗАКРЕПЛЕННЫМИ ЗАМЕТКАМИ --- ✅
+  // 1. Загружаем массив ID из localStorage или создаем пустой
+  const pinnedIds = ref(JSON.parse(localStorage.getItem('pinnedIds') || '[]'));
+
+  // 2. Сохраняем изменения обратно в localStorage
+  watch(pinnedIds, (newIds) => {
+    localStorage.setItem('pinnedIds', JSON.stringify(newIds));
+  }, { deep: true });
+
+  // 3. Функция для проверки, закреплена ли заметка
+  function isPinned(noteId) {
+    return pinnedIds.value.includes(noteId);
+  }
+  
+  // 4. Функция для переключения статуса закрепления
+  function togglePin(noteId) {
+    if (isPinned(noteId)) {
+      // Если уже закреплена - открепляем (удаляем ID из массива)
+      pinnedIds.value = pinnedIds.value.filter(id => id !== noteId);
+    } else {
+      // Если не закреплена - закрепляем (добавляем ID в начало массива)
+      pinnedIds.value.unshift(noteId);
+    }
+  }
+
   return {
     currentTheme,
     toggleTheme,
@@ -1097,6 +1169,12 @@ export const useSettingsStore = defineStore('settings', () => {
     decreaseFontSize,
     currentLanguage,
     setLanguage,
+    viewMode,
+    toggleViewMode,
+    // Экспортируем новые функции и переменные
+    pinnedIds,
+    isPinned,
+    togglePin,
   };
 });
 ```
@@ -1108,79 +1186,92 @@ export const useSettingsStore = defineStore('settings', () => {
 
 ### src/styles/main.css
 ```
-html {
-  overflow-y: auto !important;
+/* Базовый сброс и переменные */
+:root {
+  --font-size-multiplier: 1.0;
 }
 
-/* --- Правила масштабирования (остаются без изменений) --- */
-.note-content-area p,
-.note-content-area div,
-.note-content-area h1,
-.note-content-area h2,
-.note-content-area h3,
-.note-content-area .text-body-1,
-.note-content-area .text-caption {
-  transition: font-size 0.2s ease-in-out, line-height 0.2s ease-in-out;
-}
-/* ... (все остальные правила для h1, h2, p и т.д. остаются как были) ... */
-.note-content-area p,
-.note-content-area div,
-.note-content-area .text-body-1,
-.note-content-area .text-caption {
-  font-size: calc(1rem * var(--font-size-multiplier, 1)) !important;
-  line-height: calc(1.5 * var(--font-size-multiplier, 1)) !important;
-}
-.note-content-area h1 {
-  font-size: calc(1.8rem * var(--font-size-multiplier, 1)) !important;
-  font-weight: 500;
-  line-height: 1.2 !important; 
-}
+/* Стили для контента из редактора */
 .note-content-area h2 {
-  font-size: calc(1.4rem * var(--font-size-multiplier, 1)) !important;
+  font-size: calc(1.75rem * var(--font-size-multiplier));
+  line-height: 1.4;
+  margin: 1.5em 0 0.5em;
   font-weight: 500;
-  line-height: 1.2 !important;
 }
+
 .note-content-area h3 {
-  font-size: calc(1.1rem * var(--font-size-multiplier, 1)) !important;
+  font-size: calc(1.25rem * var(--font-size-multiplier));
+  line-height: 1.4;
+  margin: 1.5em 0 0.5em;
+  font-weight: 500;
 }
 
-/* --- ГЛАВНОЕ ИЗМЕНЕНИЕ: Стили для Рубрики (h3) --- */
-
-/* 1. БАЗОВЫЙ стиль для h3, который работает ВЕЗДЕ (включая редактор) */
-/* У него НЕТ больших отступов. */
-.ProseMirror h3 {
-  color: #B71C1C !important;
-  font-weight: 500 !important;
-  font-style: italic !important;
-  line-height: 1.2 !important;
+.note-content-area p {
+  font-size: calc(1rem * var(--font-size-multiplier));
+  line-height: 1.7;
+  margin-bottom: 1em;
 }
 
-/* 2. УЛУЧШЕННЫЙ стиль, который добавляет отступы ТОЛЬКО на странице просмотра */
-.note-content-area.is-view-mode .ProseMirror h3 {
-  margin-top: 1em !important;
-  margin-bottom: 0.5em !important;
+.note-content-area .rubric {
+  color: rgb(var(--v-theme-error));
+  font-style: italic;
+  text-align: center;
 }
 
-/* 3. Адаптация цвета для темной темы (работает везде) */
-.v-theme--dark .ProseMirror h3 {
-  color: #E57373 !important;
+/* Правило для выравнивания по ширине */
+.note-content-area p[style*="text-align: justify;"],
+.note-content-area h2[style*="text-align: justify;"],
+.note-content-area h3[style*="text-align: justify;"] {
+  text-align: justify;
 }
 
-/* 4. Отдельный стиль для меню редактора (остается без изменений) */
-.EditorRubricMenu h3 {
-  font-size: 1.1rem !important;
-  font-weight: 500 !important;
-  font-style: italic !important;
-  margin: 0 !important;
-  line-height: 1.2 !important;
+/* Правило для переноса текста в заголовках карточек и списков */
+.v-card-title, .v-list-item-title {
+  white-space: normal !important;
+  word-break: break-word;
+  line-height: 1.4;
 }
 
-/* --- Общие стили для контента из редактора --- */
-.ProseMirror p {
-  margin-bottom: 0;
+/* Убираем лишние отступы на мобильных устройствах */
+@media (max-width: 600px) {
+  .v-container {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .v-card-text {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .v-card-title {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .v-list-item {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
 }
-.ProseMirror ul,
-.ProseMirror ol {
-  padding-left: 24px;
+
+/* Дополнительные стили для редактора */
+.editor-container {
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 4px;
 }
+.editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 4px 8px;
+  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+.editor-toolbar .v-btn.v-btn--active {
+  background-color: rgba(var(--v-theme-primary), 0.1);
+}
+.ProseMirror {
+  padding: 12px 16px;
+  min-height: 200px;
+  outline: none;
+}
+.ProseMirror p { margin-bottom: 0; }
+.ProseMirror-focused { border-color: transparent; box-shadow: none; }
 ```
