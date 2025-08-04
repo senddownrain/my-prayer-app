@@ -1,7 +1,7 @@
 <template>
   <v-container>
     <div v-if="item">
-      <h2 class="text-h4 font-weight-bold mb-4">{{ item.title }}</h2>
+      <h2 class="text-h5 font-weight-bold mb-4">{{ item.title }}</h2>
       <div v-for="(text, lang) in availableVersions" :key="lang" class="mb-4">
         <h2 class="text-h6 font-weight-medium text-grey-darken-1 mb-2">{{ langNames[lang] }}</h2>
         <div v-html="text" class="note-content-area ProseMirror"></div>
@@ -10,7 +10,7 @@
       <div v-if="linkedNotes.length > 0" class="mt-8">
         <v-divider class="mb-4"></v-divider>
         <h3 class="text-subtitle-1 font-weight-bold mb-3">Связанные заметки:</h3>
-        <v-list density="compact" class="pa-0">
+        <v-list density="compact" class="pa-0 linked-notes-list">
           <v-list-item
             v-for="linkedNote in linkedNotes"
             :key="linkedNote.id"
@@ -65,6 +65,9 @@ const updateAppBarForItem = (currentItem) => {
   }
 };
 
-watch(item, updateAppBarForItem, { immediate: true });
+onMounted(() => {
+  // Следим за изменением item и сразу вызываем updateAppBarForItem
+  watch(item, updateAppBarForItem, { immediate: true });
+});
 onUnmounted(resetAppBar);
 </script>

@@ -1,24 +1,38 @@
 import { ref } from 'vue';
 
+// Глобальные реактивные переменные
 const appBar = ref({
   title: 'Мои Молитвы',
   showBackButton: false,
-  actions: [],
-  isMenu: true // ✅ Флаг, показывать ли кнопку меню
+  isSearchVisible: false, // Показывать ли иконку поиска
+  actions: []
 });
 
-const isDrawerOpen = ref(false); // ✅ Состояние для открытия/закрытия меню
+const isDrawerOpen = ref(false);
+const isSearchActive = ref(false); // Активен ли режим поиска (поле ввода на весь appbar)
 
 export function useAppBar() {
   const setAppBar = (config) => {
     appBar.value.title = config.title || 'Мои Молитвы';
     appBar.value.showBackButton = config.showBackButton || false;
+    appBar.value.isSearchVisible = config.isSearchVisible || false;
     appBar.value.actions = config.actions || [];
-    // Если есть кнопка "назад", кнопка меню не нужна.
-    appBar.value.isMenu = !config.showBackButton; 
   };
-  
-  const resetAppBar = () => { /* ... */ };
 
-  return { appBar, isDrawerOpen, setAppBar, resetAppBar };
+  const resetAppBar = () => {
+    // Сброс к состоянию по умолчанию для главного экрана
+    setAppBar({
+      title: 'Мои Молитвы',
+      isSearchVisible: true,
+      actions: []
+    });
+  };
+
+  return { 
+    appBar, 
+    isDrawerOpen, 
+    isSearchActive, 
+    setAppBar, 
+    resetAppBar 
+  };
 }

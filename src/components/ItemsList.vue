@@ -1,16 +1,35 @@
 <template>
   <v-container>
-    <div v-if="isLoading" class="text-center mt-16"><v-progress-circular indeterminate color="primary" size="64"></v-progress-circular></div>
+    <!-- Поле поиска было удалено из этого файла, так как оно централизовано в App.vue -->
+
+    <!-- Индикатор загрузки -->
+    <div v-if="isLoading" class="text-center mt-16">
+      <v-progress-circular indeterminate color="primary" size="64"></v-progress-circular>
+    </div>
+
+    <!-- Основной контент, когда загрузка завершена -->
     <div v-else>
+      <!-- Режим отображения: Карточки -->
       <div v-if="settings.viewMode === 'card'">
         <v-card v-for="item in sortedAndFilteredItems" :key="item.id" class="mb-4" elevation="2">
           <v-card-title class="font-weight-bold d-flex align-center">
-            <v-btn :icon="settings.isPinned(item.id) ? 'mdi-pin' : 'mdi-pin-outline'" :color="settings.isPinned(item.id) ? 'primary' : 'grey'" variant="text" size="small" class="mr-2" @click.stop="settings.togglePin(item.id)"></v-btn>
+            <!-- Кнопка закрепления -->
+            <v-btn
+              :icon="settings.isPinned(item.id) ? 'mdi-pin' : 'mdi-pin-outline'"
+              :color="settings.isPinned(item.id) ? 'primary' : 'grey'"
+              variant="text"
+              size="small"
+              class="mr-2"
+              @click.stop="settings.togglePin(item.id)"
+            ></v-btn>
+            <!-- Заголовок -->
             <span @click="viewItem(item.id)" class="flex-grow-1" style="cursor: pointer;">{{ item.title }}</span>
           </v-card-title>
           <v-card-text class="pb-0" @click="viewItem(item.id)" style="cursor: pointer;">
             <p class="mb-4 text-medium-emphasis">{{ getPreviewText(item) }}</p>
-            <v-chip-group><v-chip v-for="tag in item.tags" :key="tag" size="small" color="primary" variant="tonal">{{ tag }}</v-chip></v-chip-group>
+            <v-chip-group>
+              <v-chip v-for="tag in item.tags" :key="tag" size="small" color="primary" variant="tonal">{{ tag }}</v-chip>
+            </v-chip-group>
           </v-card-text>
           <v-card-actions>
             <v-spacer></v-spacer>
@@ -19,10 +38,19 @@
           </v-card-actions>
         </v-card>
       </div>
+
+      <!-- Режим отображения: Компактный список -->
       <v-list v-else-if="settings.viewMode === 'compact'" lines="one" density="compact">
         <v-list-item v-for="item in sortedAndFilteredItems" :key="item.id" @click="viewItem(item.id)">
           <template v-slot:prepend>
-            <v-btn :icon="settings.isPinned(item.id) ? 'mdi-pin' : 'mdi-pin-outline'" :color="settings.isPinned(item.id) ? 'primary' : 'grey'" variant="text" size="x-small" class="mr-2" @click.stop="settings.togglePin(item.id)"></v-btn>
+            <v-btn
+              :icon="settings.isPinned(item.id) ? 'mdi-pin' : 'mdi-pin-outline'"
+              :color="settings.isPinned(item.id) ? 'primary' : 'grey'"
+              variant="text"
+              size="x-small"
+              class="mr-2"
+              @click.stop="settings.togglePin(item.id)"
+            ></v-btn>
           </template>
           <v-list-item-title>{{ item.title }}</v-list-item-title>
           <template v-slot:append>
@@ -31,12 +59,30 @@
           </template>
         </v-list-item>
       </v-list>
+
+      <!-- Сообщение, если заметок не найдено -->
       <div v-if="!isLoading && sortedAndFilteredItems.length === 0" class="text-center text-grey-darken-1 mt-16">
         <v-icon size="48" class="mb-2">mdi-note-off-outline</v-icon>
         <p>{{ $t('noNotesFound') }}</p>
       </div>
     </div>
-    <v-btn icon="mdi-plus" location="bottom right" size="large" color="surface" position="fixed" variant="elevated" elevation="8" class="ma-4" @click="router.push({ name: 'ItemAdd' })"><v-icon color="primary">mdi-plus</v-icon></v-btn>
+
+    <!-- Плавающая кнопка для добавления новой заметки -->
+    <v-btn
+      icon="mdi-plus"
+      location="bottom right"
+      size="large"
+      color="surface"
+      position="fixed"
+      variant="elevated"
+      elevation="8"
+      class="ma-4"
+      @click="router.push({ name: 'ItemAdd' })"
+    >
+      <v-icon color="primary">mdi-plus</v-icon>
+    </v-btn>
+
+    <!-- Диалог подтверждения удаления -->
     <v-dialog v-model="isDeleteDialogOpen" persistent max-width="400px">
       <v-card>
         <v-card-title class="text-h5">{{ $t('confirmDeletion') }}</v-card-title>
@@ -61,37 +107,58 @@ import { useI18n } from 'vue-i18n';
 import { useSettingsStore } from '@/stores/settings';
 
 const router = useRouter();
-const { t, locale } = useI18n(); // Получаем и t, и locale
+const { t, locale } = useI18n();
 const { items, deleteItem } = useItems();
 const { search, selectedTags } = useFilters();
-const { setAppBar, resetAppBar, isSearchActive, isFilterSheetOpen } = useAppBar();
+const { setAppBar, resetAppBar, isFilterSheetOpen } = useAppBar();
 const settings = useSettingsStore();
-const isLoading = ref(true);
-watch(items, (newItems) => { if (newItems) isLoading.value = false; }, { immediate: true });
 
+const isLoading = ref(true);
+watch(items, (newItems) => {
+  if (newItems) isLoading.value = false;
+}, { immediate: true });
+
+// Функция для настройки верхней панели навигации
 const setupAppBar = () => {
   setAppBar({
     title: t('appTitle'),
     showBackButton: false,
+    isSearchVisible: true, // Показываем иконку поиска на этой странице
     actions: [
-      { icon: 'mdi-magnify', onClick: () => { isSearchActive.value = true; } },
       { icon: 'mdi-filter-variant', onClick: () => { isFilterSheetOpen.value = true; } },
     ]
   });
 };
+
+// Настраиваем AppBar при загрузке компонента и сбрасываем при уходе
 onMounted(setupAppBar);
 onUnmounted(resetAppBar);
-
-// ✅ ИСПРАВЛЕНО: Следим за изменением языка (locale), а не за функцией t
+// Также обновляем заголовок при смене языка
 watch(locale, setupAppBar);
 
+// Логика для диалога удаления
 const isDeleteDialogOpen = ref(false);
 const itemToDeleteId = ref(null);
 const itemToDelete = computed(() => itemToDeleteId.value ? items.value.find(item => item.id === itemToDeleteId.value) : null);
-function openDeleteDialog(id) { itemToDeleteId.value = id; isDeleteDialogOpen.value = true; }
-function closeDeleteDialog() { isDeleteDialogOpen.value = false; itemToDeleteId.value = null; }
-async function confirmDeletion() { if (itemToDeleteId.value) { await deleteItem(itemToDeleteId.value); } closeDeleteDialog(); }
 
+function openDeleteDialog(id) {
+  itemToDeleteId.value = id;
+  isDeleteDialogOpen.value = true;
+}
+
+function closeDeleteDialog() {
+  isDeleteDialogOpen.value = false;
+  itemToDeleteId.value = null;
+}
+
+async function confirmDeletion() {
+  if (itemToDeleteId.value) {
+    await deleteItem(itemToDeleteId.value);
+  }
+  closeDeleteDialog();
+}
+
+// Вспомогательная функция для получения превью текста
 function getPreviewText(item) {
   const htmlContent = item.textVersions?.be || item.textVersions?.ru || item.textVersions?.la || Object.values(item.textVersions || {}).find(v => v) || '';
   if (!htmlContent) return 'Нет содержимого';
@@ -100,21 +167,35 @@ function getPreviewText(item) {
   return text.length > 150 ? text.substring(0, 150) + '...' : text;
 }
 
+// Вычисляемое свойство для фильтрации и сортировки заметок
 const sortedAndFilteredItems = computed(() => {
   if (isLoading.value) return [];
   const searchLower = search.value.toLowerCase().trim();
+
   const filtered = items.value.filter(item => {
+    // Фильтр по тегам
     const tagMatch = selectedTags.value.length === 0 || (item.tags && selectedTags.value.every(tag => item.tags.includes(tag)));
     if (!tagMatch) return false;
+    
+    // Фильтр по поисковой строке
     if (searchLower) {
       const fullText = (item.title + ' ' + Object.values(item.textVersions || {}).join(' ')).toLowerCase();
       return fullText.includes(searchLower);
     }
+    
     return true;
   });
+
+  // Сортировка по закрепленным заметкам
   return filtered.slice().sort((a, b) => (settings.isPinned(b.id) - settings.isPinned(a.id)));
 });
 
-function viewItem(id) { router.push({ name: 'ItemView', params: { id } }); }
-function navigateToEdit(id) { router.push({ name: 'ItemEdit', params: { id } }); }
+// Функции для навигации
+function viewItem(id) {
+  router.push({ name: 'ItemView', params: { id } });
+}
+
+function navigateToEdit(id) {
+  router.push({ name: 'ItemEdit', params: { id } });
+}
 </script>

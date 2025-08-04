@@ -15,12 +15,16 @@ export const useSettingsStore = defineStore('settings', () => {
 
   // ... (вся логика для темы, размера шрифта, языка, вида списка, закрепленных заметок остается без изменений) ...
   const currentTheme = ref(localStorage.getItem('theme') || 'light');
-  theme.global.name.value = currentTheme.value;
-  function toggleTheme() {
-    currentTheme.value = currentTheme.value === 'light' ? 'dark' : 'light';
+// Устанавливаем тему при инициализации
+if (theme.global.name.value !== currentTheme.value) {
     theme.global.name.value = currentTheme.value;
-    localStorage.setItem('theme', currentTheme.value);
-  }
+}
+  function toggleTheme() {
+  const newTheme = currentTheme.value === 'light' ? 'dark' : 'light';
+  currentTheme.value = newTheme;
+  theme.global.name.value = newTheme; // Vuetify 3.5+ снова рекомендует этот метод
+  localStorage.setItem('theme', newTheme);
+}
   const fontSizeMultiplier = ref(parseFloat(localStorage.getItem('fontSizeMultiplier')) || 1.0);
   watch(fontSizeMultiplier, (newMultiplier) => { document.documentElement.style.setProperty('--font-size-multiplier', newMultiplier); }, { immediate: true });
   function increaseFontSize() { if (fontSizeMultiplier.value < 1.5) fontSizeMultiplier.value += 0.1; }
@@ -33,7 +37,16 @@ export const useSettingsStore = defineStore('settings', () => {
   const pinnedIds = ref(JSON.parse(localStorage.getItem('pinnedIds') || '[]'));
   watch(pinnedIds, (newIds) => { localStorage.setItem('pinnedIds', JSON.stringify(newIds)); }, { deep: true });
   function isPinned(noteId) { return pinnedIds.value.includes(noteId); }
-  function togglePin(noteId) { /* ... */ }
+ function togglePin(noteId) {
+  const index = pinnedIds.value.indexOf(noteId);
+  if (index > -1) {
+    // Если id уже есть, удаляем его
+    pinnedIds.value.splice(index, 1);
+  } else {
+    // Если id нет, добавляем его в начало массива
+    pinnedIds.value.unshift(noteId);
+  }
+}
   
 
   // ✅ --- НОВЫЙ БЛОК: УПРАВЛЕНИЕ КАТЕГОРИЯМИ МЕНЮ --- ✅

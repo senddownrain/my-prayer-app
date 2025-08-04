@@ -1,6 +1,6 @@
 <template>
   <v-app :theme="settings.currentTheme">
-    <!-- ✅ НАВИГАЦИОННОЕ МЕНЮ -->
+    <!-- Боковое навигационное меню -->
     <v-navigation-drawer v-model="isDrawerOpen" temporary>
       <v-list nav>
         <v-list-item 
@@ -19,19 +19,21 @@
           :title="category.name"
           @click="navigateToCategory(category.tag)"
         ></v-list-item>
-
+        
         <v-divider></v-divider>
-
+        
         <v-list-item 
           prepend-icon="mdi-cog-outline" 
           :title="$t('settings')"
           :to="{ name: 'Settings' }"
         ></v-list-item>
+        
         <v-list-item 
           prepend-icon="mdi-information-outline" 
           title="О нас"
           :to="{ name: 'About' }"
         ></v-list-item>
+        
          <v-list-item 
           prepend-icon="mdi-shield-crown-outline" 
           title="Админка"
@@ -40,20 +42,41 @@
       </v-list>
     </v-navigation-drawer>
 
-    <!-- ✅ ОБНОВЛЕННЫЙ APPBAR -->
+    <!-- Верхняя панель (AppBar) с логикой переключения на поиск -->
     <v-app-bar :elevation="2" app>
-      <!-- Либо кнопка меню, либо кнопка "назад" -->
-      <v-app-bar-nav-icon v-if="appBar.isMenu" @click="isDrawerOpen = !isDrawerOpen"></v-app-bar-nav-icon>
-      <v-btn v-else icon="mdi-arrow-left" @click="router.back()"></v-btn>
+      <!-- Состояние 1: Обычная панель (поиск НЕ активен) -->
+      <template v-if="!isSearchActive">
+        <!-- Кнопка меню или кнопка "назад" -->
+        <v-btn v-if="!appBar.showBackButton" icon="mdi-menu" @click="isDrawerOpen = !isDrawerOpen"></v-btn>
+        <v-btn v-else icon="mdi-arrow-left" @click="router.back()"></v-btn>
+        
+        <v-toolbar-title>{{ appBar.title }}</v-toolbar-title>
+        <v-spacer></v-spacer>
+
+        <!-- Иконка для активации поиска -->
+        <v-btn v-if="appBar.isSearchVisible" icon="mdi-magnify" @click="isSearchActive = true"></v-btn>
+        
+        <!-- Другие кнопки действий (Сохранить, Редактировать, Фильтр) -->
+        <v-btn v-for="action in appBar.actions" :key="action.icon" :icon="action.icon" @click="action.onClick"></v-btn>
+      </template>
       
-      <v-toolbar-title>{{ appBar.title }}</v-toolbar-title>
-      <v-spacer></v-spacer>
-      <!-- Кнопки действий остаются как были -->
-      <v-btn v-for="action in appBar.actions" :key="action.icon" icon @click="action.onClick"></v-btn>
+      <!-- Состояние 2: Панель поиска (поиск АКТИВЕН) -->
+      <template v-else>
+        <v-text-field
+          v-model="search"
+          :placeholder="$t('searchPlaceholder')"
+          variant="solo-inverted"
+          flat
+          hide-details
+          autofocus
+          prepend-inner-icon="mdi-arrow-left"
+          @click:prepend-inner="isSearchActive = false"
+        ></v-text-field>
+      </template>
     </v-app-bar>
 
+    <!-- Основной контент приложения -->
     <v-main>
-      <!-- RouterView и FilterSheet без изменений -->
       <router-view />
       <FilterSheet />
     </v-main>
@@ -67,17 +90,21 @@ import { useAppBar } from '@/composables/useAppBar';
 import { useFilters } from '@/composables/useFilters';
 import FilterSheet from '@/components/FilterSheet.vue';
 
+// Инициализация хуков и хранилищ
 const settings = useSettingsStore();
 const router = useRouter();
-const { appBar, isDrawerOpen } = useAppBar();
-const { selectedTags } = useFilters();
 
+// Получение реактивных переменных из composables
+const { appBar, isDrawerOpen, isSearchActive } = useAppBar();
+const { selectedTags, search } = useFilters();
+
+// Функция для навигации по категориям из бокового меню
 function navigateToCategory(tag) {
-  // Обновляем фильтр
+  // Обновляем фильтр по тегам
   selectedTags.value = tag ? [tag] : [];
-  // Переходим на главную страницу
+  // Переходим на главную страницу со списком
   router.push({ name: 'ItemsList' });
-  // Закрываем меню
+  // Закрываем боковое меню
   isDrawerOpen.value = false;
 }
 </script>
