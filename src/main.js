@@ -1,18 +1,18 @@
 import { createApp } from 'vue'
+import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import vuetify from './plugins/vuetify'
-import './firebase'; 
+import i18n from './i18n'
+import './firebase' // Импортируем для инициализации Firebase
 import '@mdi/font/css/materialdesignicons.css'
-import { createPinia } from 'pinia'; 
-import './styles/main.css'; // Убедитесь, что эта строка есть
-import i18n from './i18n';
+import './styles/main.css'
 
-const pinia = createPinia(); 
+const app = createApp(App)
 
-createApp(App)
-  .use(router)
-  .use(vuetify)
-  .use(pinia)
-  .use(i18n)
-  .mount('#app')
+app.use(createPinia())
+app.use(router)
+app.use(vuetify)
+app.use(i18n)
+
+app.mount('#app')

@@ -2,7 +2,6 @@
   <v-container>
     <v-list lines="two" subheader>
       <v-list-subheader>{{ $t('appearance') }}</v-list-subheader>
-      
       <v-list-item :title="$t('viewMode')" :subtitle="$t('viewModeHint')">
         <template v-slot:prepend><v-icon>mdi-view-dashboard-outline</v-icon></template>
         <template v-slot:append>
@@ -12,12 +11,10 @@
           </v-btn-toggle>
         </template>
       </v-list-item>
-
       <v-list-item :title="$t('darkTheme')" :subtitle="$t('themeIs', { themeName: $t('themeNames.' + settings.currentTheme) })">
         <template v-slot:prepend><v-icon>mdi-theme-light-dark</v-icon></template>
         <template v-slot:append><v-switch :model-value="settings.currentTheme === 'dark'" @update:model-value="settings.toggleTheme" inset color="primary" hide-details></v-switch></template>
       </v-list-item>
-      
       <v-list-item :title="$t('fontSize')" :subtitle="$t('fontSizeHint')">
         <template v-slot:prepend><v-icon>mdi-format-font-size-increase</v-icon></template>
         <template v-slot:append>
@@ -29,7 +26,6 @@
         </template>
       </v-list-item>
     </v-list>
-
     <v-divider class="my-4"></v-divider>
     <v-card variant="outlined" class="pa-4">
       <h3 class="v-list-subheader pa-0 mb-2">{{ $t('preview') }}</h3>
@@ -38,7 +34,6 @@
         <p class="text-caption mt-2">А это — текст поменьше, для примера.</p>
       </div>
     </v-card>
-
     <v-divider class="my-4"></v-divider>
     <v-list>
       <v-list-subheader>{{ $t('language') }}</v-list-subheader>
@@ -50,37 +45,39 @@
         ></v-select>
       </v-list-item>
     </v-list>
-
-     <!-- ✅ --- НОВЫЙ РАЗДЕЛ: НАСТРОЙКА КАТЕГОРИЙ --- ✅ -->
+     <!-- ✅ --- ОБНОВЛЕННЫЙ РАЗДЕЛ: НАСТРОЙКА КАТЕГОРИЙ --- ✅ -->
     <v-divider class="my-4"></v-divider>
     <v-list-subheader>Категории в меню</v-list-subheader>
     <v-list-item v-for="(cat, index) in settings.menuCategories" :key="index">
       <v-list-item-title>{{ cat.name }}</v-list-item-title>
-      <v-list-item-subtitle>Фильтр по тегу: `{{ cat.tag }}`</v-list-item-subtitle>
+       <!-- ✅ Отображаем все теги для категории -->
+      <v-list-item-subtitle>Фильтр по тегам: `{{ cat.tags?.join(', ') }}`</v-list-item-subtitle>
       <template v-slot:append>
         <v-btn icon="mdi-delete-outline" variant="text" color="grey" @click="settings.removeCategory(index)"></v-btn>
       </template>
     </v-list-item>
-    
     <v-card variant="tonal" class="pa-4 mt-4">
       <h3 class="text-subtitle-1 mb-3">Добавить категорию</h3>
       <v-form @submit.prevent="onAddCategory">
         <v-text-field v-model="newCategory.name" label="Название категории" density="compact" variant="solo-filled" flat></v-text-field>
-        <v-autocomplete
-          v-model="newCategory.tag"
+        <!-- ✅ Заменяем v-autocomplete на v-combobox с multiple -->
+        <v-combobox
+          v-model="newCategory.tags"
           :items="allTags"
-          label="Выберите или введите тег"
+          label="Выберите или введите теги"
           density="compact"
           variant="solo-filled"
           flat
+          multiple
+          chips
+          clearable
           class="mt-2"
-        ></v-autocomplete>
+        ></v-combobox>
         <v-btn type="submit" color="primary" block class="mt-2">Добавить</v-btn>
       </v-form>
     </v-card>
   </v-container>
 </template>
-
 <script setup>
 import { onMounted, ref } from 'vue';
 import { useAppBar } from '@/composables/useAppBar';
@@ -89,10 +86,14 @@ import { useItems } from '@/composables/useItems';
 const { setAppBar } = useAppBar();
 const settings = useSettingsStore();
 const { allTags } = useItems(); // Получаем все доступные теги
-const newCategory = ref({ name: '', tag: '' });
+// ✅ newCategory теперь содержит массив tags
+const newCategory = ref({ name: '', tags: [] });
+
 function onAddCategory() {
-  settings.addCategory(newCategory.value);
-  newCategory.value = { name: '', tag: '' }; // Сбрасываем форму
+  if (newCategory.value.name && newCategory.value.tags.length > 0) {
+    settings.addCategory({ ...newCategory.value });
+    newCategory.value = { name: '', tags: [] }; // Сбрасываем форму
+  }
 }
 onMounted(() => {
   setAppBar({ title: 'Настройки', showBackButton: true });

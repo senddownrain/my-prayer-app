@@ -1,12 +1,12 @@
 <template>
   <v-container>
-    <div v-if="item">
+    <!-- ✅ Улучшенная логика отображения -->
+    <div v-if="!isLoading && item">
       <h2 class="text-h5 font-weight-bold mb-4">{{ item.title }}</h2>
       <div v-for="(text, lang) in availableVersions" :key="lang" class="mb-4">
         <h2 class="text-h6 font-weight-medium text-grey-darken-1 mb-2">{{ langNames[lang] }}</h2>
         <div v-html="text" class="note-content-area ProseMirror"></div>
       </div>
-
       <div v-if="linkedNotes.length > 0" class="mt-8">
         <v-divider class="mb-4"></v-divider>
         <h3 class="text-subtitle-1 font-weight-bold mb-3">Связанные заметки:</h3>
@@ -22,7 +22,6 @@
           </v-list-item>
         </v-list>
       </div>
-
       <div class="mt-6 text-body-2 text-medium-emphasis">
         <div v-if="item.source">
           <v-divider class="my-3"></v-divider>
@@ -33,6 +32,14 @@
         </div>
       </div>
     </div>
+    <!-- ✅ Состояние "не найдено" -->
+    <div v-else-if="!isLoading && !item" class="text-center mt-16">
+        <v-icon size="64" class="mb-4">mdi-file-question-outline</v-icon>
+        <h2 class="text-h5 mb-4">Заметка не найдена</h2>
+        <p class="text-medium-emphasis mb-6">Возможно, она была удалена или ссылка неверна.</p>
+        <v-btn color="primary" :to="{ name: 'ItemsList' }">Вернуться на главную</v-btn>
+    </div>
+    <!-- ✅ Состояние загрузки -->
     <div v-else class="text-center text-grey-darken-1 mt-16">
       <v-progress-circular indeterminate color="primary"></v-progress-circular>
     </div>
@@ -44,11 +51,13 @@ import { computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useItems } from '@/composables/useItems';
 import { useAppBar } from '@/composables/useAppBar';
+import { useAuthStore } from '@/stores/auth';
 
 const props = defineProps({ id: { type: String, required: true } });
 const router = useRouter();
-const { items } = useItems();
+const { items, isLoading } = useItems(); // ✅ Получаем isLoading
 const { setAppBar, resetAppBar } = useAppBar();
+const authStore = useAuthStore(); // ✅ Получаем хранилище авторизации
 
 const item = computed(() => items.value.find(i => i.id === props.id));
 const linkedNotes = computed(() => item.value?.linkedNoteIds?.map(id => items.value.find(note => note.id === id)).filter(Boolean) || []);
@@ -60,14 +69,15 @@ const updateAppBarForItem = (currentItem) => {
     setAppBar({
       title: currentItem.title,
       showBackButton: true,
-      actions: [{ icon: 'mdi-pencil', onClick: () => router.push({ name: 'ItemEdit', params: { id: currentItem.id } }) }]
+      // ✅ Кнопка редактирования видна только администратору
+      actions: authStore.user ? [{ icon: 'mdi-pencil', onClick: () => router.push({ name: 'ItemEdit', params: { id: currentItem.id } }) }] : []
     });
   }
 };
 
 onMounted(() => {
-  // Следим за изменением item и сразу вызываем updateAppBarForItem
   watch(item, updateAppBarForItem, { immediate: true });
 });
+
 onUnmounted(resetAppBar);
 </script>

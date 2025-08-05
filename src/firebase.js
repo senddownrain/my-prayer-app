@@ -1,9 +1,8 @@
 import { initializeApp } from "firebase/app";
-// ✅ 1. Импортируем initializeFirestore и persistentLocalCache
+// ✅ Возвращаем правильную инициализацию Firestore с поддержкой оффлайн-кэширования
 import { initializeFirestore, persistentLocalCache } from "firebase/firestore";
 
 const firebaseConfig = {
-  // ... ваша конфигурация Firebase без изменений ...
   apiKey: "AIzaSyDF2TD4MTcKiBChKRssauvL-nNyT4Am9N0",
   authDomain: "molitwy.firebaseapp.com",
   projectId: "molitwy",
@@ -14,13 +13,10 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// ✅ 2. Используем НОВЫЙ метод инициализации с настройками кэша
-// Это заменяет и getFirestore(), и enableIndexedDbPersistence()
+// ✅ Используем НОВЫЙ метод инициализации с настройками кэша,
+// который заменяет и getFirestore(), и enableIndexedDbPersistence()
 const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({
-    // Можно добавить настройки, например, для работы в нескольких вкладках
-    // tabManager: 'multi-tab' 
-  })
+  localCache: persistentLocalCache({})
 });
 
 // Экспортируем db, как и раньше

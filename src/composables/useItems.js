@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { db } from '@/firebase';
 import { 
   collection, 
@@ -11,13 +11,13 @@ import {
   query,
   orderBy
 } from 'firebase/firestore';
+import { useSettingsStore } from '@/stores/settings';
 
 const items = ref([]);
 const allTags = ref([]);
+const isLoading = ref(true); // ✅ Добавляем состояние загрузки
 
 const itemsCollection = collection(db, 'items');
-// ✅ --- УБИРАЕМ СОРТИРОВКУ ПО isPinned ---
-// Возвращаемся к простой сортировке только по дате создания.
 const itemsQuery = query(itemsCollection, orderBy('createdAt', 'desc'));
 
 onSnapshot(itemsQuery, (snapshot) => {
@@ -26,12 +26,22 @@ onSnapshot(itemsQuery, (snapshot) => {
     ...doc.data()
   }));
   allTags.value = [...new Set(items.value.flatMap(item => item.tags || []))].sort();
+  isLoading.value = false; // ✅ Выключаем загрузку, когда данные получены
+}, (error) => {
+  console.error("Ошибка получения данных из Firestore: ", error);
+  isLoading.value = false;
 });
 
 export function useItems() {
+  const settings = useSettingsStore();
+
+  // ✅ Создаем вычисляемое свойство для сортировки по закрепленным заметкам
+  const sortedItems = computed(() => {
+    if (!items.value) return [];
+    return [...items.value].sort((a, b) => (settings.isPinned(b.id) - settings.isPinned(a.id)));
+  });
 
   const addItem = async (data) => {
-    // ✅ Убираем поле isPinned при создании, оно больше не нужно в базе
     const docRef = await addDoc(itemsCollection, {
       ...data,
       createdAt: serverTimestamp()
@@ -49,14 +59,12 @@ export function useItems() {
     await updateDoc(doc(db, 'items', id), dataToUpdate);
   };
 
-  // ✅ УДАЛЯЕМ функцию togglePin отсюда. Ее больше здесь нет.
-
   return {
-    items,
+    items: sortedItems, // ✅ Экспортируем уже отсортированный массив
     allTags,
+    isLoading, // ✅ Экспортируем состояние загрузки
     addItem,
     deleteItem,
     updateItem,
-    // И не экспортируем ее.
   };
 }

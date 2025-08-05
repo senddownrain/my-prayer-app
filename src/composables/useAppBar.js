@@ -10,6 +10,8 @@ const appBar = ref({
 
 const isDrawerOpen = ref(false);
 const isSearchActive = ref(false); // Активен ли режим поиска (поле ввода на весь appbar)
+// ✅ Добавляем глобальную переменную для состояния шторки фильтра
+const isFilterSheetOpen = ref(false);
 
 export function useAppBar() {
   const setAppBar = (config) => {
@@ -32,6 +34,7 @@ export function useAppBar() {
     appBar, 
     isDrawerOpen, 
     isSearchActive, 
+    isFilterSheetOpen,
     setAppBar, 
     resetAppBar 
   };

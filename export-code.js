@@ -5,6 +5,11 @@ const path = require('path');
 const pathsToExport = [
   'package.json',
   'vite.config.js',
+  'firebase.json',
+  'index.html',
+  'seed-db.js',
+  'vite.config.mjs',
+  'public',
   'src' // Экспортируем всю папку src
 ];
 

@@ -61,11 +61,185 @@ export default defineConfig({
 })
 ```
 
+### firebase.json
+```
+{
+  "hosting": {
+    "public": "dist",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
+```
+
+### index.html
+```
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- ✅ META-ТЕГИ ДЛЯ PWA -->
+    <meta name="theme-color" content="#1867C0">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180">
+    <link rel="mask-icon" href="/mask-icon.svg" color="#FFFFFF">
+    
+    <title>Мои Молитвы</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
+```
+
+### seed-db.js
+```
+const { initializeApp } = require("firebase/app");
+// ✅ --- ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ: Добавил 'doc' в список --- ✅
+const { getFirestore, collection, getDocs, writeBatch, addDoc, serverTimestamp, updateDoc, doc } = require("firebase/firestore");
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDF2TD4MTcKiBChKRssauvL-nNyT4Am9N0",
+  authDomain: "molitwy.firebaseapp.com",
+  projectId: "molitwy",
+  storageBucket: "molitwy.firebasestorage.app",
+  messagingSenderId: "654293224787",
+  appId: "1:654293224787:web:5f4fce64abf5ba1b1ea5a6"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const prayersData = [
+  { id: "pater_noster", title: "Отче наш", tags: ["основные"], textVersions: { ru: "<p>Текст...</p>", be: "<p>Тэкст...</p>", la: "<p>Text...</p>" } },
+  { id: "ave_maria", title: "Радуйся, Мария", tags: ["основные", "марианские"], textVersions: { ru: "<p>Текст...</p>", be: "<p>Тэкст...</p>", la: "<p>Text...</p>" } },
+  { id: "credo", title: "Символ веры", tags: ["основные"], textVersions: { ru: "<p>Текст...</p>", be: "<p>Тэкст...</p>", la: "<p>Text...</p>" }, linkedNoteIds: ["pater_noster", "ave_maria"] },
+  { id: "gloria_patri", title: "Слава", tags: ["основные"], textVersions: { ru: "<p>Текст...</p>", be: "<p>Тэкст...</p>", la: "<p>Text...</p>" }, linkedNoteIds: ["pater_noster"] },
+];
+
+async function clearCollection(db, collectionPath) {
+  const collectionRef = collection(db, collectionPath);
+  const snapshot = await getDocs(collectionRef);
+  if (snapshot.empty) { console.log(`Коллекция '${collectionPath}' уже пуста.`); return; }
+  const batch = writeBatch(db);
+  snapshot.docs.forEach(doc => { batch.delete(doc.ref); });
+  await batch.commit();
+  console.log(`Все документы в коллекции '${collectionPath}' были удалены.`);
+}
+
+async function seedDatabase() {
+  try {
+    console.log("Очистка коллекции 'items'...");
+    await clearCollection(db, 'items');
+    console.log("Наполнение базы новыми данными...");
+    const itemsCollection = collection(db, 'items');
+    const addedIds = {};
+
+    for (const prayer of prayersData) {
+      const dataToAdd = {
+        title: prayer.title,
+        tags: prayer.tags,
+        textVersions: prayer.textVersions,
+        createdAt: serverTimestamp()
+      };
+      
+      const docRef = await addDoc(itemsCollection, dataToAdd);
+      addedIds[prayer.id] = docRef.id;
+      console.log(`- Добавлена: "${prayer.title}"`);
+    }
+
+    console.log("Обновление связей...");
+    for (const prayer of prayersData) {
+        if (prayer.linkedNoteIds && prayer.linkedNoteIds.length > 0) {
+            const realLinkedIds = prayer.linkedNoteIds.map(tempId => addedIds[tempId]);
+            const realDocId = addedIds[prayer.id];
+            // Теперь и doc(), и updateDoc() импортированы и будут работать
+            await updateDoc(doc(db, "items", realDocId), { linkedNoteIds: realLinkedIds });
+            console.log(`- Обновлены связи для "${prayer.title}"`);
+        }
+    }
+    console.log("Наполнение базы завершено!");
+  } catch (error) {
+    console.error("КРИТИЧЕСКАЯ ошибка:", error);
+  }
+}
+
+seedDatabase();
+```
+
+### vite.config.mjs
+```
+
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
+import { VitePWA } from 'vite-plugin-pwa'
+import path from 'path' 
+
+export default defineConfig({
+  plugins: [
+    vue({ 
+      template: { transformAssetUrls }
+    }),
+    vuetify({
+      autoImport: true,
+    }),
+    VitePWA({
+      registerType: 'autoUpdate',
+      injectRegister: 'auto',
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,json,vue,txt,woff2}'],
+        cleanupOutdatedCaches: true,
+      },
+      manifest: {
+        name: 'Мое Vue Приложение',
+        short_name: 'VueApp',
+        description: 'Простое приложение на Vue, Vuetify и Firebase',
+        theme_color: '#ffffff',
+        background_color: '#ffffff',
+        display: 'standalone',
+        start_url: '.',
+        icons: [
+          {
+            src: 'img/icons/icon-192x192.png',
+            sizes: '192x192',
+            type: 'image/png'
+          },
+          {
+            src: 'img/icons/icon-512x512.png',
+            sizes: '512x512',
+            type: 'image/png'
+          }
+        ]
+      }
+    })
+  ],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+})
+
+
+```
+
 ### src/App.vue
 ```
 <template>
   <v-app :theme="settings.currentTheme">
-    <!-- ✅ НАВИГАЦИОННОЕ МЕНЮ -->
     <v-navigation-drawer v-model="isDrawerOpen" temporary>
       <v-list nav>
         <v-list-item 
@@ -73,77 +247,132 @@ export default defineConfig({
           :title="$t('allPrayers')"
           @click="navigateToCategory(null)"
         ></v-list-item>
-        
         <v-divider></v-divider>
         <v-list-subheader>Категории</v-list-subheader>
-        
         <v-list-item
           v-for="category in settings.menuCategories"
           :key="category.name"
           prepend-icon="mdi-label-outline"
           :title="category.name"
-          @click="navigateToCategory(category.tag)"
+          @click="navigateToCategory(category)"
         ></v-list-item>
-
         <v-divider></v-divider>
-
+        
+        <!-- ✅ Настройки теперь доступны ВСЕМ пользователям -->
         <v-list-item 
           prepend-icon="mdi-cog-outline" 
           :title="$t('settings')"
           :to="{ name: 'Settings' }"
         ></v-list-item>
+
+        <!-- Ссылки, видимые только администратору -->
+        <v-list-item 
+          v-if="authStore.user"
+          prepend-icon="mdi-shield-crown-outline" 
+          title="Админка"
+          :to="{ name: 'Admin' }"
+        ></v-list-item>
+        
+        <!-- Общие ссылки -->
         <v-list-item 
           prepend-icon="mdi-information-outline" 
           title="О нас"
           :to="{ name: 'About' }"
         ></v-list-item>
-         <v-list-item 
-          prepend-icon="mdi-shield-crown-outline" 
-          title="Админка"
-          :to="{ name: 'Admin' }"
+        <v-divider></v-divider>
+
+        <!-- Кнопка Выход / Вход -->
+        <v-list-item
+          v-if="authStore.user"
+          prepend-icon="mdi-logout"
+          title="Выход"
+          @click="handleLogout"
+        ></v-list-item>
+         <v-list-item
+          v-else
+          prepend-icon="mdi-login"
+          title="Вход"
+          :to="{ name: 'Login' }"
         ></v-list-item>
       </v-list>
     </v-navigation-drawer>
 
-    <!-- ✅ ОБНОВЛЕННЫЙ APPBAR -->
     <v-app-bar :elevation="2" app>
-      <!-- Либо кнопка меню, либо кнопка "назад" -->
-      <v-app-bar-nav-icon v-if="appBar.isMenu" @click="isDrawerOpen = !isDrawerOpen"></v-app-bar-nav-icon>
-      <v-btn v-else icon="mdi-arrow-left" @click="router.back()"></v-btn>
-      
-      <v-toolbar-title>{{ appBar.title }}</v-toolbar-title>
-      <v-spacer></v-spacer>
-      <!-- Кнопки действий остаются как были -->
-      <v-btn v-for="action in appBar.actions" :key="action.icon" icon @click="action.onClick"></v-btn>
+        <v-btn v-if="!appBar.showBackButton" icon="mdi-menu" @click="isDrawerOpen = !isDrawerOpen"></v-btn>
+        <v-btn v-else icon="mdi-arrow-left" @click="router.back()"></v-btn>
+        
+        <v-expand-x-transition>
+            <v-text-field
+                v-if="isSearchActive"
+                v-model="search"
+                :placeholder="$t('searchPlaceholder')"
+                variant="solo-inverted"
+                flat
+                hide-details
+                autofocus
+                density="compact"
+                @blur="isSearchActive = false; search = ''"
+            ></v-text-field>
+        </v-expand-x-transition>
+
+        <v-toolbar-title v-if="!isSearchActive">
+            {{ appBar.title }}
+        </v-toolbar-title>
+
+        <v-spacer v-if="!isSearchActive"></v-spacer>
+
+        <template v-if="!isSearchActive">
+            <v-btn v-if="appBar.isSearchVisible" icon="mdi-magnify" @click="isSearchActive = true"></v-btn>
+            <v-btn v-for="action in appBar.actions" :key="action.icon" :icon="action.icon" @click="action.onClick"></v-btn>
+        </template>
     </v-app-bar>
 
     <v-main>
-      <!-- RouterView и FilterSheet без изменений -->
       <router-view />
       <FilterSheet />
     </v-main>
+
+    <NotificationSnackbar ref="snackbar" />
   </v-app>
 </template>
 
 <script setup>
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useSettingsStore } from '@/stores/settings';
 import { useAppBar } from '@/composables/useAppBar';
 import { useFilters } from '@/composables/useFilters';
+import { useAuthStore } from '@/stores/auth';
+import { notifier } from '@/composables/useNotifier';
 import FilterSheet from '@/components/FilterSheet.vue';
+import NotificationSnackbar from '@/components/NotificationSnackbar.vue';
 
 const settings = useSettingsStore();
 const router = useRouter();
-const { appBar, isDrawerOpen } = useAppBar();
-const { selectedTags } = useFilters();
+const authStore = useAuthStore();
 
-function navigateToCategory(tag) {
-  // Обновляем фильтр
-  selectedTags.value = tag ? [tag] : [];
-  // Переходим на главную страницу
-  router.push({ name: 'ItemsList' });
-  // Закрываем меню
+const { appBar, isDrawerOpen, isSearchActive } = useAppBar();
+const { selectedTags, search } = useFilters();
+const snackbar = ref(null);
+
+onMounted(() => {
+  notifier.value = snackbar.value;
+});
+
+function navigateToCategory(category) {
+  selectedTags.value = category ? (category.tags || []) : [];
+  
+  if (router.currentRoute.value.name !== 'ItemsList') {
+    router.push({ name: 'ItemsList' });
+  }
+  
   isDrawerOpen.value = false;
+}
+
+// ✅ Добавляем отдельную функцию для выхода, чтобы закрывать меню
+async function handleLogout() {
+    isDrawerOpen.value = false;
+    await authStore.logout();
 }
 </script>
 ```
@@ -207,45 +436,119 @@ onMounted(() => {
 ```
 <template>
   <div v-if="editor" class="editor-container">
+    <!-- ✅ ОБНОВЛЕННАЯ ПАНЕЛЬ ИНСТРУМЕНТОВ -->
     <div class="editor-toolbar">
-      <v-btn-toggle v-model="textStyle" mandatory density="compact" variant="outlined">
-        <v-btn value="paragraph">{{ $t('style.normal') }}</v-btn>
-        <v-btn value="heading-2">{{ $t('style.h2') }}</v-btn>
-        <v-btn value="heading-3">{{ $t('style.h3') }}</v-btn>
-        <v-btn value="rubric">{{ $t('style.rubric') }}</v-btn>
+      <!-- Выпадающий список для стилей -->
+      <v-menu offset-y>
+        <template v-slot:activator="{ props }">
+          <v-btn v-bind="props" density="compact" class="mr-2" style="min-width: 130px;">
+            {{ currentStyleLabel }}
+            <v-icon right>mdi-menu-down</v-icon>
+          </v-btn>
+        </template>
+        <v-list density="compact">
+          <v-list-item @click="editor.chain().focus().setParagraph().run()" :active="editor.isActive('paragraph')">
+            <v-list-item-title>{{ $t('style.normal') }}</v-list-item-title>
+          </v-list-item>
+          <v-list-item @click="editor.chain().focus().toggleHeading({ level: 2 }).run()" :active="editor.isActive('heading', { level: 2 })">
+            <v-list-item-title>{{ $t('style.h2') }}</v-list-item-title>
+          </v-list-item>
+          <v-list-item @click="editor.chain().focus().toggleHeading({ level: 3 }).run()" :active="editor.isActive('heading', { level: 3 })">
+            <v-list-item-title>{{ $t('style.h3') }}</v-list-item-title>
+          </v-list-item>
+           <v-list-item @click="editor.chain().focus().toggleRubric().run()" :active="editor.isActive('rubric')">
+            <v-list-item-title>{{ $t('style.rubric') }}</v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-menu>
+
+      <v-divider vertical class="mx-1"></v-divider>
+
+      <!-- Кнопки форматирования -->
+      <v-btn-toggle multiple density="compact" variant="text">
+        <v-btn @click="editor.chain().focus().toggleBold().run()" :class="{ 'v-btn--active': editor.isActive('bold') }" icon="mdi-format-bold"></v-btn>
+        <v-btn @click="editor.chain().focus().toggleItalic().run()" :class="{ 'v-btn--active': editor.isActive('italic') }" icon="mdi-format-italic"></v-btn>
       </v-btn-toggle>
 
-      <v-spacer></v-spacer>
-      
-      <v-btn-toggle density="compact" variant="outlined">
+      <v-divider vertical class="mx-1"></v-divider>
+
+       <!-- Списки -->
+      <v-btn-toggle multiple density="compact" variant="text">
+        <v-btn @click="editor.chain().focus().toggleBulletList().run()" :class="{ 'v-btn--active': editor.isActive('bulletList') }" icon="mdi-format-list-bulleted"></v-btn>
+        <v-btn @click="editor.chain().focus().toggleOrderedList().run()" :class="{ 'v-btn--active': editor.isActive('orderedList') }" icon="mdi-format-list-numbered"></v-btn>
+      </v-btn-toggle>
+       <v-divider vertical class="mx-1"></v-divider>
+      <!-- Выравнивание -->
+      <v-btn-toggle multiple density="compact" variant="text">
         <v-btn @click="editor.chain().focus().setTextAlign('left').run()" :class="{ 'v-btn--active': editor.isActive({ textAlign: 'left' }) }" icon="mdi-format-align-left"></v-btn>
         <v-btn @click="editor.chain().focus().setTextAlign('center').run()" :class="{ 'v-btn--active': editor.isActive({ textAlign: 'center' }) }" icon="mdi-format-align-center"></v-btn>
         <v-btn @click="editor.chain().focus().setTextAlign('justify').run()" :class="{ 'v-btn--active': editor.isActive({ textAlign: 'justify' }) }" icon="mdi-format-align-justify"></v-btn>
       </v-btn-toggle>
+
     </div>
+
     <editor-content :editor="editor" />
   </div>
 </template>
 
 <script setup>
-import { ref, watch, onBeforeUnmount, onMounted } from 'vue';
+import { computed, watch, onBeforeUnmount, ref } from 'vue';
 import { useEditor, EditorContent } from '@tiptap/vue-3';
 import StarterKit from '@tiptap/starter-kit';
 import TextAlign from '@tiptap/extension-text-align';
+import { Paragraph } from '@tiptap/extension-paragraph';
+import { Node } from '@tiptap/core';
+import { useI18n } from 'vue-i18n';
 
+const { t } = useI18n();
 const props = defineProps({ modelValue: { type: String, default: '' } });
 const emit = defineEmits(['update:modelValue']);
+
+// ✅ Пользовательское расширение для Рубрики
+const Rubric = Node.create({
+  name: 'rubric',
+  group: 'block',
+  content: 'inline*',
+  parseHTML() { return [{ tag: 'p.rubric', class: 'rubric' }]; },
+  renderHTML({ HTMLAttributes }) { return ['p', { ...HTMLAttributes, class: 'rubric' }, 0]; },
+  addCommands() {
+    return {
+      toggleRubric: () => ({ commands, state }) => {
+        const isActive = this.editor.isActive('rubric');
+        if (isActive) {
+          return commands.setNode('paragraph');
+        }
+        return commands.setNode(this.name);
+      },
+    };
+  },
+});
 
 const editor = useEditor({
   content: props.modelValue,
   extensions: [
-    StarterKit.configure({ heading: { levels: [2, 3] } }),
-    TextAlign.configure({ types: ['heading', 'paragraph'] }),
+    StarterKit.configure({
+      heading: { levels: [2, 3] }, // Заголовки h2 и h3
+      paragraph: false, // Отключаем стандартный, чтобы добавить свой
+    }),
+    Paragraph, // Добавляем стандартный параграф
+    TextAlign.configure({ types: ['heading', 'paragraph', 'rubric'] }),
+    Rubric, // Наше расширение для рубрик
   ],
-  onUpdate: () => { emit('update:modelValue', editor.value.getHTML()); },
+  onUpdate: () => {
+    emit('update:modelValue', editor.value.getHTML());
+  },
 });
 
-const textStyle = ref('paragraph');
+// ✅ Логика для отображения текущего стиля в кнопке
+const currentStyleLabel = computed(() => {
+  if (!editor.value) return '';
+  if (editor.value.isActive('heading', { level: 2 })) return t('style.h2');
+  if (editor.value.isActive('heading', { level: 3 })) return t('style.h3');
+  if (editor.value.isActive('rubric')) return t('style.rubric');
+  return t('style.normal');
+});
+
 
 watch(() => props.modelValue, (value) => {
   if (editor.value && editor.value.getHTML() !== value) {
@@ -253,28 +556,11 @@ watch(() => props.modelValue, (value) => {
   }
 });
 
-watch(textStyle, (newStyle) => {
-  if (!editor.value) return;
-  const chain = editor.value.chain().focus();
-  
-  const isRubric = editor.value.getAttributes('paragraph').class === 'rubric';
-
-  if (newStyle === 'paragraph') {
-    chain.setParagraph().run();
-  } else if (newStyle === 'heading-2') {
-    chain.toggleHeading({ level: 2 }).run();
-  } else if (newStyle === 'heading-3') {
-    chain.toggleHeading({ level: 3 }).run();
-  } else if (newStyle === 'rubric') {
-    if (isRubric) {
-        chain.setParagraph().run(); // Снимаем стиль
-    } else {
-        chain.setParagraph().setNode('paragraph', { class: 'rubric' }).run(); // Применяем
-    }
+onBeforeUnmount(() => {
+  if (editor.value) {
+    editor.value.destroy();
   }
 });
-
-onBeforeUnmount(() => { if (editor.value) editor.value.destroy(); });
 </script>
 ```
 
@@ -332,6 +618,7 @@ const { allTags } = useItems();
         <v-tab value="ru">Рус</v-tab>
         <v-tab value="la">Lat</v-tab>
       </v-tabs>
+      
       <v-window v-model="currentLangTab">
         <v-window-item value="be"><Editor v-model="form.textVersions.be" /></v-window-item>
         <v-window-item value="ru"><Editor v-model="form.textVersions.ru" /></v-window-item>
@@ -339,27 +626,46 @@ const { allTags } = useItems();
       </v-window>
 
       <v-combobox
-        v-model="form.tags" :items="allTags" :label="$t('tags')"
-        multiple chips clearable variant="outlined" class="mt-4"
+        v-model="form.tags"
+        :items="allTags"
+        :label="$t('tags')"
+        multiple
+        chips
+        clearable
+        variant="outlined"
+        class="mt-4"
       ></v-combobox>
 
       <v-divider class="my-4"></v-divider>
       <h3 class="text-subtitle-1 mb-2">Связанные заметки</h3>
       <div v-if="form.linkedNoteIds && form.linkedNoteIds.length > 0" class="mb-3">
-        <v-chip v-for="linkedNote in currentlyLinkedNotes" :key="linkedNote.id" class="mr-2 mb-2" closable @click:close="removeLink(linkedNote.id)">
+        <v-chip
+          v-for="linkedNote in currentlyLinkedNotes"
+          :key="linkedNote.id"
+          class="mr-2 mb-2"
+          closable
+          @click:close="removeLink(linkedNote.id)"
+        >
           {{ linkedNote.title }}
         </v-chip>
       </div>
       <v-btn @click="isLinkDialogOpen = true" prepend-icon="mdi-link-plus">Добавить связь</v-btn>
     </v-form>
-    
-    <div v-else class="text-center mt-16"><v-progress-circular indeterminate color="primary"></v-progress-circular></div>
+
+    <div v-else class="text-center mt-16">
+      <v-progress-circular indeterminate color="primary"></v-progress-circular>
+    </div>
 
     <v-dialog v-model="isLinkDialogOpen" max-width="500px">
       <v-card>
         <v-card-title>Выберите заметку для связи</v-card-title>
         <v-list>
-          <v-list-item v-for="note in availableNotesToLink" :key="note.id" :title="note.title" @click="addLink(note.id)"></v-list-item>
+          <v-list-item
+            v-for="note in availableNotesToLink"
+            :key="note.id"
+            :title="note.title"
+            @click="addLink(note.id)"
+          ></v-list-item>
         </v-list>
       </v-card>
     </v-dialog>
@@ -373,12 +679,14 @@ import { useItems } from '@/composables/useItems';
 import { useAppBar } from '@/composables/useAppBar';
 import Editor from '@/components/Editor.vue';
 import { useI18n } from 'vue-i18n';
+import { useNotifier } from '@/composables/useNotifier';
 
 const props = defineProps({ id: { type: String, required: false } });
 const router = useRouter();
 const { t } = useI18n();
 const { items, addItem, updateItem, allTags } = useItems();
 const { setAppBar, resetAppBar } = useAppBar();
+const { showSuccess } = useNotifier();
 const isEditMode = computed(() => !!props.id);
 const isFormReady = ref(false);
 const currentLangTab = ref('be');
@@ -394,6 +702,7 @@ const form = ref({
 const isLinkDialogOpen = ref(false);
 const currentlyLinkedNotes = computed(() => form.value.linkedNoteIds?.map(id => items.value.find(item => item.id === id)).filter(Boolean) || []);
 const availableNotesToLink = computed(() => items.value.filter(item => item.id !== props.id && !form.value.linkedNoteIds?.includes(item.id)));
+
 function addLink(noteId) { form.value.linkedNoteIds.push(noteId); isLinkDialogOpen.value = false; }
 function removeLink(noteId) { form.value.linkedNoteIds = form.value.linkedNoteIds.filter(id => id !== noteId); }
 
@@ -406,8 +715,13 @@ async function handleSave() {
     tags: form.value.tags,
     linkedNoteIds: form.value.linkedNoteIds || []
   };
-  if (isEditMode.value) await updateItem(props.id, dataToSave);
-  else await addItem(dataToSave);
+
+  if (isEditMode.value) {
+    await updateItem(props.id, dataToSave);
+  } else {
+    await addItem(dataToSave);
+  }
+  showSuccess('Заметка успешно сохранена!');
   router.push({ name: 'ItemsList' });
 }
 
@@ -417,18 +731,30 @@ onMounted(() => {
     showBackButton: true,
     actions: [{ icon: 'mdi-check', onClick: handleSave }]
   });
+
   if (isEditMode.value) {
-    watch(items, (newItems) => {
+    // ✅ ИСПРАВЛЕНИЕ: Мы объявляем переменную stopWatch заранее, чтобы избежать ошибки.
+    let stopWatch;
+    stopWatch = watch(items, (newItems) => {
       const itemToEdit = newItems.find(i => i.id === props.id);
       if (itemToEdit) {
-        form.value = { ...itemToEdit, source: itemToEdit.source || '', tags: itemToEdit.tags || [], textVersions: itemToEdit.textVersions || {}, linkedNoteIds: itemToEdit.linkedNoteIds || [] };
+        form.value = { 
+          ...itemToEdit,
+          source: itemToEdit.source || '',
+          tags: itemToEdit.tags || [],
+          textVersions: itemToEdit.textVersions || { ru: '', be: '', la: '' },
+          linkedNoteIds: itemToEdit.linkedNoteIds || []
+        };
         isFormReady.value = true;
+        // Теперь мы можем безопасно вызвать stopWatch, так как он уже определен.
+        if(stopWatch) stopWatch();
       }
     }, { immediate: true });
   } else {
     isFormReady.value = true;
   }
 });
+
 onUnmounted(resetAppBar);
 </script>
 ```
@@ -437,123 +763,153 @@ onUnmounted(resetAppBar);
 ```
 <template>
   <v-container>
-    <div v-if="isLoading" class="text-center mt-16"><v-progress-circular indeterminate color="primary" size="64"></v-progress-circular></div>
-    <div v-else>
-      <div v-if="settings.viewMode === 'card'">
-        <v-card v-for="item in sortedAndFilteredItems" :key="item.id" class="mb-4" elevation="2">
-          <v-card-title class="font-weight-bold d-flex align-center">
-            <v-btn :icon="settings.isPinned(item.id) ? 'mdi-pin' : 'mdi-pin-outline'" :color="settings.isPinned(item.id) ? 'primary' : 'grey'" variant="text" size="small" class="mr-2" @click.stop="settings.togglePin(item.id)"></v-btn>
-            <span @click="viewItem(item.id)" class="flex-grow-1" style="cursor: pointer;">{{ item.title }}</span>
-          </v-card-title>
-          <v-card-text class="pb-0" @click="viewItem(item.id)" style="cursor: pointer;">
-            <p class="mb-4 text-medium-emphasis">{{ getPreviewText(item) }}</p>
-            <v-chip-group><v-chip v-for="tag in item.tags" :key="tag" size="small" color="primary" variant="tonal">{{ tag }}</v-chip></v-chip-group>
-          </v-card-text>
-          <v-card-actions>
-            <v-spacer></v-spacer>
-            <v-btn color="grey-darken-1" variant="text" @click.stop="navigateToEdit(item.id)">{{ $t('edit') }}</v-btn>
-            <v-btn color="error" variant="text" @click.stop="openDeleteDialog(item.id)">{{ $t('delete') }}</v-btn>
-          </v-card-actions>
-        </v-card>
+    <v-form v-if="isFormReady" @submit.prevent="handleSave">
+      <v-text-field v-model="form.title" :label="$t('title')" variant="outlined" class="mb-4"></v-text-field>
+      <v-text-field v-model="form.source" :label="$t('source')" variant="outlined" class="mb-4" clearable></v-text-field>
+
+      <v-tabs v-model="currentLangTab" bg-color="primary" class="mb-1">
+        <v-tab value="be">Бел</v-tab>
+        <v-tab value="ru">Рус</v-tab>
+        <v-tab value="la">Lat</v-tab>
+      </v-tabs>
+      
+      <v-window v-model="currentLangTab">
+        <v-window-item value="be"><Editor v-model="form.textVersions.be" /></v-window-item>
+        <v-window-item value="ru"><Editor v-model="form.textVersions.ru" /></v-window-item>
+        <v-window-item value="la"><Editor v-model="form.textVersions.la" /></v-window-item>
+      </v-window>
+
+      <v-combobox
+        v-model="form.tags"
+        :items="allTags"
+        :label="$t('tags')"
+        multiple
+        chips
+        clearable
+        variant="outlined"
+        class="mt-4"
+      ></v-combobox>
+
+      <v-divider class="my-4"></v-divider>
+      <h3 class="text-subtitle-1 mb-2">Связанные заметки</h3>
+      <div v-if="form.linkedNoteIds && form.linkedNoteIds.length > 0" class="mb-3">
+        <v-chip
+          v-for="linkedNote in currentlyLinkedNotes"
+          :key="linkedNote.id"
+          class="mr-2 mb-2"
+          closable
+          @click:close="removeLink(linkedNote.id)"
+        >
+          {{ linkedNote.title }}
+        </v-chip>
       </div>
-      <v-list v-else-if="settings.viewMode === 'compact'" lines="one" density="compact">
-        <v-list-item v-for="item in sortedAndFilteredItems" :key="item.id" @click="viewItem(item.id)">
-          <template v-slot:prepend>
-            <v-btn :icon="settings.isPinned(item.id) ? 'mdi-pin' : 'mdi-pin-outline'" :color="settings.isPinned(item.id) ? 'primary' : 'grey'" variant="text" size="x-small" class="mr-2" @click.stop="settings.togglePin(item.id)"></v-btn>
-          </template>
-          <v-list-item-title>{{ item.title }}</v-list-item-title>
-          <template v-slot:append>
-            <v-btn icon="mdi-pencil" variant="text" size="small" @click.stop="navigateToEdit(item.id)"></v-btn>
-            <v-btn icon="mdi-delete" variant="text" size="small" @click.stop="openDeleteDialog(item.id)"></v-btn>
-          </template>
-        </v-list-item>
-      </v-list>
-      <div v-if="!isLoading && sortedAndFilteredItems.length === 0" class="text-center text-grey-darken-1 mt-16">
-        <v-icon size="48" class="mb-2">mdi-note-off-outline</v-icon>
-        <p>{{ $t('noNotesFound') }}</p>
-      </div>
+      <v-btn @click="isLinkDialogOpen = true" prepend-icon="mdi-link-plus">Добавить связь</v-btn>
+    </v-form>
+
+    <div v-else class="text-center mt-16">
+      <v-progress-circular indeterminate color="primary"></v-progress-circular>
     </div>
-    <v-btn icon="mdi-plus" location="bottom right" size="large" color="surface" position="fixed" variant="elevated" elevation="8" class="ma-4" @click="router.push({ name: 'ItemAdd' })"><v-icon color="primary">mdi-plus</v-icon></v-btn>
-    <v-dialog v-model="isDeleteDialogOpen" persistent max-width="400px">
+
+    <v-dialog v-model="isLinkDialogOpen" max-width="500px">
       <v-card>
-        <v-card-title class="text-h5">{{ $t('confirmDeletion') }}</v-card-title>
-        <v-card-text>{{ $t('deleteConfirmationMessage', { title: itemToDelete ? itemToDelete.title : '' }) }}</v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn variant="text" @click="closeDeleteDialog">{{ $t('cancel') }}</v-btn>
-          <v-btn color="error" variant="flat" @click="confirmDeletion">{{ $t('delete') }}</v-btn>
-        </v-card-actions>
+        <v-card-title>Выберите заметку для связи</v-card-title>
+        <v-list>
+          <v-list-item
+            v-for="note in availableNotesToLink"
+            :key="note.id"
+            :title="note.title"
+            @click="addLink(note.id)"
+          ></v-list-item>
+        </v-list>
       </v-card>
     </v-dialog>
   </v-container>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, watch, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useItems } from '@/composables/useItems';
-import { useFilters } from '@/composables/useFilters';
 import { useAppBar } from '@/composables/useAppBar';
+import Editor from '@/components/Editor.vue';
 import { useI18n } from 'vue-i18n';
-import { useSettingsStore } from '@/stores/settings';
+import { useNotifier } from '@/composables/useNotifier';
 
+const props = defineProps({ id: { type: String, required: false } });
 const router = useRouter();
-const { t, locale } = useI18n(); // Получаем и t, и locale
-const { items, deleteItem } = useItems();
-const { search, selectedTags } = useFilters();
-const { setAppBar, resetAppBar, isSearchActive, isFilterSheetOpen } = useAppBar();
-const settings = useSettingsStore();
-const isLoading = ref(true);
-watch(items, (newItems) => { if (newItems) isLoading.value = false; }, { immediate: true });
+const { t } = useI18n();
+const { items, addItem, updateItem, allTags } = useItems();
+const { setAppBar, resetAppBar } = useAppBar();
+const { showSuccess } = useNotifier();
+const isEditMode = computed(() => !!props.id);
+const isFormReady = ref(false);
+const currentLangTab = ref('be');
 
-const setupAppBar = () => {
-  setAppBar({
-    title: t('appTitle'),
-    showBackButton: false,
-    actions: [
-      { icon: 'mdi-magnify', onClick: () => { isSearchActive.value = true; } },
-      { icon: 'mdi-filter-variant', onClick: () => { isFilterSheetOpen.value = true; } },
-    ]
-  });
-};
-onMounted(setupAppBar);
-onUnmounted(resetAppBar);
-
-// ✅ ИСПРАВЛЕНО: Следим за изменением языка (locale), а не за функцией t
-watch(locale, setupAppBar);
-
-const isDeleteDialogOpen = ref(false);
-const itemToDeleteId = ref(null);
-const itemToDelete = computed(() => itemToDeleteId.value ? items.value.find(item => item.id === itemToDeleteId.value) : null);
-function openDeleteDialog(id) { itemToDeleteId.value = id; isDeleteDialogOpen.value = true; }
-function closeDeleteDialog() { isDeleteDialogOpen.value = false; itemToDeleteId.value = null; }
-async function confirmDeletion() { if (itemToDeleteId.value) { await deleteItem(itemToDeleteId.value); } closeDeleteDialog(); }
-
-function getPreviewText(item) {
-  const htmlContent = item.textVersions?.be || item.textVersions?.ru || item.textVersions?.la || Object.values(item.textVersions || {}).find(v => v) || '';
-  if (!htmlContent) return 'Нет содержимого';
-  const doc = new DOMParser().parseFromString(htmlContent, 'text/html');
-  const text = (doc.body.textContent || "").trim();
-  return text.length > 150 ? text.substring(0, 150) + '...' : text;
-}
-
-const sortedAndFilteredItems = computed(() => {
-  if (isLoading.value) return [];
-  const searchLower = search.value.toLowerCase().trim();
-  const filtered = items.value.filter(item => {
-    const tagMatch = selectedTags.value.length === 0 || (item.tags && selectedTags.value.every(tag => item.tags.includes(tag)));
-    if (!tagMatch) return false;
-    if (searchLower) {
-      const fullText = (item.title + ' ' + Object.values(item.textVersions || {}).join(' ')).toLowerCase();
-      return fullText.includes(searchLower);
-    }
-    return true;
-  });
-  return filtered.slice().sort((a, b) => (settings.isPinned(b.id) - settings.isPinned(a.id)));
+const form = ref({
+  title: '',
+  source: '',
+  textVersions: { ru: '', be: '', la: '' },
+  tags: [],
+  linkedNoteIds: []
 });
 
-function viewItem(id) { router.push({ name: 'ItemView', params: { id } }); }
-function navigateToEdit(id) { router.push({ name: 'ItemEdit', params: { id } }); }
+const isLinkDialogOpen = ref(false);
+const currentlyLinkedNotes = computed(() => form.value.linkedNoteIds?.map(id => items.value.find(item => item.id === id)).filter(Boolean) || []);
+const availableNotesToLink = computed(() => items.value.filter(item => item.id !== props.id && !form.value.linkedNoteIds?.includes(item.id)));
+
+function addLink(noteId) { form.value.linkedNoteIds.push(noteId); isLinkDialogOpen.value = false; }
+function removeLink(noteId) { form.value.linkedNoteIds = form.value.linkedNoteIds.filter(id => id !== noteId); }
+
+async function handleSave() {
+  if (!form.value.title) return;
+  const dataToSave = {
+    title: form.value.title,
+    source: form.value.source || '',
+    textVersions: form.value.textVersions,
+    tags: form.value.tags,
+    linkedNoteIds: form.value.linkedNoteIds || []
+  };
+
+  if (isEditMode.value) {
+    await updateItem(props.id, dataToSave);
+  } else {
+    await addItem(dataToSave);
+  }
+  showSuccess('Заметка успешно сохранена!');
+  router.push({ name: 'ItemsList' });
+}
+
+onMounted(() => {
+  setAppBar({
+    title: isEditMode.value ? t('editing') : t('newNote'),
+    showBackButton: true,
+    actions: [{ icon: 'mdi-check', onClick: handleSave }]
+  });
+
+  if (isEditMode.value) {
+    // ✅ ИСПРАВЛЕНИЕ: Мы объявляем переменную stopWatch заранее, чтобы избежать ошибки.
+    let stopWatch;
+    stopWatch = watch(items, (newItems) => {
+      const itemToEdit = newItems.find(i => i.id === props.id);
+      if (itemToEdit) {
+        form.value = { 
+          ...itemToEdit,
+          source: itemToEdit.source || '',
+          tags: itemToEdit.tags || [],
+          textVersions: itemToEdit.textVersions || { ru: '', be: '', la: '' },
+          linkedNoteIds: itemToEdit.linkedNoteIds || []
+        };
+        isFormReady.value = true;
+        // Теперь мы можем безопасно вызвать stopWatch, так как он уже определен.
+        if(stopWatch) stopWatch();
+      }
+    }, { immediate: true });
+  } else {
+    isFormReady.value = true;
+  }
+});
+
+onUnmounted(resetAppBar);
 </script>
 ```
 
@@ -561,17 +917,17 @@ function navigateToEdit(id) { router.push({ name: 'ItemEdit', params: { id } });
 ```
 <template>
   <v-container>
-    <div v-if="item">
-      <h2 class="text-h4 font-weight-bold mb-4">{{ item.title }}</h2>
+    <!-- ✅ Улучшенная логика отображения -->
+    <div v-if="!isLoading && item">
+      <h2 class="text-h5 font-weight-bold mb-4">{{ item.title }}</h2>
       <div v-for="(text, lang) in availableVersions" :key="lang" class="mb-4">
         <h2 class="text-h6 font-weight-medium text-grey-darken-1 mb-2">{{ langNames[lang] }}</h2>
         <div v-html="text" class="note-content-area ProseMirror"></div>
       </div>
-
       <div v-if="linkedNotes.length > 0" class="mt-8">
         <v-divider class="mb-4"></v-divider>
         <h3 class="text-subtitle-1 font-weight-bold mb-3">Связанные заметки:</h3>
-        <v-list density="compact" class="pa-0">
+        <v-list density="compact" class="pa-0 linked-notes-list">
           <v-list-item
             v-for="linkedNote in linkedNotes"
             :key="linkedNote.id"
@@ -583,7 +939,6 @@ function navigateToEdit(id) { router.push({ name: 'ItemEdit', params: { id } });
           </v-list-item>
         </v-list>
       </div>
-
       <div class="mt-6 text-body-2 text-medium-emphasis">
         <div v-if="item.source">
           <v-divider class="my-3"></v-divider>
@@ -594,6 +949,14 @@ function navigateToEdit(id) { router.push({ name: 'ItemEdit', params: { id } });
         </div>
       </div>
     </div>
+    <!-- ✅ Состояние "не найдено" -->
+    <div v-else-if="!isLoading && !item" class="text-center mt-16">
+        <v-icon size="64" class="mb-4">mdi-file-question-outline</v-icon>
+        <h2 class="text-h5 mb-4">Заметка не найдена</h2>
+        <p class="text-medium-emphasis mb-6">Возможно, она была удалена или ссылка неверна.</p>
+        <v-btn color="primary" :to="{ name: 'ItemsList' }">Вернуться на главную</v-btn>
+    </div>
+    <!-- ✅ Состояние загрузки -->
     <div v-else class="text-center text-grey-darken-1 mt-16">
       <v-progress-circular indeterminate color="primary"></v-progress-circular>
     </div>
@@ -605,11 +968,13 @@ import { computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useItems } from '@/composables/useItems';
 import { useAppBar } from '@/composables/useAppBar';
+import { useAuthStore } from '@/stores/auth';
 
 const props = defineProps({ id: { type: String, required: true } });
 const router = useRouter();
-const { items } = useItems();
+const { items, isLoading } = useItems(); // ✅ Получаем isLoading
 const { setAppBar, resetAppBar } = useAppBar();
+const authStore = useAuthStore(); // ✅ Получаем хранилище авторизации
 
 const item = computed(() => items.value.find(i => i.id === props.id));
 const linkedNotes = computed(() => item.value?.linkedNoteIds?.map(id => items.value.find(note => note.id === id)).filter(Boolean) || []);
@@ -621,13 +986,122 @@ const updateAppBarForItem = (currentItem) => {
     setAppBar({
       title: currentItem.title,
       showBackButton: true,
-      actions: [{ icon: 'mdi-pencil', onClick: () => router.push({ name: 'ItemEdit', params: { id: currentItem.id } }) }]
+      // ✅ Кнопка редактирования видна только администратору
+      actions: authStore.user ? [{ icon: 'mdi-pencil', onClick: () => router.push({ name: 'ItemEdit', params: { id: currentItem.id } }) }] : []
     });
   }
 };
 
-watch(item, updateAppBarForItem, { immediate: true });
+onMounted(() => {
+  watch(item, updateAppBarForItem, { immediate: true });
+});
+
 onUnmounted(resetAppBar);
+</script>
+```
+
+### src/components/LoginView.vue
+```
+<template>
+  <v-container class="fill-height justify-center">
+    <v-card width="100%" max-width="400">
+      <v-card-title class="text-center text-h5 py-4">Вход для администратора</v-card-title>
+      <v-card-text>
+        <v-form @submit.prevent="handleLogin">
+          <v-text-field
+            v-model="email"
+            label="Email"
+            type="email"
+            variant="outlined"
+            class="mb-2"
+            :rules="[v => !!v || 'Email обязателен']"
+            required
+          ></v-text-field>
+          <v-text-field
+            v-model="password"
+            label="Пароль"
+            type="password"
+            variant="outlined"
+            :rules="[v => !!v || 'Пароль обязателен']"
+            required
+          ></v-text-field>
+          <v-alert v-if="error" type="error" density="compact" class="mt-4" text>{{ error }}</v-alert>
+          <v-btn type="submit" color="primary" block size="large" class="mt-6" :loading="isLoggingIn">Войти</v-btn>
+        </v-form>
+      </v-card-text>
+    </v-card>
+  </v-container>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue';
+import { useAuthStore } from '@/stores/auth';
+import { useAppBar } from '@/composables/useAppBar';
+
+const email = ref('');
+const password = ref('');
+const error = ref(null);
+const isLoggingIn = ref(false);
+
+const authStore = useAuthStore();
+const { setAppBar } = useAppBar();
+
+const handleLogin = async () => {
+  isLoggingIn.value = true;
+  error.value = null;
+  try {
+    await authStore.login(email.value, password.value);
+  } catch (e) {
+    error.value = 'Неверный email или пароль.';
+  } finally {
+    isLoggingIn.value = false;
+  }
+};
+
+onMounted(() => {
+    setAppBar({ title: 'Вход', showBackButton: false });
+});
+</script>
+```
+
+### src/components/NotificationSnackbar.vue
+```
+<template>
+  <v-snackbar
+    v-model="visible"
+    :color="color"
+    :timeout="timeout"
+    location="bottom right"
+    variant="elevated"
+  >
+    {{ message }}
+    <template v-slot:actions>
+      <v-btn icon="mdi-close" @click="hide"></v-btn>
+    </template>
+  </v-snackbar>
+</template>
+
+<script setup>
+import { ref } from 'vue';
+
+const visible = ref(false);
+const message = ref('');
+const color = ref('success');
+const timeout = ref(3000);
+
+// Глобальная функция для показа уведомления
+function show(newMessage, newColor = 'success') {
+  message.value = newMessage;
+  color.value = newColor;
+  visible.value = true;
+}
+
+function hide() {
+  visible.value = false;
+}
+
+// Делаем функцию show доступной извне через ref
+defineExpose({ show });
 </script>
 ```
 
@@ -637,7 +1111,6 @@ onUnmounted(resetAppBar);
   <v-container>
     <v-list lines="two" subheader>
       <v-list-subheader>{{ $t('appearance') }}</v-list-subheader>
-      
       <v-list-item :title="$t('viewMode')" :subtitle="$t('viewModeHint')">
         <template v-slot:prepend><v-icon>mdi-view-dashboard-outline</v-icon></template>
         <template v-slot:append>
@@ -647,12 +1120,10 @@ onUnmounted(resetAppBar);
           </v-btn-toggle>
         </template>
       </v-list-item>
-
       <v-list-item :title="$t('darkTheme')" :subtitle="$t('themeIs', { themeName: $t('themeNames.' + settings.currentTheme) })">
         <template v-slot:prepend><v-icon>mdi-theme-light-dark</v-icon></template>
         <template v-slot:append><v-switch :model-value="settings.currentTheme === 'dark'" @update:model-value="settings.toggleTheme" inset color="primary" hide-details></v-switch></template>
       </v-list-item>
-      
       <v-list-item :title="$t('fontSize')" :subtitle="$t('fontSizeHint')">
         <template v-slot:prepend><v-icon>mdi-format-font-size-increase</v-icon></template>
         <template v-slot:append>
@@ -664,7 +1135,6 @@ onUnmounted(resetAppBar);
         </template>
       </v-list-item>
     </v-list>
-
     <v-divider class="my-4"></v-divider>
     <v-card variant="outlined" class="pa-4">
       <h3 class="v-list-subheader pa-0 mb-2">{{ $t('preview') }}</h3>
@@ -673,7 +1143,6 @@ onUnmounted(resetAppBar);
         <p class="text-caption mt-2">А это — текст поменьше, для примера.</p>
       </div>
     </v-card>
-
     <v-divider class="my-4"></v-divider>
     <v-list>
       <v-list-subheader>{{ $t('language') }}</v-list-subheader>
@@ -685,37 +1154,39 @@ onUnmounted(resetAppBar);
         ></v-select>
       </v-list-item>
     </v-list>
-
-     <!-- ✅ --- НОВЫЙ РАЗДЕЛ: НАСТРОЙКА КАТЕГОРИЙ --- ✅ -->
+     <!-- ✅ --- ОБНОВЛЕННЫЙ РАЗДЕЛ: НАСТРОЙКА КАТЕГОРИЙ --- ✅ -->
     <v-divider class="my-4"></v-divider>
     <v-list-subheader>Категории в меню</v-list-subheader>
     <v-list-item v-for="(cat, index) in settings.menuCategories" :key="index">
       <v-list-item-title>{{ cat.name }}</v-list-item-title>
-      <v-list-item-subtitle>Фильтр по тегу: `{{ cat.tag }}`</v-list-item-subtitle>
+       <!-- ✅ Отображаем все теги для категории -->
+      <v-list-item-subtitle>Фильтр по тегам: `{{ cat.tags?.join(', ') }}`</v-list-item-subtitle>
       <template v-slot:append>
         <v-btn icon="mdi-delete-outline" variant="text" color="grey" @click="settings.removeCategory(index)"></v-btn>
       </template>
     </v-list-item>
-    
     <v-card variant="tonal" class="pa-4 mt-4">
       <h3 class="text-subtitle-1 mb-3">Добавить категорию</h3>
       <v-form @submit.prevent="onAddCategory">
         <v-text-field v-model="newCategory.name" label="Название категории" density="compact" variant="solo-filled" flat></v-text-field>
-        <v-autocomplete
-          v-model="newCategory.tag"
+        <!-- ✅ Заменяем v-autocomplete на v-combobox с multiple -->
+        <v-combobox
+          v-model="newCategory.tags"
           :items="allTags"
-          label="Выберите или введите тег"
+          label="Выберите или введите теги"
           density="compact"
           variant="solo-filled"
           flat
+          multiple
+          chips
+          clearable
           class="mt-2"
-        ></v-autocomplete>
+        ></v-combobox>
         <v-btn type="submit" color="primary" block class="mt-2">Добавить</v-btn>
       </v-form>
     </v-card>
   </v-container>
 </template>
-
 <script setup>
 import { onMounted, ref } from 'vue';
 import { useAppBar } from '@/composables/useAppBar';
@@ -724,10 +1195,14 @@ import { useItems } from '@/composables/useItems';
 const { setAppBar } = useAppBar();
 const settings = useSettingsStore();
 const { allTags } = useItems(); // Получаем все доступные теги
-const newCategory = ref({ name: '', tag: '' });
+// ✅ newCategory теперь содержит массив tags
+const newCategory = ref({ name: '', tags: [] });
+
 function onAddCategory() {
-  settings.addCategory(newCategory.value);
-  newCategory.value = { name: '', tag: '' }; // Сбрасываем форму
+  if (newCategory.value.name && newCategory.value.tags.length > 0) {
+    settings.addCategory({ ...newCategory.value });
+    newCategory.value = { name: '', tags: [] }; // Сбрасываем форму
+  }
 }
 onMounted(() => {
   setAppBar({ title: 'Настройки', showBackButton: true });
@@ -739,27 +1214,44 @@ onMounted(() => {
 ```
 import { ref } from 'vue';
 
+// Глобальные реактивные переменные
 const appBar = ref({
   title: 'Мои Молитвы',
   showBackButton: false,
-  actions: [],
-  isMenu: true // ✅ Флаг, показывать ли кнопку меню
+  isSearchVisible: false, // Показывать ли иконку поиска
+  actions: []
 });
 
-const isDrawerOpen = ref(false); // ✅ Состояние для открытия/закрытия меню
+const isDrawerOpen = ref(false);
+const isSearchActive = ref(false); // Активен ли режим поиска (поле ввода на весь appbar)
+// ✅ Добавляем глобальную переменную для состояния шторки фильтра
+const isFilterSheetOpen = ref(false);
 
 export function useAppBar() {
   const setAppBar = (config) => {
     appBar.value.title = config.title || 'Мои Молитвы';
     appBar.value.showBackButton = config.showBackButton || false;
+    appBar.value.isSearchVisible = config.isSearchVisible || false;
     appBar.value.actions = config.actions || [];
-    // Если есть кнопка "назад", кнопка меню не нужна.
-    appBar.value.isMenu = !config.showBackButton; 
   };
-  
-  const resetAppBar = () => { /* ... */ };
 
-  return { appBar, isDrawerOpen, setAppBar, resetAppBar };
+  const resetAppBar = () => {
+    // Сброс к состоянию по умолчанию для главного экрана
+    setAppBar({
+      title: 'Мои Молитвы',
+      isSearchVisible: true,
+      actions: []
+    });
+  };
+
+  return { 
+    appBar, 
+    isDrawerOpen, 
+    isSearchActive, 
+    isFilterSheetOpen,
+    setAppBar, 
+    resetAppBar 
+  };
 }
 ```
 
@@ -783,7 +1275,7 @@ export function useFilters() {
 
 ### src/composables/useItems.js
 ```
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { db } from '@/firebase';
 import { 
   collection, 
@@ -796,13 +1288,13 @@ import {
   query,
   orderBy
 } from 'firebase/firestore';
+import { useSettingsStore } from '@/stores/settings';
 
 const items = ref([]);
 const allTags = ref([]);
+const isLoading = ref(true); // ✅ Добавляем состояние загрузки
 
 const itemsCollection = collection(db, 'items');
-// ✅ --- УБИРАЕМ СОРТИРОВКУ ПО isPinned ---
-// Возвращаемся к простой сортировке только по дате создания.
 const itemsQuery = query(itemsCollection, orderBy('createdAt', 'desc'));
 
 onSnapshot(itemsQuery, (snapshot) => {
@@ -811,12 +1303,22 @@ onSnapshot(itemsQuery, (snapshot) => {
     ...doc.data()
   }));
   allTags.value = [...new Set(items.value.flatMap(item => item.tags || []))].sort();
+  isLoading.value = false; // ✅ Выключаем загрузку, когда данные получены
+}, (error) => {
+  console.error("Ошибка получения данных из Firestore: ", error);
+  isLoading.value = false;
 });
 
 export function useItems() {
+  const settings = useSettingsStore();
+
+  // ✅ Создаем вычисляемое свойство для сортировки по закрепленным заметкам
+  const sortedItems = computed(() => {
+    if (!items.value) return [];
+    return [...items.value].sort((a, b) => (settings.isPinned(b.id) - settings.isPinned(a.id)));
+  });
 
   const addItem = async (data) => {
-    // ✅ Убираем поле isPinned при создании, оно больше не нужно в базе
     const docRef = await addDoc(itemsCollection, {
       ...data,
       createdAt: serverTimestamp()
@@ -834,17 +1336,39 @@ export function useItems() {
     await updateDoc(doc(db, 'items', id), dataToUpdate);
   };
 
-  // ✅ УДАЛЯЕМ функцию togglePin отсюда. Ее больше здесь нет.
-
   return {
-    items,
+    items: sortedItems, // ✅ Экспортируем уже отсортированный массив
     allTags,
+    isLoading, // ✅ Экспортируем состояние загрузки
     addItem,
     deleteItem,
     updateItem,
-    // И не экспортируем ее.
   };
 }
+```
+
+### src/composables/useNotifier.js
+```
+import { ref } from 'vue';
+
+// Эта переменная будет хранить ссылку на наш компонент уведомлений
+export const notifier = ref(null);
+
+export function useNotifier() {
+  const showSuccess = (message) => {
+    if (notifier.value) {
+      notifier.value.show(message, 'success');
+    }
+  };
+
+  const showError = (message) => {
+    if (notifier.value) {
+      notifier.value.show(message, 'error');
+    }
+  };
+
+  return { showSuccess, showError };
+}   
 ```
 
 ### src/export-code.js
@@ -910,11 +1434,10 @@ try {
 ### src/firebase.js
 ```
 import { initializeApp } from "firebase/app";
-// ✅ 1. Импортируем initializeFirestore и persistentLocalCache
+// ✅ Возвращаем правильную инициализацию Firestore с поддержкой оффлайн-кэширования
 import { initializeFirestore, persistentLocalCache } from "firebase/firestore";
 
 const firebaseConfig = {
-  // ... ваша конфигурация Firebase без изменений ...
   apiKey: "AIzaSyDF2TD4MTcKiBChKRssauvL-nNyT4Am9N0",
   authDomain: "molitwy.firebaseapp.com",
   projectId: "molitwy",
@@ -925,13 +1448,10 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// ✅ 2. Используем НОВЫЙ метод инициализации с настройками кэша
-// Это заменяет и getFirestore(), и enableIndexedDbPersistence()
+// ✅ Используем НОВЫЙ метод инициализации с настройками кэша,
+// который заменяет и getFirestore(), и enableIndexedDbPersistence()
 const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({
-    // Можно добавить настройки, например, для работы в нескольких вкладках
-    // tabManager: 'multi-tab' 
-  })
+  localCache: persistentLocalCache({})
 });
 
 // Экспортируем db, как и раньше
@@ -1055,20 +1575,36 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
 import vuetify from './plugins/vuetify'
-import './firebase'; 
+import { initializeApp } from "firebase/app"; // Импортируем для getAuth
+import { getAuth, onAuthStateChanged } from "firebase/auth"; // Импортируем для проверки
 import '@mdi/font/css/materialdesignicons.css'
 import { createPinia } from 'pinia'; 
-import './styles/main.css'; // Убедитесь, что эта строка есть
+import './styles/main.css';
 import i18n from './i18n';
 
-const pinia = createPinia(); 
+// --- ИСПРАВЛЕНИЕ: Логика отложенной инициализации ---
 
-createApp(App)
-  .use(router)
-  .use(vuetify)
-  .use(pinia)
-  .use(i18n)
-  .mount('#app')
+// 1. Получаем экземпляр auth
+const auth = getAuth();
+let app; // Объявляем переменную для нашего приложения
+
+// 2. Устанавливаем прослушиватель onAuthStateChanged
+// Этот код выполнится один раз при запуске, определив статус пользователя
+onAuthStateChanged(auth, () => {
+
+  // 3. Создаем и монтируем приложение ТОЛЬКО ПОСЛЕ того, 
+  // как Firebase определил статус пользователя.
+  if (!app) {
+    const pinia = createPinia();
+    
+    app = createApp(App)
+      .use(router)
+      .use(vuetify)
+      .use(pinia)
+      .use(i18n)
+      .mount('#app');
+  }
+});
 ```
 
 ### src/plugins/vuetify.js
@@ -1090,16 +1626,23 @@ export default createVuetify({
 ### src/router/index.js
 ```
 import { createRouter, createWebHistory } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
 
 const routes = [
+  { path: '/login', name: 'Login', component: () => import('@/components/LoginView.vue') },
+  
   { path: '/', name: 'ItemsList', component: () => import('@/components/ItemsList.vue') },
   { path: '/item/:id', name: 'ItemView', component: () => import('@/components/ItemView.vue'), props: true },
-  { path: '/edit/:id', name: 'ItemEdit', component: () => import('@/components/ItemForm.vue'), props: true },
-  { path: '/add', name: 'ItemAdd', component: () => import('@/components/ItemForm.vue') },
+  
+  // ✅ УБИРАЕМ ЗАЩИТУ со страницы настроек. Теперь она доступна всем.
   { path: '/settings', name: 'Settings', component: () => import('@/components/SettingsView.vue') },
-  // ✅ --- НОВЫЕ МАРШРУТЫ --- ✅
+  
+  // Защищаем только те маршруты, которые действительно требуют прав администратора
+  { path: '/edit/:id', name: 'ItemEdit', component: () => import('@/components/ItemForm.vue'), props: true, meta: { requiresAuth: true } },
+  { path: '/add', name: 'ItemAdd', component: () => import('@/components/ItemForm.vue'), meta: { requiresAuth: true } },
+  { path: '/admin', name: 'Admin', component: () => import('@/components/AdminView.vue'), meta: { requiresAuth: true } },
+  
   { path: '/about', name: 'About', component: () => import('@/components/AboutView.vue') },
-  { path: '/admin', name: 'Admin', component: () => import('@/components/AdminView.vue') },
 ];
 
 const router = createRouter({
@@ -1107,7 +1650,74 @@ const router = createRouter({
   routes,
 });
 
+// --- ✅ ГЛАВНОЕ ИСПРАВЛЕНИЕ: Полностью переработанный навигационный страж ---
+router.beforeEach((to, from, next) => {
+  const authStore = useAuthStore();
+  
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
+  const userIsLoggedIn = !!authStore.user;
+
+  // Случай 1: Пользователь пытается зайти на защищенную страницу, но не авторизован.
+  if (requiresAuth && !userIsLoggedIn) {
+    // Перенаправляем его на страницу входа.
+    // Мы также можем передать исходный путь в `query`, чтобы вернуть его обратно после входа.
+    next({ name: 'Login', query: { redirect: to.fullPath } });
+  } 
+  // Случай 2: Пользователь авторизован и пытается зайти на страницу входа.
+  else if (to.name === 'Login' && userIsLoggedIn) {
+    // Не пускаем его, перенаправляем на главную.
+    next({ name: 'ItemsList' });
+  } 
+  // Случай 3: Все остальные случаи (включая выход с защищенной страницы).
+  else {
+    // Просто разрешаем навигацию.
+    next();
+  }
+});
+
 export default router;
+```
+
+### src/stores/auth.js
+```
+import { defineStore } from 'pinia';
+import { ref } from 'vue';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+import router from '@/router';
+
+export const useAuthStore = defineStore('auth', () => {
+  const user = ref(null);
+  const auth = getAuth();
+  const loading = ref(true);
+
+  // Прослушиватель для отслеживания состояния входа
+  const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    user.value = firebaseUser;
+    loading.value = false;
+  });
+
+  const login = async (email, password) => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      router.push({ name: 'ItemsList' });
+    } catch (error) {
+      console.error("Ошибка входа:", error.code);
+      throw error; // Пробрасываем ошибку для обработки в компоненте
+    }
+  };
+
+  const logout = async () => {
+    await signOut(auth);
+    router.push({ name: 'Login' });
+  };
+  
+  // Возвращаем функцию, чтобы ее можно было вызвать при выходе из приложения
+  const unbind = () => {
+    unsubscribe();
+  };
+
+  return { user, login, logout, unbind, loading };
+});
 ```
 
 ### src/stores/settings.js
@@ -1117,51 +1727,63 @@ import { ref, watch } from 'vue';
 import { useTheme } from 'vuetify';
 import { useI18n } from 'vue-i18n';
 
-// ✅ Значения по умолчанию для категорий
+// ✅ Значения по умолчанию для категорий (теперь с массивом тегов)
 const defaultCategories = [
-  { name: 'Основные молитвы', tag: 'основные' },
-  { name: 'Марийные молитвы', tag: 'мария' }
+  { name: 'Основные молитвы', tags: ['основные'] },
+  { name: 'Марианские молитвы', tags: ['марианские'] }
 ];
 
 export const useSettingsStore = defineStore('settings', () => {
   const theme = useTheme();
   const { locale } = useI18n();
 
-  // ... (вся логика для темы, размера шрифта, языка, вида списка, закрепленных заметок остается без изменений) ...
   const currentTheme = ref(localStorage.getItem('theme') || 'light');
-  theme.global.name.value = currentTheme.value;
-  function toggleTheme() {
-    currentTheme.value = currentTheme.value === 'light' ? 'dark' : 'light';
+  if (theme.global.name.value !== currentTheme.value) {
     theme.global.name.value = currentTheme.value;
-    localStorage.setItem('theme', currentTheme.value);
   }
+  function toggleTheme() {
+    const newTheme = currentTheme.value === 'light' ? 'dark' : 'light';
+    currentTheme.value = newTheme;
+    theme.global.name.value = newTheme;
+    localStorage.setItem('theme', newTheme);
+  }
+
   const fontSizeMultiplier = ref(parseFloat(localStorage.getItem('fontSizeMultiplier')) || 1.0);
   watch(fontSizeMultiplier, (newMultiplier) => { document.documentElement.style.setProperty('--font-size-multiplier', newMultiplier); }, { immediate: true });
   function increaseFontSize() { if (fontSizeMultiplier.value < 1.5) fontSizeMultiplier.value += 0.1; }
   function decreaseFontSize() { if (fontSizeMultiplier.value > 0.8) fontSizeMultiplier.value -= 0.1; }
+
   const currentLanguage = ref(localStorage.getItem('language') || 'ru');
   locale.value = currentLanguage.value;
   function setLanguage(lang) { locale.value = lang; localStorage.setItem('language', lang); }
+
   const viewMode = ref(localStorage.getItem('viewMode') || 'card');
-  function toggleViewMode() { viewMode.value = viewMode.value === 'card' ? 'compact' : 'card'; }
+  function toggleViewMode() { viewMode.value = viewMode.value === 'card' ? 'compact' : 'card'; localStorage.setItem('viewMode', viewMode.value) }
+
   const pinnedIds = ref(JSON.parse(localStorage.getItem('pinnedIds') || '[]'));
   watch(pinnedIds, (newIds) => { localStorage.setItem('pinnedIds', JSON.stringify(newIds)); }, { deep: true });
   function isPinned(noteId) { return pinnedIds.value.includes(noteId); }
-  function togglePin(noteId) { /* ... */ }
-  
+  function togglePin(noteId) {
+    const index = pinnedIds.value.indexOf(noteId);
+    if (index > -1) {
+      pinnedIds.value.splice(index, 1);
+    } else {
+      pinnedIds.value.unshift(noteId);
+    }
+  }
 
-  // ✅ --- НОВЫЙ БЛОК: УПРАВЛЕНИЕ КАТЕГОРИЯМИ МЕНЮ --- ✅
+  // ✅ --- ОБНОВЛЕННЫЙ БЛОК УПРАВЛЕНИЯ КАТЕГОРИЯМИ --- ✅
   const menuCategories = ref(
     JSON.parse(localStorage.getItem('menuCategories') || JSON.stringify(defaultCategories))
   );
 
-  // Сохраняем любые изменения категорий в localStorage
   watch(menuCategories, (newCategories) => {
     localStorage.setItem('menuCategories', JSON.stringify(newCategories));
   }, { deep: true });
 
   function addCategory(category) {
-    if (category && category.name && category.tag) {
+    // ✅ Проверяем, что есть имя и хотя бы один тег в массиве
+    if (category && category.name && category.tags && category.tags.length > 0) {
       menuCategories.value.push(category);
     }
   }
@@ -1176,7 +1798,6 @@ export const useSettingsStore = defineStore('settings', () => {
     currentLanguage, setLanguage,
     viewMode, toggleViewMode,
     pinnedIds, isPinned, togglePin,
-    // ✅ Экспортируем все для категорий
     menuCategories, addCategory, removeCategory
   };
 });
@@ -1195,27 +1816,33 @@ export const useSettingsStore = defineStore('settings', () => {
 }
 
 /* Стили для контента из редактора */
-.note-content-area h2 {
-  font-size: calc(1.75rem * var(--font-size-multiplier));
+.note-content-area h2,
+.ProseMirror h2 {
+  /* ✅ УМЕНЬШЕННЫЙ РАЗМЕР */
+  font-size: calc(1.5rem * var(--font-size-multiplier));
   line-height: 1.4;
   margin: 1.5em 0 0.5em;
   font-weight: 500;
 }
 
-.note-content-area h3 {
-  font-size: calc(1.25rem * var(--font-size-multiplier));
+.note-content-area h3,
+.ProseMirror h3 {
+   /* ✅ УМЕНЬШЕННЫЙ РАЗМЕР */
+  font-size: calc(1.15rem * var(--font-size-multiplier));
   line-height: 1.4;
   margin: 1.5em 0 0.5em;
   font-weight: 500;
 }
 
-.note-content-area p {
+.note-content-area p,
+.ProseMirror p {
   font-size: calc(1rem * var(--font-size-multiplier));
   line-height: 1.7;
   margin-bottom: 1em;
 }
 
-.note-content-area .rubric {
+.note-content-area .rubric,
+.ProseMirror .rubric {
   color: rgb(var(--v-theme-error));
   font-style: italic;
   text-align: center;
@@ -1235,19 +1862,16 @@ export const useSettingsStore = defineStore('settings', () => {
   line-height: 1.4;
 }
 
-/* Убираем лишние отступы на мобильных устройствах */
+/* ✅ УЛУЧШЕННЫЕ СТИЛИ ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ */
 @media (max-width: 600px) {
   .v-container {
-    padding-left: 12px;
-    padding-right: 12px;
+    padding-left: 8px;   /* Уменьшаем отступы */
+    padding-right: 8px;
   }
-  .v-card-text {
-    padding-left: 12px;
-    padding-right: 12px;
-  }
-  .v-card-title {
-    padding-left: 12px;
-    padding-right: 12px;
+  /* Убираем отступы у первого элемента списка/карточки */
+  .v-container > div > .v-card:first-child,
+  .v-container > div > .v-list:first-child {
+      margin-top: 0;
   }
   .v-list-item {
     padding-left: 4px;
@@ -1260,21 +1884,34 @@ export const useSettingsStore = defineStore('settings', () => {
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   border-radius: 4px;
 }
+
 .editor-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   padding: 4px 8px;
   border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  gap: 4px; /* Добавляем небольшой отступ между группами кнопок */
 }
+
 .editor-toolbar .v-btn.v-btn--active {
   background-color: rgba(var(--v-theme-primary), 0.1);
+  color: rgb(var(--v-theme-primary));
 }
+
 .ProseMirror {
   padding: 12px 16px;
   min-height: 200px;
   outline: none;
 }
+
 .ProseMirror p { margin-bottom: 0; }
+.ProseMirror p.rubric { margin: 1em 0; }
 .ProseMirror-focused { border-color: transparent; box-shadow: none; }
+/* ✅ Исправление для иконки в списке связанных заметок */
+.linked-notes-list .v-list-item__prepend .v-icon {
+  margin-inline-end: 12px; /* Добавляем отступ справа от иконки */
+}
+
+
 ```
