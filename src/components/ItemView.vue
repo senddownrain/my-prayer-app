@@ -47,14 +47,21 @@
     <div v-else class="text-center text-grey-darken-1 mt-16">
       <v-progress-circular indeterminate color="primary"></v-progress-circular>
     </div>
+
+    <v-btn
+      v-if="authStore.user"
+      icon="mdi-pencil"
+      location="bottom right" size="large" color="primary" position="fixed"
+      variant="elevated" elevation="8" class="ma-4"
+      @click="router.push({ name: 'ItemEdit', params: { id: props.id } })"
+    ></v-btn>
   </v-container>
 </template>
 
 <script setup>
-import { computed, watch, onMounted, onUnmounted } from 'vue';
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useItems } from '@/composables/useItems';
-import { useAppBar } from '@/composables/useAppBar';
 import { useAuthStore } from '@/stores/auth';
 import { useI18n } from 'vue-i18n';
 
@@ -62,26 +69,9 @@ const props = defineProps({ id: { type: String, required: true } });
 const router = useRouter();
 const { t } = useI18n();
 const { items, isLoading } = useItems();
-const { setAppBar, resetAppBar } = useAppBar();
 const authStore = useAuthStore();
 
 const item = computed(() => items.value.find(i => i.id === props.id));
 const linkedNotes = computed(() => item.value?.linkedNoteIds?.map(id => items.value.find(note => note.id === id)).filter(Boolean) || []);
 const availableVersions = computed(() => item.value ? Object.fromEntries(Object.entries(item.value.textVersions).filter(([_, v]) => v)) : {});
-
-const updateAppBarForItem = (currentItem) => {
-  if (currentItem) {
-    setAppBar({
-      title: currentItem.title,
-      showBackButton: true,
-      actions: authStore.user ? [{ icon: 'mdi-pencil', onClick: () => router.push({ name: 'ItemEdit', params: { id: currentItem.id } }) }] : []
-    });
-  }
-};
-
-onMounted(() => {
-  watch(item, updateAppBarForItem, { immediate: true });
-});
-
-onUnmounted(resetAppBar);
 </script>

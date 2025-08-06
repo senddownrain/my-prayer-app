@@ -2,7 +2,6 @@
   <v-container>
     <v-form v-if="isFormReady" @submit.prevent="handleSave">
       <v-text-field v-model="form.title" :label="$t('title')" variant="outlined" class="mb-4"></v-text-field>
-      <v-text-field v-model="form.source" :label="$t('source')" variant="outlined" class="mb-4" clearable></v-text-field>
       <v-tabs v-model="currentLangTab" bg-color="primary" class="mb-1">
         <v-tab value="be">Бел</v-tab>
         <v-tab value="ru">Рус</v-tab>
@@ -36,7 +35,19 @@
           {{ linkedNote.title }}
         </v-chip>
       </div>
+
       <v-btn @click="isLinkDialogOpen = true" prepend-icon="mdi-link-plus">{{ $t('linkedNotesAdd') }}</v-btn>
+    <!-- ✅ --- ПЕРЕКЛЮЧАТЕЛЬ "СКРЫТЫЙ" --- ✅ -->
+     <v-text-field v-model="form.source" :label="$t('source')" variant="outlined" class="mb-4" clearable></v-text-field>
+       
+    <v-switch
+        v-model="form.hidden"
+        :label="$t('hiddenNote')"
+        color="primary"
+        inset
+        class="mb-2"
+      ></v-switch>
+
     </v-form>
     <div v-else class="text-center mt-16">
       <v-progress-circular indeterminate color="primary"></v-progress-circular>
@@ -58,10 +69,9 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted, computed } from 'vue';
+import { ref, watch, onMounted, onUnmounted, computed, inject } from 'vue';
 import { useRouter } from 'vue-router';
 import { useItems } from '@/composables/useItems';
-import { useAppBar } from '@/composables/useAppBar';
 import Editor from '@/components/Editor.vue';
 import { useI18n } from 'vue-i18n';
 import { useNotifier } from '@/composables/useNotifier';
@@ -70,8 +80,9 @@ const props = defineProps({ id: { type: String, required: false } });
 const router = useRouter();
 const { t } = useI18n();
 const { items, addItem, updateItem, allTags } = useItems();
-const { setAppBar, resetAppBar } = useAppBar();
 const { showSuccess } = useNotifier();
+// ✅ Получаем функцию регистрации сохранения из родителя (App.vue)
+const registerSaveAction = inject('registerSaveAction');
 
 const isEditMode = computed(() => !!props.id);
 const isFormReady = ref(false);
@@ -82,7 +93,8 @@ const form = ref({
   source: '',
   textVersions: { ru: '', be: '', la: '' },
   tags: [],
-  linkedNoteIds: []
+  linkedNoteIds: [],
+  hidden: false // ✅ Добавлено поле по умолчанию
 });
 
 const isLinkDialogOpen = ref(false);
@@ -100,7 +112,8 @@ async function handleSave() {
     source: form.value.source || '',
     textVersions: form.value.textVersions,
     tags: form.value.tags,
-    linkedNoteIds: form.value.linkedNoteIds || []
+    linkedNoteIds: form.value.linkedNoteIds || [],
+      hidden: form.value.hidden || false // ✅ Добавляем поле при сохранении
   };
 
   if (isEditMode.value) {
@@ -114,11 +127,8 @@ async function handleSave() {
 }
 
 onMounted(() => {
-  setAppBar({
-    title: isEditMode.value ? t('editing') : t('newNote'),
-    showBackButton: true,
-    actions: [{ icon: 'mdi-check', onClick: handleSave }]
-  });
+  // ✅ Регистрируем нашу функцию handleSave, чтобы App.vue мог её вызвать
+  registerSaveAction(handleSave);
 
   if (isEditMode.value) {
     let stopWatch;
@@ -130,7 +140,8 @@ onMounted(() => {
           source: itemToEdit.source || '',
           tags: itemToEdit.tags || [],
           textVersions: itemToEdit.textVersions || { ru: '', be: '', la: '' },
-          linkedNoteIds: itemToEdit.linkedNoteIds || []
+          linkedNoteIds: itemToEdit.linkedNoteIds || [],
+            hidden: itemToEdit.hidden || false // ✅ Получаем значение при загрузке
         };
         isFormReady.value = true;
         if(stopWatch) stopWatch();
@@ -141,5 +152,8 @@ onMounted(() => {
   }
 });
 
-onUnmounted(resetAppBar);
+onUnmounted(() => {
+  // ✅ Очищаем функцию сохранения при уходе со страницы
+  registerSaveAction(null);
+});
 </script>

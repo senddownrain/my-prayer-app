@@ -26,6 +26,7 @@
             </v-chip-group>
           </v-card-text>
           <v-card-actions v-if="authStore.user">
+            <v-icon v-if="item.hidden" color="grey" class="ml-2">mdi-eye-off-outline</v-icon>
             <v-spacer></v-spacer>
             <v-btn color="grey-darken-1" variant="text" @click.stop="navigateToEdit(item.id)">{{ $t('edit') }}</v-btn>
             <v-btn color="error" variant="text" @click.stop="openDeleteDialog(item.id)">{{ $t('delete') }}</v-btn>
@@ -37,7 +38,7 @@
       <v-list v-else-if="settings.viewMode === 'compact'" lines="one" density="compact">
         <v-list-item v-for="item in filteredItems" :key="item.id" @click="viewItem(item.id)">
           <template v-slot:prepend>
-            <v-btn
+             <v-btn
               :icon="settings.isPinned(item.id) ? 'mdi-pin' : 'mdi-pin-outline'"
               :color="settings.isPinned(item.id) ? 'primary' : 'grey'"
               variant="text" size="x-small" class="mr-2"
@@ -46,6 +47,7 @@
           </template>
           <v-list-item-title>{{ item.title }}</v-list-item-title>
           <template v-if="authStore.user" v-slot:append>
+            <v-icon v-if="item.hidden" color="grey" class="ml-2">mdi-eye-off-outline</v-icon>
             <v-btn icon="mdi-pencil" variant="text" size="small" @click.stop="navigateToEdit(item.id)"></v-btn>
             <v-btn icon="mdi-delete" variant="text" size="small" @click.stop="openDeleteDialog(item.id)"></v-btn>
           </template>
@@ -86,39 +88,22 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useItems } from '@/composables/useItems';
 import { useFilters } from '@/composables/useFilters';
-import { useAppBar } from '@/composables/useAppBar';
 import { useI18n } from 'vue-i18n';
 import { useSettingsStore } from '@/stores/settings';
 import { useAuthStore } from '@/stores/auth';
 import { useNotifier } from '@/composables/useNotifier';
 
 const router = useRouter();
-const { t, locale } = useI18n();
+const { t } = useI18n();
 const { items, isLoading, deleteItem } = useItems();
 const { search, selectedTags } = useFilters();
-const { setAppBar, resetAppBar, isFilterSheetOpen } = useAppBar();
 const settings = useSettingsStore();
 const authStore = useAuthStore();
 const { showSuccess } = useNotifier();
-
-const setupAppBar = () => {
-  setAppBar({
-    title: t('appTitle'),
-    showBackButton: false,
-    isSearchVisible: true,
-    actions: [
-      { icon: 'mdi-filter-variant', onClick: () => { isFilterSheetOpen.value = true; } },
-    ]
-  });
-};
-
-onMounted(setupAppBar);
-onUnmounted(resetAppBar);
-watch(locale, setupAppBar);
 
 const isDeleteDialogOpen = ref(false);
 const itemToDeleteId = ref(null);
@@ -156,6 +141,13 @@ const filteredItems = computed(() => {
   const searchLower = search.value.toLowerCase().trim();
 
   return items.value.filter(item => {
+    // ✅ --- НОВЫЙ БЛОК ФИЛЬТРАЦИИ СКРЫТЫХ --- ✅
+    // Если настройка "Показывать скрытые" ВЫКЛЮЧЕНА и у заметки есть флаг hidden,
+    // то не показываем её.
+    if (!settings.showHiddenItems && item.hidden) {
+      return false;
+    }
+
     const tagMatch = selectedTags.value.length === 0 || (item.tags && selectedTags.value.some(tag => item.tags.includes(tag)));
     if (!tagMatch) return false;
 
@@ -163,6 +155,7 @@ const filteredItems = computed(() => {
       const fullText = (item.title + ' ' + Object.values(item.textVersions || {}).join(' ')).toLowerCase();
       return fullText.includes(searchLower);
     }
+    
     return true;
   });
 });
