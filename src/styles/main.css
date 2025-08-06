@@ -6,7 +6,6 @@
 /* Стили для контента из редактора */
 .note-content-area h2,
 .ProseMirror h2 {
-  /* ✅ УМЕНЬШЕННЫЙ РАЗМЕР */
   font-size: calc(1.5rem * var(--font-size-multiplier));
   line-height: 1.4;
   margin: 1.5em 0 0.5em;
@@ -15,7 +14,6 @@
 
 .note-content-area h3,
 .ProseMirror h3 {
-   /* ✅ УМЕНЬШЕННЫЙ РАЗМЕР */
   font-size: calc(1.15rem * var(--font-size-multiplier));
   line-height: 1.4;
   margin: 1.5em 0 0.5em;
@@ -50,22 +48,30 @@
   line-height: 1.4;
 }
 
-/* ✅ УЛУЧШЕННЫЕ СТИЛИ ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ */
+/* ✅ --- ОБНОВЛЕННЫЕ СТИЛИ ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ --- ✅ */
 @media (max-width: 600px) {
-  .v-container {
-    padding-left: 8px;   /* Уменьшаем отступы */
-    padding-right: 8px;
+  /* Убираем отступы ТОЛЬКО у контейнера со списком заметок */
+  .v-main .v-container.items-list-container {
+    padding: 0 !important;
   }
-  /* Убираем отступы у первого элемента списка/карточки */
-  .v-container > div > .v-card:first-child,
-  .v-container > div > .v-list:first-child {
-      margin-top: 0;
+  
+  /* Эти стили для карточек будут работать только внутри контейнера со списком */
+  .items-list-container .v-card {
+    margin-left: 8px;
+    margin-right: 8px;
+    margin-top: 12px;
+    border-radius: 8px !important;
   }
-  .v-list-item {
-    padding-left: 4px;
-    padding-right: 4px;
+  .items-list-container .v-card:first-child {
+      margin-top: 8px;
+  }
+
+  /* Этот стиль для списка будет работать только внутри контейнера со списком */
+  .items-list-container .v-list {
+      padding: 0;
   }
 }
+
 
 /* Дополнительные стили для редактора */
 .editor-container {
@@ -79,7 +85,7 @@
   align-items: center;
   padding: 4px 8px;
   border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  gap: 4px; /* Добавляем небольшой отступ между группами кнопок */
+  gap: 4px;
 }
 
 .editor-toolbar .v-btn.v-btn--active {
@@ -96,8 +102,8 @@
 .ProseMirror p { margin-bottom: 0; }
 .ProseMirror p.rubric { margin: 1em 0; }
 .ProseMirror-focused { border-color: transparent; box-shadow: none; }
-/* ✅ Исправление для иконки в списке связанных заметок */
-.linked-notes-list .v-list-item__prepend .v-icon {
-  margin-inline-end: 12px; /* Добавляем отступ справа от иконки */
-}
 
+/* УЛУЧШЕННЫЕ СТИЛИ ДЛЯ СВЯЗАННЫХ ЗАМЕТОК */
+.linked-notes-list .v-list-item__prepend .v-icon {
+  margin-inline-end: 12px;
+}

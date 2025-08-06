@@ -19,6 +19,8 @@
   "newNote": "Новая заметка",
   "loading": "Загрузка...",
   "noteNotFound": "Заметка не найдена",
+  "noteNotFoundMessage": "Возможно, она была удалена или ссылка неверна.",
+  "backToHome": "Вернуться на главную",
   "settings": "Настройки",
   "appearance": "Внешний вид",
   "darkTheme": "Тёмная тема",
@@ -37,5 +39,22 @@
     "h2": "Заголовок 1",
     "h3": "Заголовок 2",
     "rubric": "Рубрика"
+  },
+  "menuCategories": "Категории в меню",
+  "addCategory": "Добавить категорию",
+  "categoryName": "Название категории",
+  "categoryTags": "Выберите или введите теги",
+  "add": "Добавить",
+  "linkedNotesTitle": "Смотрите также:",
+  "linkedNotesAdd": "Добавить связь",
+  "linkedNotesSelect": "Выберите заметку для связи",
+  "sourceLabel": "Источник:",
+  "tagsLabel": "Теги:",
+  "noteSavedSuccess": "Заметка успешно сохранена!",
+  "noteDeletedSuccess": "Заметка успешно удалена!",
+  "langNames": {
+    "ru": "Русский",
+    "be": "Беларуская",
+    "la": "Latina"
   }
 }

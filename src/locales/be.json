@@ -19,6 +19,8 @@
   "newNote": "Новая нататка",
   "loading": "Загрузка...",
   "noteNotFound": "Нататка не знойдзена",
+  "noteNotFoundMessage": "Магчыма, яна была выдаленая або спасылка няправільная.",
+  "backToHome": "Вярнуцца на галоўную",
   "settings": "Налады",
   "appearance": "Знешні выгляд",
   "darkTheme": "Цёмная тэма",
@@ -31,11 +33,28 @@
   "preview": "Папярэдні прагляд",
   "language": "Мова",
   "textStyle": "Стыль тэксту",
-  "allPrayers": "Все молитвы",
+  "allPrayers": "Усе малітвы",
   "style": {
     "normal": "Звычайны",
     "h2": "Загаловак 1",
     "h3": "Загаловак 2",
     "rubric": "Рубрыка"
+  },
+  "menuCategories": "Катэгорыі ў меню",
+  "addCategory": "Дадаць катэгорыю",
+  "categoryName": "Назва катэгорыі",
+  "categoryTags": "Абярыце або ўвядзіце тэгі",
+  "add": "Дадаць",
+  "linkedNotesTitle": "Глядзіце таксама:",
+  "linkedNotesAdd": "Дадаць сувязь",
+  "linkedNotesSelect": "Абярыце нататку для сувязі",
+  "sourceLabel": "Крыніца:",
+  "tagsLabel": "Тэгі:",
+  "noteSavedSuccess": "Нататка паспяхова захавана!",
+  "noteDeletedSuccess": "Нататка паспяхова выдалена!",
+  "langNames": {
+    "ru": "Русский",
+    "be": "Беларуская",
+    "la": "Latina"
   }
 }

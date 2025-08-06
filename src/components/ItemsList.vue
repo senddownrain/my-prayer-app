@@ -1,5 +1,5 @@
 <template>
-  <v-container>
+  <v-container class="items-list-container">
     <!-- Индикатор загрузки в виде "скелета" -->
     <div v-if="isLoading">
         <v-skeleton-loader v-for="n in 3" :key="n" type="card" class="mb-4"></v-skeleton-loader>
@@ -137,7 +137,7 @@ function closeDeleteDialog() {
 async function confirmDeletion() {
   if (itemToDeleteId.value) {
     await deleteItem(itemToDeleteId.value);
-    showSuccess('Заметка успешно удалена!');
+    showSuccess(t('noteDeletedSuccess'));
   }
   closeDeleteDialog();
 }
@@ -156,7 +156,7 @@ const filteredItems = computed(() => {
   const searchLower = search.value.toLowerCase().trim();
 
   return items.value.filter(item => {
-    const tagMatch = selectedTags.value.length === 0 || (item.tags && selectedTags.value.every(tag => item.tags.includes(tag)));
+    const tagMatch = selectedTags.value.length === 0 || (item.tags && selectedTags.value.some(tag => item.tags.includes(tag)));
     if (!tagMatch) return false;
 
     if (searchLower) {

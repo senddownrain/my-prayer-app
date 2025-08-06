@@ -33,7 +33,7 @@ export const useSettingsStore = defineStore('settings', () => {
   locale.value = currentLanguage.value;
   function setLanguage(lang) { locale.value = lang; localStorage.setItem('language', lang); }
 
-  const viewMode = ref(localStorage.getItem('viewMode') || 'card');
+  const viewMode = ref(localStorage.getItem('viewMode') || 'compact'); // ✅ ИЗМЕНЕНО НА 'compact'
   function toggleViewMode() { viewMode.value = viewMode.value === 'card' ? 'compact' : 'card'; localStorage.setItem('viewMode', viewMode.value) }
 
   const pinnedIds = ref(JSON.parse(localStorage.getItem('pinnedIds') || '[]'));

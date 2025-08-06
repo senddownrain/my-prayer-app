@@ -3,19 +3,16 @@
     <v-form v-if="isFormReady" @submit.prevent="handleSave">
       <v-text-field v-model="form.title" :label="$t('title')" variant="outlined" class="mb-4"></v-text-field>
       <v-text-field v-model="form.source" :label="$t('source')" variant="outlined" class="mb-4" clearable></v-text-field>
-
       <v-tabs v-model="currentLangTab" bg-color="primary" class="mb-1">
         <v-tab value="be">Бел</v-tab>
         <v-tab value="ru">Рус</v-tab>
         <v-tab value="la">Lat</v-tab>
       </v-tabs>
-      
       <v-window v-model="currentLangTab">
         <v-window-item value="be"><Editor v-model="form.textVersions.be" /></v-window-item>
         <v-window-item value="ru"><Editor v-model="form.textVersions.ru" /></v-window-item>
         <v-window-item value="la"><Editor v-model="form.textVersions.la" /></v-window-item>
       </v-window>
-
       <v-combobox
         v-model="form.tags"
         :items="allTags"
@@ -26,7 +23,6 @@
         variant="outlined"
         class="mt-4"
       ></v-combobox>
-
       <v-divider class="my-4"></v-divider>
       <h3 class="text-subtitle-1 mb-2">Связанные заметки</h3>
       <div v-if="form.linkedNoteIds && form.linkedNoteIds.length > 0" class="mb-3">
@@ -40,16 +36,14 @@
           {{ linkedNote.title }}
         </v-chip>
       </div>
-      <v-btn @click="isLinkDialogOpen = true" prepend-icon="mdi-link-plus">Добавить связь</v-btn>
+      <v-btn @click="isLinkDialogOpen = true" prepend-icon="mdi-link-plus">{{ $t('linkedNotesAdd') }}</v-btn>
     </v-form>
-
     <div v-else class="text-center mt-16">
       <v-progress-circular indeterminate color="primary"></v-progress-circular>
     </div>
-
     <v-dialog v-model="isLinkDialogOpen" max-width="500px">
       <v-card>
-        <v-card-title>Выберите заметку для связи</v-card-title>
+        <v-card-title>{{ $t('linkedNotesSelect') }}</v-card-title>
         <v-list>
           <v-list-item
             v-for="note in availableNotesToLink"
@@ -78,6 +72,7 @@ const { t } = useI18n();
 const { items, addItem, updateItem, allTags } = useItems();
 const { setAppBar, resetAppBar } = useAppBar();
 const { showSuccess } = useNotifier();
+
 const isEditMode = computed(() => !!props.id);
 const isFormReady = ref(false);
 const currentLangTab = ref('be');
@@ -91,6 +86,7 @@ const form = ref({
 });
 
 const isLinkDialogOpen = ref(false);
+
 const currentlyLinkedNotes = computed(() => form.value.linkedNoteIds?.map(id => items.value.find(item => item.id === id)).filter(Boolean) || []);
 const availableNotesToLink = computed(() => items.value.filter(item => item.id !== props.id && !form.value.linkedNoteIds?.includes(item.id)));
 
@@ -112,7 +108,8 @@ async function handleSave() {
   } else {
     await addItem(dataToSave);
   }
-  showSuccess('Заметка успешно сохранена!');
+
+  showSuccess(t('noteSavedSuccess'));
   router.push({ name: 'ItemsList' });
 }
 
@@ -124,7 +121,6 @@ onMounted(() => {
   });
 
   if (isEditMode.value) {
-    // ✅ ИСПРАВЛЕНИЕ: Мы объявляем переменную stopWatch заранее, чтобы избежать ошибки.
     let stopWatch;
     stopWatch = watch(items, (newItems) => {
       const itemToEdit = newItems.find(i => i.id === props.id);
@@ -137,7 +133,6 @@ onMounted(() => {
           linkedNoteIds: itemToEdit.linkedNoteIds || []
         };
         isFormReady.value = true;
-        // Теперь мы можем безопасно вызвать stopWatch, так как он уже определен.
         if(stopWatch) stopWatch();
       }
     }, { immediate: true });
