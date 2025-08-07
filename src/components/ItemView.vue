@@ -2,7 +2,8 @@
   <v-container>
     <div v-if="!isLoading && item">
       <h2 class="text-h5 font-weight-bold mb-4 note-content-area">{{ item.title }}</h2>
-      <div v-for="(text, lang) in availableVersions" :key="lang" class="mb-4">
+      <div v-for="(text, lang) in availableVersions" :key="lang" class="mb-4" 
+        @click="handleContentClick" >
         <div class="lang-label">{{ t('langLabels.' + lang) }}</div>
         <div v-html="text" class="note-content-area ProseMirror"></div>
       </div>
@@ -74,4 +75,17 @@ const authStore = useAuthStore();
 const item = computed(() => items.value.find(i => i.id === props.id));
 const linkedNotes = computed(() => item.value?.linkedNoteIds?.map(id => items.value.find(note => note.id === id)).filter(Boolean) || []);
 const availableVersions = computed(() => item.value ? Object.fromEntries(Object.entries(item.value.textVersions).filter(([_, v]) => v)) : {});
+// ✅ НОВАЯ ФУНКЦИЯ ДЛЯ ПЕРЕХВАТА КЛИКОВ
+function handleContentClick(event) {
+  // Находим ближайший родительский элемент <a>, по которому кликнули
+  const link = event.target.closest('a');
+  // Проверяем, что это ссылка и что она ведет на внутренний маршрут
+  if (link && link.pathname.startsWith('/item/')) {
+    // Отменяем стандартное поведение браузера (перезагрузку страницы)
+    event.preventDefault(); 
+    
+    // Используем Vue Router для навигации
+    router.push(link.pathname);
+  }
+}
 </script>

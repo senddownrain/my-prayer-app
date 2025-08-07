@@ -60,10 +60,10 @@
           </template>
         </v-list-item>
       </v-list>
-      <v-card-actions>
+      <!-- <v-card-actions>
         <v-spacer></v-spacer>
         <v-btn color="primary" variant="text" @click="isTextSettingsSheetOpen = false">{{ $t('done') }}</v-btn>
-      </v-card-actions>
+      </v-card-actions> -->
     </v-card>
   </v-bottom-sheet>
 </template>

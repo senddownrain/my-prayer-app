@@ -49,10 +49,50 @@
         <v-btn @click="editor.chain().focus().setTextAlign('justify').run()" :class="{ 'v-btn--active': editor.isActive({ textAlign: 'justify' }) }" icon="mdi-format-align-justify"></v-btn>
       </v-btn-toggle>
 
+      <v-divider vertical class="mx-1"></v-divider>
+      <!-- ✅ НОВАЯ КНОПКА ДЛЯ ВСТАВКИ ССЫЛКИ -->
+      <v-btn 
+        @click="openLinkDialog" 
+        :disabled="editor.state.selection.empty"
+        icon="mdi-link-variant-plus"
+        density="compact"
+        variant="text"
+      ></v-btn>
+
     </div>
 
     <editor-content :editor="editor" />
   </div>
+
+   <v-dialog v-model="isLinkDialogOpen" max-width="600px" scrollable>
+    <v-card>
+      <v-card-title class="headline">{{ $t('linkedNotesSelect') }}</v-card-title>
+      <v-card-text class="pa-4">
+        <v-text-field
+          v-model="searchQuery"
+          :placeholder="$t('searchPlaceholder')"
+          variant="outlined"
+          density="compact"
+          autofocus
+          hide-details
+          class="mb-4"
+        ></v-text-field>
+        <v-list v-if="filteredNotes.length > 0">
+          <v-list-item
+            v-for="note in filteredNotes"
+            :key="note.id"
+            :title="note.title"
+            @click="setLink(note.id)"
+          >
+            <template v-slot:prepend>
+              <v-icon>mdi-note-text-outline</v-icon>
+            </template>
+          </v-list-item>
+        </v-list>
+        <div v-else class="text-center text-grey py-4">{{ $t('noNotesFound') }}</div>
+      </v-card-text>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script setup>
@@ -63,6 +103,12 @@ import TextAlign from '@tiptap/extension-text-align';
 import { Paragraph } from '@tiptap/extension-paragraph';
 import { Node } from '@tiptap/core';
 import { useI18n } from 'vue-i18n';
+
+import Link from '@tiptap/extension-link';
+import { useItems } from '@/composables/useItems';
+
+
+const { items } = useItems(); // ✅ Получаем все заметки
 
 const { t } = useI18n();
 const props = defineProps({ modelValue: { type: String, default: '' } });
@@ -98,6 +144,10 @@ const editor = useEditor({
     Paragraph, // Добавляем стандартный параграф
     TextAlign.configure({ types: ['heading', 'paragraph', 'rubric'] }),
     Rubric, // Наше расширение для рубрик
+     Link.configure({
+      openOnClick: false, // Не открывать ссылку в редакторе
+      autolink: true,     // Автоматически превращать URL в ссылки
+    }),
   ],
   onUpdate: () => {
     emit('update:modelValue', editor.value.getHTML());
@@ -113,6 +163,32 @@ const currentStyleLabel = computed(() => {
   return t('style.normal');
 });
 
+// ✅ ЛОГИКА ДЛЯ ДИАЛОГА ВСТАВКИ ССЫЛКИ
+const isLinkDialogOpen = ref(false);
+const searchQuery = ref('');
+const filteredNotes = computed(() => {
+  if (!searchQuery.value) {
+    return items.value;
+  }
+  return items.value.filter(note => 
+    note.title.toLowerCase().includes(searchQuery.value.toLowerCase())
+  );
+});
+function openLinkDialog() {
+  // Команда `isActive('link')` проверяет, стоит ли курсор на ссылке
+  // Если да, мы убираем ссылку. Если нет, открываем диалог для её создания.
+  if (editor.value.isActive('link')) {
+    editor.value.chain().focus().unsetLink().run();
+  } else {
+    isLinkDialogOpen.value = true;
+  }
+}
+function setLink(noteId) {
+  const url = `/item/${noteId}`;
+  editor.value.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+  isLinkDialogOpen.value = false;
+  searchQuery.value = ''; // Сбрасываем поиск
+}
 
 watch(() => props.modelValue, (value) => {
   if (editor.value && editor.value.getHTML() !== value) {

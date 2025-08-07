@@ -41,6 +41,17 @@ export function useItems() {
     return [...items.value].sort((a, b) => (settings.isPinned(b.id) - settings.isPinned(a.id)));
   });
 
+  // ✅ ПРЕВРАЩАЕМ allTags В COMPUTED СВОЙСТВО
+  const allTags = computed(() => {
+    // Сначала фильтруем заметки
+    const visibleItems = items.value.filter(item => 
+      settings.showHiddenItems ? true : !item.hidden
+    );
+    // Затем собираем теги только из видимых заметок
+    const tags = visibleItems.flatMap(item => item.tags || []);
+    return [...new Set(tags)].sort();
+  });
+
   const addItem = async (data) => {
     const docRef = await addDoc(itemsCollection, {
       ...data,

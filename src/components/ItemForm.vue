@@ -55,6 +55,15 @@
     <v-dialog v-model="isLinkDialogOpen" max-width="500px">
       <v-card>
         <v-card-title>{{ $t('linkedNotesSelect') }}</v-card-title>
+         <v-text-field
+          v-model="linkSearchQuery"
+          :placeholder="$t('searchPlaceholder')"
+          variant="filled"
+          density="compact"
+          hide-details
+          autofocus
+          class="mx-4 mb-2"
+        ></v-text-field>
         <v-list>
           <v-list-item
             v-for="note in availableNotesToLink"
@@ -99,10 +108,27 @@ const form = ref({
 
 const isLinkDialogOpen = ref(false);
 
-const currentlyLinkedNotes = computed(() => form.value.linkedNoteIds?.map(id => items.value.find(item => item.id === id)).filter(Boolean) || []);
-const availableNotesToLink = computed(() => items.value.filter(item => item.id !== props.id && !form.value.linkedNoteIds?.includes(item.id)));
+const linkSearchQuery = ref(''); // ✅ Переменная для поиска
 
-function addLink(noteId) { form.value.linkedNoteIds.push(noteId); isLinkDialogOpen.value = false; }
+const currentlyLinkedNotes = computed(() => form.value.linkedNoteIds?.map(id => items.value.find(item => item.id === id)).filter(Boolean) || []);
+// ✅ ОБНОВЛЯЕМ COMPUTED ДЛЯ ФИЛЬТРАЦИИ
+const availableNotesToLink = computed(() => {
+  return items.value.filter(item => {
+    const isNotSelf = item.id !== props.id;
+    const isNotLinked = !form.value.linkedNoteIds?.includes(item.id);
+    const matchesSearch = linkSearchQuery.value 
+      ? item.title.toLowerCase().includes(linkSearchQuery.value.toLowerCase())
+      : true;
+    return isNotSelf && isNotLinked && matchesSearch;
+  });
+});
+
+function addLink(noteId) { 
+  form.value.linkedNoteIds.push(noteId); 
+  isLinkDialogOpen.value = false; 
+  linkSearchQuery.value = ''; // ✅ Сбрасываем поиск
+}
+
 function removeLink(noteId) { form.value.linkedNoteIds = form.value.linkedNoteIds.filter(id => id !== noteId); }
 
 async function handleSave() {

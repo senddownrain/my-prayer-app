@@ -82,6 +82,8 @@
               density="compact"
               class="mr-2"
               @blur="isSearchActive = false"
+              clearable  
+              @click:clear="isSearchActive = false; search = '';"
           ></v-text-field>
       </v-expand-x-transition>
       <v-toolbar-title 

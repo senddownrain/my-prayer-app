@@ -91,5 +91,16 @@
     "ru": "Рус",
     "be": "Бел",
     "la": "Lat"
-  }
+  },
+  
+   "startNovena": "Пачаць навэнну",
+  "novenaDurationTitle": "Працягласць навэнны",
+  "novenaDaysLabel": "Колькасць дзён",
+  "days": "дзён",
+  "start": "Пачаць",
+  "prayerNovena": "Малітоўная навэнна",
+  "daysCompleted": "дзён выканана",
+  "day": "Дзень",
+  "todayCompleted": "Сёння выканана!",
+  "markTodayAsCompleted": "Адзначыць сёння"
 }

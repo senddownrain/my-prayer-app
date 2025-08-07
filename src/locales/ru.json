@@ -90,5 +90,15 @@
     "ru": "Рус",
     "be": "Бел",
     "la": "Lat"
-  }
+  },
+  "startNovena": "Начать новенну",
+  "novenaDurationTitle": "Длительность новенны",
+  "novenaDaysLabel": "Количество дней",
+  "days": "дней",
+  "start": "Начать",
+  "prayerNovena": "Молитвенная новенна",
+  "daysCompleted": "дней выполнено",
+  "day": "День",
+  "todayCompleted": "Сегодня выполнено!",
+  "markTodayAsCompleted": "Отметить сегодня"
 }

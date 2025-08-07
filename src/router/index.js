@@ -28,6 +28,19 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  // ✅ ДОБАВЬТЕ ЭТОТ БЛОК
+  scrollBehavior(to, from, savedPosition) {
+    // Если есть сохраненная позиция (при навигации назад/вперед),
+    // то возвращаемся к ней.
+    if (savedPosition) {
+      return savedPosition;
+    }
+    // В противном случае (при новой навигации) всегда
+    // прокручиваем в начало страницы.
+    else {
+      return { top: 0, left: 0 };
+    }
+  },
 });
 
 // --- ✅ НАВИГАЦИОННЫЙ СТРАЖ С ПОДРОБНЫМ ЛОГИРОВАНИЕМ ---
