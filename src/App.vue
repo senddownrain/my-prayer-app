@@ -88,7 +88,7 @@
         style="cursor: pointer;"
         class="font-weight-medium"
       >
-        {{ $t('appTitle') }}
+       <span class="wrappable-toolbar-title"> {{ $t('appTitle') }}</span> 
       </v-toolbar-title>
       <v-spacer v-if="!isSearchActive"></v-spacer>
       <template v-if="!isSearchActive">
@@ -101,7 +101,11 @@
     </v-app-bar>
 
     <v-main>
-      <router-view />
+      <router-view v-if="!authStore.loading" />
+      <!-- Показываем красивый индикатор загрузки в центре, пока приложение готовится -->
+      <div v-else class="d-flex justify-center align-center fill-height">
+        <v-progress-circular indeterminate color="primary" size="64"></v-progress-circular>
+      </div>
       <FilterSheet />
     </v-main>
     <NotificationSnackbar ref="snackbar" />

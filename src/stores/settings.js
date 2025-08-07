@@ -18,9 +18,9 @@ export const useSettingsStore = defineStore('settings', () => {
   const currentTheme = ref(localStorage.getItem('theme') || 'light');
   const keepScreenOn = ref(JSON.parse(localStorage.getItem('keepScreenOn') || 'false'));
   const fontFamily = ref(localStorage.getItem('fontFamily') || systemFont);
-  const fontSizeMultiplier = ref(parseFloat(localStorage.getItem('fontSizeMultiplier')) || 1.0);
+  const fontSizeMultiplier = ref(parseFloat(localStorage.getItem('fontSizeMultiplier')) || 1.2);
   const viewMode = ref(localStorage.getItem('viewMode') || 'compact');
-  const currentLanguage = ref(localStorage.getItem('language') || 'ru');
+  const currentLanguage = ref(localStorage.getItem('language') || 'be');
   const pinnedIds = ref(JSON.parse(localStorage.getItem('pinnedIds') || '[]'));
   const menuCategories = ref(JSON.parse(localStorage.getItem('menuCategories') || JSON.stringify(defaultCategories)));
   const showHiddenItems = ref(JSON.parse(localStorage.getItem('showHiddenItems') || 'false'));
@@ -29,7 +29,11 @@ export const useSettingsStore = defineStore('settings', () => {
   // ✅ ИСПРАВЛЕНО: Предупреждение Vuetify. Теперь используется актуальный метод.
   watch(currentTheme, (v) => { theme.global.name.value = v; localStorage.setItem('theme', v); }, { immediate: true });
   watch(fontFamily, (v) => { document.documentElement.style.setProperty('--app-font-family', v); localStorage.setItem('fontFamily', v); }, { immediate: true });
-  watch(fontSizeMultiplier, (v) => localStorage.setItem('fontSizeMultiplier', v));
+  watch(fontSizeMultiplier, (newMultiplier) => { 
+    document.documentElement.style.setProperty('--font-size-multiplier', newMultiplier);
+    localStorage.setItem('fontSizeMultiplier', String(newMultiplier));
+  }, { immediate: true }); // immediate: true - применяет стиль при первой же загрузке
+
   watch(keepScreenOn, (v) => localStorage.setItem('keepScreenOn', v));
   watch(viewMode, (v) => localStorage.setItem('viewMode', v));
   watch(currentLanguage, (v) => { locale.value = v; localStorage.setItem('language', v); }, { immediate: true });

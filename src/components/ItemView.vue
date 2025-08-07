@@ -1,9 +1,9 @@
 <template>
   <v-container>
     <div v-if="!isLoading && item">
-      <h2 class="text-h5 font-weight-bold mb-4">{{ item.title }}</h2>
+      <h2 class="text-h5 font-weight-bold mb-4 note-content-area">{{ item.title }}</h2>
       <div v-for="(text, lang) in availableVersions" :key="lang" class="mb-4">
-        <h2 class="text-h6 font-weight-medium text-grey-darken-1 mb-2">{{ t('langNames.' + lang) }}</h2>
+        <div class="lang-label">{{ t('langLabels.' + lang) }}</div>
         <div v-html="text" class="note-content-area ProseMirror"></div>
       </div>
       
@@ -15,7 +15,7 @@
             v-for="linkedNote in linkedNotes"
             :key="linkedNote.id"
             @click="router.push({ name: 'ItemView', params: { id: linkedNote.id } })"
-            rounded="lg"
+            
             class="mb-1"
           >
             <template v-slot:prepend>

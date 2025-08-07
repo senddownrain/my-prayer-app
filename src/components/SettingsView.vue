@@ -29,7 +29,7 @@
         </v-chip>
       </v-chip-group>
 
-      <v-list-item :title="$t('fontSize')" :subtitle="$t('fontSizeHint')">
+    <v-list-item :title="$t('fontSize')" :subtitle="$t('fontSizeHint')">
         <template v-slot:prepend><v-icon>mdi-format-font-size-increase</v-icon></template>
         <template v-slot:append>
           <div class="d-flex align-center">
@@ -39,6 +39,15 @@
           </div>
         </template>
       </v-list-item>
+      
+      <!-- ✅ --- БЛОК ПРЕДПРОСМОТРА РАЗМЕРА ШРИФТА --- ✅ -->
+      <div class="px-4 pb-2">
+        <v-card variant="outlined" class="pa-4">
+          <div class="note-content-area">
+            <p>{{ $t('previewText') }}</p>
+          </div>
+        </v-card>
+      </div>
 
       <v-list-item :title="$t('darkTheme')" :subtitle="$t('themeIs', { themeName: $t('themeNames.' + settings.currentTheme) })">
         <template v-slot:prepend><v-icon>mdi-theme-light-dark</v-icon></template>
@@ -66,8 +75,34 @@
     </v-item-group>
 
     <v-divider class="my-4"></v-divider>
+      <!-- ✅ --- ВОЗВРАЩАЕМ ЛОГИКУ ДОБАВЛЕНИЯ КАТЕГОРИЙ --- ✅ -->
     <v-list-subheader>{{ $t('menuCategories') }}</v-list-subheader>
-    <!-- ... -->
+    <v-list-item v-for="(cat, index) in settings.menuCategories" :key="index">
+      <v-list-item-title>{{ cat.name }}</v-list-item-title>
+      <v-list-item-subtitle>Фильтр по тегам: `{{ cat.tags?.join(', ') }}`</v-list-item-subtitle>
+      <template v-slot:append>
+        <v-btn icon="mdi-delete-outline" variant="text" color="grey" @click="settings.removeCategory(index)"></v-btn>
+      </template>
+    </v-list-item>
+    <v-card variant="tonal" class="pa-4 mt-4">
+      <h3 class="text-subtitle-1 mb-3">{{ $t('addCategory') }}</h3>
+      <v-form @submit.prevent="onAddCategory">
+        <v-text-field v-model="newCategory.name" :label="$t('categoryName')" density="compact" variant="solo-filled" flat></v-text-field>
+        <v-combobox
+          v-model="newCategory.tags"
+          :items="allTags"
+          :label="$t('categoryTags')"
+          density="compact"
+          variant="solo-filled"
+          flat
+          multiple
+          chips
+          clearable
+          class="mt-2"
+        ></v-combobox>
+        <v-btn type="submit" color="primary" block class="mt-2">{{ $t('add') }}</v-btn>
+      </v-form>
+    </v-card>
   </v-container>
 </template>
 

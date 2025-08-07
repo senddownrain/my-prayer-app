@@ -41,7 +41,7 @@
              <v-btn
               :icon="settings.isPinned(item.id) ? 'mdi-pin' : 'mdi-pin-outline'"
               :color="settings.isPinned(item.id) ? 'primary' : 'grey'"
-              variant="text" size="x-small" class="mr-2"
+              variant="text" size="medium" class="mr-2"
               @click.stop="settings.togglePin(item.id)"
             ></v-btn>
           </template>

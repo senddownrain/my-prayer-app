@@ -1,73 +1,176 @@
+/* ==========================================================================
+   Глобальные переменные и стили
+   ========================================================================== */
+
+/* Глобальное применение выбранного пользователем семейства шрифтов */
 body {
   font-family: var(--app-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol');
 }
 
-/* Базовый сброс и переменные */
+/* Переменная для множителя размера текста, управляемая из настроек */
 :root {
   --font-size-multiplier: 1.0;
 }
 
-/* Стили для контента из редактора */
-.note-content-area h2, .ProseMirror h2 {
+
+/* ==========================================================================
+   Принудительные переопределения стилей Vuetify для консистентности
+   ========================================================================== */
+
+/* 
+  Этот блок гарантирует, что ВЫБРАННЫЙ ШРИФТ будет применен ко всем элементам, 
+  переопределяя стандартный шрифт Roboto от Vuetify.
+*/
+.v-application,
+.v-application .text-h1, .v-application .text-h2, .v-application .text-h3, .v-application .text-h4, .v-application .text-h5, .v-application .text-h6,
+.v-application .text-subtitle-1, .v-application .text-subtitle-2,
+.v-application .text-body-1, .v-application .text-body-2,
+.v-application .text-caption, .v-application .text-overline,
+.v-application .v-btn, .v-application .v-list-item-title, .v-application .v-list-item-subtitle,
+.v-application .v-card-title, .v-application .v-card-subtitle, .v-application .v-card-text,
+.v-application .v-toolbar-title,
+.v-application .v-chip,
+.v-application .v-label,
+.ProseMirror { /* Также применяем к редактору */
+  font-family: var(--app-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol') !important;
+}
+
+
+/* 
+  Этот блок гарантирует, что ЗАГОЛОВОК В APPBAR будет переноситься, 
+  а не обрезаться с многоточием.
+*/
+.wrappable-toolbar-title {
+  white-space: normal !important;
+  line-height: 1.25 !important;
+  font-size: 1.15rem !important;
+}
+
+
+/* ==========================================================================
+   Стили для контента заметок (где работает изменение размера)
+   ========================================================================== */
+
+/* 
+  Правила размера шрифта применяются только к элементам внутри этого класса.
+  Используется в ItemView.vue и для превью в SettingsView.vue.
+*/
+.note-content-area h2, .note-content-area .text-h5, .note-content-area .text-h2 {
   font-size: calc(1.5rem * var(--font-size-multiplier));
-  line-height: 1.4; margin: 1.5em 0 0.5em; font-weight: 500;
+  line-height: 1.4; 
+  margin: 1.2em 0 0.5em; 
+  font-weight: 500;
 }
-.note-content-area h3, .ProseMirror h3 {
+.note-content-area h3, .note-content-area .text-h6, .note-content-area .text-h3 {
   font-size: calc(1.15rem * var(--font-size-multiplier));
-  line-height: 1.4; margin: 1.5em 0 0.5em; font-weight: 500;
+  line-height: 1.4; 
+  margin: 1.2em 0 0.5em; 
+  font-weight: 500;
 }
-.note-content-area p, .ProseMirror p {
+.note-content-area p, .note-content-area div, .note-content-area .text-body-1 {
   font-size: calc(1rem * var(--font-size-multiplier));
-  line-height: 1.7; margin-bottom: 1em;
+  line-height: 1.7;
 }
-/* ✅ УБИРАЕМ ОТСТУП У ПЕРВОГО ЭЛЕМЕНТА ТЕКСТА */
-.note-content-area > *:first-child, .ProseMirror > *:first-child {
+.note-content-area .rubric {
+  color: rgb(var(--v-theme-error)); 
+  font-style: italic; 
+  text-align: center;
+  font-size: calc(0.9rem * var(--font-size-multiplier));
+}
+.note-content-area > *:first-child {
   margin-top: 0 !important;
 }
 
-.note-content-area .rubric, .ProseMirror .rubric {
-  color: rgb(var(--v-theme-error)); font-style: italic; text-align: center;
-}
-.note-content-area p[style*="text-align: justify;"],
-.note-content-area h2[style*="text-align: justify;"],
-.note-content-area h3[style*="text-align: justify;"] {
-  text-align: justify;
+
+/* ==========================================================================
+   Стили для специфичных компонентов
+   ========================================================================== */
+
+/* Стили для компактных меток языка (Рус, Бел, Lat) */
+.lang-label {
+  display: inline-block;
+  padding: 2px 10px;
+  background-color: rgba(var(--v-theme-on-surface), 0.08);
+  color: rgba(var(--v-theme-on-surface), 0.7);
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  text-transform: uppercase;
 }
 
-/* Правило для переноса текста в заголовках карточек и списков */
-.v-card-title, .v-list-item-title {
-  white-space: normal !important; word-break: break-word; line-height: 1.4;
+/* Стили для редактора TipTap */
+.editor-container { 
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); 
+  border-radius: 4px; 
 }
-
-/* Стили для мобильных устройств */
-@media (max-width: 600px) {
-  .v-main .v-container.items-list-container {
-    padding: 8px 0 0 0 !important; /* ✅ ДОБАВЛЕН ОТСТУП СВЕРХУ */
-  }
-  .items-list-container .v-card {
-    margin-left: 8px; margin-right: 8px; margin-top: 12px; border-radius: 8px !important;
-  }
-  .items-list-container .v-card:first-child { margin-top: 0; } /* Убираем отступ у первой карточки */
-  .items-list-container .v-list { padding: 0; }
+.editor-toolbar { 
+  display: flex; 
+  flex-wrap: wrap; 
+  align-items: center; 
+  padding: 4px 8px; 
+  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); 
+  gap: 4px; 
 }
-
-/* Стили для редактора */
-.editor-container { border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); border-radius: 4px; }
-.editor-toolbar { display: flex; flex-wrap: wrap; align-items: center; padding: 4px 8px; border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); gap: 4px; }
-.editor-toolbar .v-btn.v-btn--active { background-color: rgba(var(--v-theme-primary), 0.1); color: rgb(var(--v-theme-primary)); }
+.editor-toolbar .v-btn.v-btn--active { 
+  background-color: rgba(var(--v-theme-primary), 0.1); 
+  color: rgb(var(--v-theme-primary)); 
+}
 .ProseMirror {
   min-height: 200px;
+  padding: 8px 12px;
   outline: none;
 }
-.ProseMirror p { margin-bottom: 0; }
-.ProseMirror p.rubric { margin: 1em 0; }
-.ProseMirror-focused { border-color: transparent; box-shadow: none; }
+.ProseMirror p { 
+  margin-bottom: 0; 
+}
+.ProseMirror p.rubric { 
+  margin: 1em 0; 
+}
+.ProseMirror-focused { 
+  border-color: transparent; 
+  box-shadow: none; 
+}
+
 
 /* Улучшенные стили для связанных заметок */
-.linked-notes-list .v-list-item__prepend .v-icon { margin-inline-end: 12px; }
+.linked-notes-list .v-list-item__prepend .v-icon { 
+  margin-inline-end: 12px; 
+}
 
-/* ✅ СТИЛИ ДЛЯ КОМПАКТНОГО СПИСКА */
+
+/* Стили для компактного списка */
 .v-list.v-list--density-compact .v-list-item {
-  min-height: 52px; /* Делаем строки выше */
-  border-bottom: 1px solid rgba(var(--v-border-color), 0.12); /* Добавляем разделитель */
+  min-height: 52px;
+  border-bottom: 1px solid rgba(var(--v-border-color), 0.12);
+}
+
+/* Общее правило для переноса длинных заголовков в карточках */
+.v-card-title {
+  white-space: normal !important; 
+  word-break: break-word; 
+  line-height: 1.4;
+}
+
+
+/* ==========================================================================
+   Адаптивные стили для мобильных устройств
+   ========================================================================== */
+
+@media (max-width: 600px) {
+  .v-main .v-container.items-list-container {
+    padding: 8px 0 0 0 !important;
+  }
+  .items-list-container .v-card {
+    margin-left: 8px; 
+    margin-right: 8px; 
+    margin-top: 12px; 
+    border-radius: 8px !important;
+  }
+  .items-list-container .v-card:first-child { 
+    margin-top: 0; 
+  }
+  .items-list-container .v-list { 
+    padding: 0; 
+  }
 }
