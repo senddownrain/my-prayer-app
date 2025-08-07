@@ -81,7 +81,13 @@
 "lightThemeImage": "Для светлай тэмы",
 "darkThemeImage": "Для цёмнай тэмы",
 "previewText": "Так будзе выглядаць асноўны тэкст вашай нататкі.",
-  "langNames": {
+"textSettings": "Настройкі тэкста",
+ "langNames": {
+    "ru": "Руская",
+    "be": "Беларуская",
+    "la": "Latina"
+  },
+  "langLabels": {
     "ru": "Рус",
     "be": "Бел",
     "la": "Lat"

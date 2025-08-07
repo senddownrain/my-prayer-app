@@ -5,13 +5,11 @@
       <!-- ✅ --- ФИНАЛЬНАЯ ВЕРСИЯ БЛОКА С ИЗОБРАЖЕНИЕМ --- ✅ -->
       <!-- Картинка теперь просто шапка, без текста внутри -->
         <v-img
-        height="180"
-        :src="settings.currentTheme === 'dark' ? '/menu-dark.png' : '/menu-light.png'"
+        height="70"
         cover
-        gradient="to top right, rgba(0,0,0,.5), rgba(0,0,0,.1)"
       >
-        <div class="d-flex flex-column justify-end h-100 pl-4 pb-2 text-white">
-          <h2 class="font-weight-bold">{{ $t('appTitle') }}</h2>
+        <div class="d-flex flex-column justify-end h-100 pa-4">
+         <h2 class="font-weight-bold app-title">{{ $t('appTitle') }}</h2>
         </div>
       </v-img>
       
@@ -65,7 +63,11 @@
     </v-navigation-drawer>
 
     <!-- AppBar остается без изменений -->
-    <v-app-bar :elevation="2" app>
+    <v-app-bar 
+  :elevation="2" 
+  app
+  :scroll-behavior="isItemViewPage ? 'hide' : undefined"
+>
       <v-btn v-if="showBackButton" icon="mdi-arrow-left" @click="router.back()"></v-btn>
       <v-btn v-else icon="mdi-menu" @click="isDrawerOpen = !isDrawerOpen"></v-btn>
       <v-expand-x-transition>
@@ -88,13 +90,20 @@
         style="cursor: pointer;"
         class="font-weight-medium"
       >
-       <span class="wrappable-toolbar-title"> {{ $t('appTitle') }}</span> 
+       <span class="wrappable-toolbar-title app-title">{{ $t('appTitle') }}</span>
       </v-toolbar-title>
-      <v-spacer v-if="!isSearchActive"></v-spacer>
       <template v-if="!isSearchActive">
           <template v-if="isHomePage">
             <v-btn icon="mdi-magnify" @click="isSearchActive = true"></v-btn>
             <v-btn icon="mdi-filter-variant" @click="isFilterSheetOpen = true"></v-btn>
+          </template>
+          <template v-if="isItemViewPage">
+            <v-btn 
+              :icon="settings.isPinned(currentItemId) ? 'mdi-pin' : 'mdi-pin-outline'"
+              :color="settings.isPinned(currentItemId) ? 'primary' : 'grey'"
+              @click="settings.togglePin(currentItemId)"
+            ></v-btn>
+            <v-btn icon="mdi-tune-variant" @click="openTextSettings"></v-btn>
           </template>
           <v-btn v-if="showSaveButton" icon="mdi-check" @click="triggerSave"></v-btn>
       </template>
@@ -107,13 +116,15 @@
         <v-progress-circular indeterminate color="primary" size="64"></v-progress-circular>
       </div>
       <FilterSheet />
+      <TextSettingsSheet />
+      
     </v-main>
     <NotificationSnackbar ref="snackbar" />
   </v-app>
 </template>
 
 <script setup>
-import { ref, onMounted, provide, computed } from 'vue';
+import { ref, onMounted, provide, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useSettingsStore } from '@/stores/settings';
 import { useAppBar } from '@/composables/useAppBar';
@@ -122,18 +133,32 @@ import { useAuthStore } from '@/stores/auth';
 import { notifier } from '@/composables/useNotifier';
 import FilterSheet from '@/components/FilterSheet.vue';
 import NotificationSnackbar from '@/components/NotificationSnackbar.vue';
+import TextSettingsSheet from '@/components/TextSettingsSheet.vue'; // ✅ ИМПОРТ
 
 const settings = useSettingsStore();
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
-const { isDrawerOpen, isSearchActive, isFilterSheetOpen } = useAppBar();
+const { isDrawerOpen, isSearchActive, isFilterSheetOpen, isTextSettingsSheetOpen  } = useAppBar();
 const { selectedTags, search } = useFilters();
 const snackbar = ref(null);
 
 const isHomePage = computed(() => route.name === 'ItemsList');
 const showBackButton = computed(() => !isHomePage.value);
 const showSaveButton = computed(() => ['ItemEdit', 'ItemAdd'].includes(route.name));
+
+const isItemViewPage = computed(() => route.name === 'ItemView');
+const currentItemId = computed(() => route.params.id); //
+
+function openTextSettings() {
+  console.log(`[App.vue] Button clicked. 'isTextSettingsSheetOpen' is currently: ${isTextSettingsSheetOpen.value}`);
+  isTextSettingsSheetOpen.value = true;
+  console.log(`[App.vue] State changed. 'isTextSettingsSheetOpen' is now: ${isTextSettingsSheetOpen.value}`);
+}
+// ✅ ЛОГ 3: Отслеживаем изменение переменной, чтобы убедиться в её реактивности
+watch(isTextSettingsSheetOpen, (newValue, oldValue) => {
+  console.log(`[App.vue WATCHER] 'isTextSettingsSheetOpen' changed from ${oldValue} to ${newValue}`);
+});
 
 const saveAction = ref(null);
 const triggerSave = () => {

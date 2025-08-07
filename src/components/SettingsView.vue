@@ -124,8 +124,8 @@ const fontOptions = ref([
 ]);
 
 const langOptions = ref([
+  { title: 'Беларуская', value: 'be' },
   { title: 'Русский', value: 'ru' },
-  { title: 'Беларуская', value: 'be' }
 ]);
 
 const newCategory = ref({ name: '', tags: [] });

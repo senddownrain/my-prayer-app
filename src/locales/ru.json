@@ -80,7 +80,13 @@
 "lightThemeImage": "Для светлой темы",
 "darkThemeImage": "Для темной темы",
 "previewText": "Так будет выглядеть основной текст вашей заметки.",
+"textSettings": "Настройки текста",
   "langNames": {
+    "ru": "Русский",
+    "be": "Беларуская",
+    "la": "Latina"
+  },
+  "langLabels": {
     "ru": "Рус",
     "be": "Бел",
     "la": "Lat"

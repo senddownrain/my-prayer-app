@@ -27,7 +27,10 @@ export const useSettingsStore = defineStore('settings', () => {
 
   // --- Слежение за изменениями и сохранение в localStorage (Watchers) ---
   // ✅ ИСПРАВЛЕНО: Предупреждение Vuetify. Теперь используется актуальный метод.
-  watch(currentTheme, (v) => { theme.global.name.value = v; localStorage.setItem('theme', v); }, { immediate: true });
+  watch(currentTheme, (newTheme) => {
+    theme.change(newTheme)
+    localStorage.setItem('theme', newTheme);
+  }, { immediate: true });
   watch(fontFamily, (v) => { document.documentElement.style.setProperty('--app-font-family', v); localStorage.setItem('fontFamily', v); }, { immediate: true });
   watch(fontSizeMultiplier, (newMultiplier) => { 
     document.documentElement.style.setProperty('--font-size-multiplier', newMultiplier);

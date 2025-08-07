@@ -39,26 +39,76 @@
 
 ### vite.config.js
 ```
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import { VitePWA } from 'vite-plugin-pwa'
-// ✅ 1. Импортируем утилиты для работы с путями из Node.js
-import { fileURLToPath, URL } from 'node:url'
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+import vuetify, { transformAssetUrls } from 'vite-plugin-vuetify';
+import { VitePWA } from 'vite-plugin-pwa';
+import path from 'path';
 
 export default defineConfig({
   plugins: [
-    vue(),
+    // Плагин для Vue, с обязательной трансформацией для Vuetify
+    vue({ 
+      template: { transformAssetUrls }
+    }),
+
+    // Плагин для Vuetify 3, с автоматическим импортом компонентов
+    vuetify({
+      autoImport: true,
+    }),
+
+    // Плагин для Progressive Web App (PWA)
     VitePWA({
-      // ... секция PWA остается без изменений ...
+      // Стратегия обновления: сервис-воркер будет обновляться автоматически в фоне
+      registerType: 'autoUpdate',
+      // Включаем регистрацию сервис-воркера
+      injectRegister: 'auto',
+      
+      workbox: {
+        // Эта опция критически важна: она удаляет старые кэши при обновлении,
+        // что помогает при смене иконок и других ассетов.
+        cleanupOutdatedCaches: true,
+        
+        // Указываем, какие файлы нужно кэшировать для оффлайн-работы
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,json,vue,txt,woff2}'],
+      },
+
+      // Манифест вашего приложения
+      manifest: {
+        name: 'Мои Молитвы', // Полное название приложения
+        short_name: 'Молитвы', // Короткое название для иконки
+        description: 'Личный сборник молитв и заметок',
+        theme_color: '#ffffff', // Цвет верхней панели в Android
+        background_color: '#ffffff', // Цвет сплэш-скрина при запуске
+        display: 'standalone', // Приложение открывается без интерфейса браузера
+        start_url: '.', // Стартовый URL
+        
+        // Здесь должны быть пути к вашим ИКОНКАМ в папке /public
+        icons: [
+          {
+            src: 'pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png'
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png'
+          },
+          // Вы можете добавить и другие размеры, например, для маскируемых иконок
+        
+        ]
+      }
     })
   ],
+  
+  // Настройка псевдонима '@' для удобного импорта из папки /src
   resolve: {
     alias: {
-      // ✅ 2. Используем НОВЫЙ синтаксис для определения псевдонима '@'
-      '@': fileURLToPath(new URL('./src', import.meta.url))
+      '@': path.resolve(__dirname, './src'),
     },
   },
-})
+});
 ```
 
 ### firebase.json
@@ -250,13 +300,11 @@ export default defineConfig({
       <!-- ✅ --- ФИНАЛЬНАЯ ВЕРСИЯ БЛОКА С ИЗОБРАЖЕНИЕМ --- ✅ -->
       <!-- Картинка теперь просто шапка, без текста внутри -->
         <v-img
-        height="180"
-        :src="settings.currentTheme === 'dark' ? '/menu-dark.png' : '/menu-light.png'"
+        height="70"
         cover
-        gradient="to top right, rgba(0,0,0,.5), rgba(0,0,0,.1)"
       >
-        <div class="d-flex flex-column justify-end h-100 pl-4 pb-2 text-white">
-          <h2 class="font-weight-bold">{{ $t('appTitle') }}</h2>
+        <div class="d-flex flex-column justify-end h-100 pa-4">
+         <h2 class="font-weight-bold app-title">{{ $t('appTitle') }}</h2>
         </div>
       </v-img>
       
@@ -310,7 +358,11 @@ export default defineConfig({
     </v-navigation-drawer>
 
     <!-- AppBar остается без изменений -->
-    <v-app-bar :elevation="2" app>
+    <v-app-bar 
+  :elevation="2" 
+  app
+  :scroll-behavior="isItemViewPage ? 'hide' : undefined"
+>
       <v-btn v-if="showBackButton" icon="mdi-arrow-left" @click="router.back()"></v-btn>
       <v-btn v-else icon="mdi-menu" @click="isDrawerOpen = !isDrawerOpen"></v-btn>
       <v-expand-x-transition>
@@ -333,28 +385,41 @@ export default defineConfig({
         style="cursor: pointer;"
         class="font-weight-medium"
       >
-        {{ $t('appTitle') }}
+       <span class="wrappable-toolbar-title app-title">{{ $t('appTitle') }}</span>
       </v-toolbar-title>
-      <v-spacer v-if="!isSearchActive"></v-spacer>
       <template v-if="!isSearchActive">
           <template v-if="isHomePage">
             <v-btn icon="mdi-magnify" @click="isSearchActive = true"></v-btn>
             <v-btn icon="mdi-filter-variant" @click="isFilterSheetOpen = true"></v-btn>
+          </template>
+          <template v-if="isItemViewPage">
+            <v-btn 
+              :icon="settings.isPinned(currentItemId) ? 'mdi-pin' : 'mdi-pin-outline'"
+              :color="settings.isPinned(currentItemId) ? 'primary' : 'grey'"
+              @click="settings.togglePin(currentItemId)"
+            ></v-btn>
+            <v-btn icon="mdi-tune-variant" @click="openTextSettings"></v-btn>
           </template>
           <v-btn v-if="showSaveButton" icon="mdi-check" @click="triggerSave"></v-btn>
       </template>
     </v-app-bar>
 
     <v-main>
-      <router-view />
+      <router-view v-if="!authStore.loading" />
+      <!-- Показываем красивый индикатор загрузки в центре, пока приложение готовится -->
+      <div v-else class="d-flex justify-center align-center fill-height">
+        <v-progress-circular indeterminate color="primary" size="64"></v-progress-circular>
+      </div>
       <FilterSheet />
+      <TextSettingsSheet />
+      
     </v-main>
     <NotificationSnackbar ref="snackbar" />
   </v-app>
 </template>
 
 <script setup>
-import { ref, onMounted, provide, computed } from 'vue';
+import { ref, onMounted, provide, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useSettingsStore } from '@/stores/settings';
 import { useAppBar } from '@/composables/useAppBar';
@@ -363,18 +428,32 @@ import { useAuthStore } from '@/stores/auth';
 import { notifier } from '@/composables/useNotifier';
 import FilterSheet from '@/components/FilterSheet.vue';
 import NotificationSnackbar from '@/components/NotificationSnackbar.vue';
+import TextSettingsSheet from '@/components/TextSettingsSheet.vue'; // ✅ ИМПОРТ
 
 const settings = useSettingsStore();
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
-const { isDrawerOpen, isSearchActive, isFilterSheetOpen } = useAppBar();
+const { isDrawerOpen, isSearchActive, isFilterSheetOpen, isTextSettingsSheetOpen  } = useAppBar();
 const { selectedTags, search } = useFilters();
 const snackbar = ref(null);
 
 const isHomePage = computed(() => route.name === 'ItemsList');
 const showBackButton = computed(() => !isHomePage.value);
 const showSaveButton = computed(() => ['ItemEdit', 'ItemAdd'].includes(route.name));
+
+const isItemViewPage = computed(() => route.name === 'ItemView');
+const currentItemId = computed(() => route.params.id); //
+
+function openTextSettings() {
+  console.log(`[App.vue] Button clicked. 'isTextSettingsSheetOpen' is currently: ${isTextSettingsSheetOpen.value}`);
+  isTextSettingsSheetOpen.value = true;
+  console.log(`[App.vue] State changed. 'isTextSettingsSheetOpen' is now: ${isTextSettingsSheetOpen.value}`);
+}
+// ✅ ЛОГ 3: Отслеживаем изменение переменной, чтобы убедиться в её реактивности
+watch(isTextSettingsSheetOpen, (newValue, oldValue) => {
+  console.log(`[App.vue WATCHER] 'isTextSettingsSheetOpen' changed from ${oldValue} to ${newValue}`);
+});
 
 const saveAction = ref(null);
 const triggerSave = () => {
@@ -977,9 +1056,9 @@ function navigateToEdit(id) { router.push({ name: 'ItemEdit', params: { id } });
 <template>
   <v-container>
     <div v-if="!isLoading && item">
-      <h2 class="text-h5 font-weight-bold mb-4">{{ item.title }}</h2>
+      <h2 class="text-h5 font-weight-bold mb-4 note-content-area">{{ item.title }}</h2>
       <div v-for="(text, lang) in availableVersions" :key="lang" class="mb-4">
-        <h2 class="text-h6 font-weight-medium text-grey-darken-1 mb-2">{{ t('langNames.' + lang) }}</h2>
+        <div class="lang-label">{{ t('langLabels.' + lang) }}</div>
         <div v-html="text" class="note-content-area ProseMirror"></div>
       </div>
       
@@ -991,7 +1070,7 @@ function navigateToEdit(id) { router.push({ name: 'ItemEdit', params: { id } });
             v-for="linkedNote in linkedNotes"
             :key="linkedNote.id"
             @click="router.push({ name: 'ItemView', params: { id: linkedNote.id } })"
-            rounded="lg"
+            
             class="mb-1"
           >
             <template v-slot:prepend>
@@ -1186,7 +1265,7 @@ defineExpose({ show });
         </v-chip>
       </v-chip-group>
 
-      <v-list-item :title="$t('fontSize')" :subtitle="$t('fontSizeHint')">
+    <v-list-item :title="$t('fontSize')" :subtitle="$t('fontSizeHint')">
         <template v-slot:prepend><v-icon>mdi-format-font-size-increase</v-icon></template>
         <template v-slot:append>
           <div class="d-flex align-center">
@@ -1196,6 +1275,15 @@ defineExpose({ show });
           </div>
         </template>
       </v-list-item>
+      
+      <!-- ✅ --- БЛОК ПРЕДПРОСМОТРА РАЗМЕРА ШРИФТА --- ✅ -->
+      <div class="px-4 pb-2">
+        <v-card variant="outlined" class="pa-4">
+          <div class="note-content-area">
+            <p>{{ $t('previewText') }}</p>
+          </div>
+        </v-card>
+      </div>
 
       <v-list-item :title="$t('darkTheme')" :subtitle="$t('themeIs', { themeName: $t('themeNames.' + settings.currentTheme) })">
         <template v-slot:prepend><v-icon>mdi-theme-light-dark</v-icon></template>
@@ -1223,8 +1311,34 @@ defineExpose({ show });
     </v-item-group>
 
     <v-divider class="my-4"></v-divider>
+      <!-- ✅ --- ВОЗВРАЩАЕМ ЛОГИКУ ДОБАВЛЕНИЯ КАТЕГОРИЙ --- ✅ -->
     <v-list-subheader>{{ $t('menuCategories') }}</v-list-subheader>
-    <!-- ... -->
+    <v-list-item v-for="(cat, index) in settings.menuCategories" :key="index">
+      <v-list-item-title>{{ cat.name }}</v-list-item-title>
+      <v-list-item-subtitle>Фильтр по тегам: `{{ cat.tags?.join(', ') }}`</v-list-item-subtitle>
+      <template v-slot:append>
+        <v-btn icon="mdi-delete-outline" variant="text" color="grey" @click="settings.removeCategory(index)"></v-btn>
+      </template>
+    </v-list-item>
+    <v-card variant="tonal" class="pa-4 mt-4">
+      <h3 class="text-subtitle-1 mb-3">{{ $t('addCategory') }}</h3>
+      <v-form @submit.prevent="onAddCategory">
+        <v-text-field v-model="newCategory.name" :label="$t('categoryName')" density="compact" variant="solo-filled" flat></v-text-field>
+        <v-combobox
+          v-model="newCategory.tags"
+          :items="allTags"
+          :label="$t('categoryTags')"
+          density="compact"
+          variant="solo-filled"
+          flat
+          multiple
+          chips
+          clearable
+          class="mt-2"
+        ></v-combobox>
+        <v-btn type="submit" color="primary" block class="mt-2">{{ $t('add') }}</v-btn>
+      </v-form>
+    </v-card>
   </v-container>
 </template>
 
@@ -1246,8 +1360,8 @@ const fontOptions = ref([
 ]);
 
 const langOptions = ref([
+  { title: 'Беларуская', value: 'be' },
   { title: 'Русский', value: 'ru' },
-  { title: 'Беларуская', value: 'be' }
 ]);
 
 const newCategory = ref({ name: '', tags: [] });
@@ -1261,6 +1375,102 @@ function onAddCategory() {
 </script>
 ```
 
+### src/components/TextSettingsSheet.vue
+```
+<template>
+  <v-bottom-sheet v-model="isTextSettingsSheetOpen">
+    <v-card class="pa-4" rounded="t-xl">
+      <v-list lines="two" subheader>
+       
+
+        <!-- Настройка размера -->
+<v-list-subheader>{{ $t('fontSize') }}</v-list-subheader>
+<v-list-item>
+  <div class="d-flex align-center justify-space-between">
+    <!-- Кнопка уменьшения -->
+    <v-btn 
+      variant="tonal" 
+      @click="settings.decreaseFontSize" 
+      :disabled="settings.fontSizeMultiplier <= 0.8"
+      class="font-size-button"
+    >
+      <span class="text-h6 font-weight-bold">A</span>
+      <v-icon right>mdi-minus</v-icon>
+    </v-btn>
+
+    <!-- Текущее значение в процентах -->
+    <span class="mx-4 font-weight-bold text-h6 text-center" style="min-width: 80px;">
+      {{ Math.round(settings.fontSizeMultiplier * 100) }}%
+    </span>
+
+    <!-- Кнопка увеличения -->
+    <v-btn 
+      variant="tonal" 
+      @click="settings.increaseFontSize" 
+      :disabled="settings.fontSizeMultiplier >= 1.5"
+      class="font-size-button"
+    >
+      <span class="text-h5 font-weight-bold">A</span>
+      <v-icon right>mdi-plus</v-icon>
+    </v-btn>
+  </div>
+</v-list-item>
+ <!-- Настройка шрифта -->
+        <v-list-subheader>{{ $t('fontFamily') }}</v-list-subheader>
+        <v-list-item class="px-1">
+          <v-chip-group 
+            :model-value="settings.fontFamily" 
+            @update:model-value="settings.setFontFamily"
+            mandatory
+          >
+            <v-chip v-for="font in fontOptions" :key="font.value" :value="font.value" filter variant="outlined" :style="{ fontFamily: font.value }">
+              {{ font.title }}
+            </v-chip>
+          </v-chip-group>
+        </v-list-item>
+        <v-list-item :title="$t('keepScreenOn')" :subtitle="$t('keepScreenOnHint')">
+          <template v-slot:prepend><v-icon>mdi-lightbulb-on-outline</v-icon></template>
+          <template v-slot:append>
+            <v-switch 
+              :model-value="settings.keepScreenOn" 
+              @update:model-value="settings.setKeepScreenOn" 
+              inset color="primary" hide-details>
+            </v-switch>
+          </template>
+        </v-list-item>
+      </v-list>
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn color="primary" variant="text" @click="isTextSettingsSheetOpen = false">{{ $t('done') }}</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-bottom-sheet>
+</template>
+
+<script setup>
+import { ref, watch } from 'vue';
+import { useSettingsStore } from '@/stores/settings';
+import { useAppBar } from '@/composables/useAppBar';
+
+const settings = useSettingsStore();
+const { isTextSettingsSheetOpen } = useAppBar();
+
+// // ✅ ЛОГ 4: Отслеживаем, получает ли этот компонент обновление состояния
+// watch(isTextSettingsSheetOpen, (newValue, oldValue) => {
+//   console.log(`%c[TextSettingsSheet.vue WATCHER] 'isTextSettingsSheetOpen' changed from ${oldValue} to ${newValue}`, 'color: green; font-weight: bold;');
+// });
+
+const fontOptions = ref([
+  { title: 'Системный', value: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" },
+  { title: 'Kurale', value: 'Kurale' },
+  { title: 'Yeseva One', value: 'Yeseva One' },
+  { title: 'Old Standard TT', value: 'Old Standard TT' },
+  { title: 'Pacifico', value: 'Pacifico' },
+  { title: 'Comfortaa', value: 'Comfortaa' },
+]);
+</script>
+```
+
 ### src/composables/useAppBar.js
 ```
 import { ref } from 'vue';
@@ -1270,6 +1480,10 @@ const showBackButton = ref(false);
 const isDrawerOpen = ref(false);
 const isSearchActive = ref(false);
 const isFilterSheetOpen = ref(false);
+const isTextSettingsSheetOpen = ref(false); // ✅ ДОБАВЛЯЕМ НОВОЕ СОСТОЯНИЕ
+
+
+console.log('[useAppBar.js] Module loaded. Creating reactive variables.');
 
 export function useAppBar() {
   // Эта функция будет просто переключать видимость кнопки "Назад"
@@ -1282,7 +1496,8 @@ export function useAppBar() {
     setBackButtonVisibility,
     isDrawerOpen, 
     isSearchActive, 
-    isFilterSheetOpen
+    isFilterSheetOpen, 
+    isTextSettingsSheetOpen 
   };
 }
 ```
@@ -1595,10 +1810,17 @@ export default i18n;
 "menuImagesHint": "Усталюйце свае фонавыя малюнкі",
 "lightThemeImage": "Для светлай тэмы",
 "darkThemeImage": "Для цёмнай тэмы",
-  "langNames": {
-    "ru": "Русский",
+"previewText": "Так будзе выглядаць асноўны тэкст вашай нататкі.",
+"textSettings": "Настройкі тэкста",
+ "langNames": {
+    "ru": "Руская",
     "be": "Беларуская",
     "la": "Latina"
+  },
+  "langLabels": {
+    "ru": "Рус",
+    "be": "Бел",
+    "la": "Lat"
   }
 }
 ```
@@ -1686,10 +1908,12 @@ export default i18n;
 "menuImagesHint": "Установите свои фоновые картинки",
 "lightThemeImage": "Для светлой темы",
 "darkThemeImage": "Для темной темы",
+"previewText": "Так будет выглядеть основной текст вашей заметки.",
+"textSettings": "Настройки текста",
   "langNames": {
-    "ru": "Русский",
-    "be": "Беларуская",
-    "la": "Latina"
+    "ru": "Рус",
+    "be": "Бел",
+    "la": "Lat"
   }
 }
 ```
@@ -1869,18 +2093,25 @@ export const useSettingsStore = defineStore('settings', () => {
   const currentTheme = ref(localStorage.getItem('theme') || 'light');
   const keepScreenOn = ref(JSON.parse(localStorage.getItem('keepScreenOn') || 'false'));
   const fontFamily = ref(localStorage.getItem('fontFamily') || systemFont);
-  const fontSizeMultiplier = ref(parseFloat(localStorage.getItem('fontSizeMultiplier')) || 1.0);
+  const fontSizeMultiplier = ref(parseFloat(localStorage.getItem('fontSizeMultiplier')) || 1.2);
   const viewMode = ref(localStorage.getItem('viewMode') || 'compact');
-  const currentLanguage = ref(localStorage.getItem('language') || 'ru');
+  const currentLanguage = ref(localStorage.getItem('language') || 'be');
   const pinnedIds = ref(JSON.parse(localStorage.getItem('pinnedIds') || '[]'));
   const menuCategories = ref(JSON.parse(localStorage.getItem('menuCategories') || JSON.stringify(defaultCategories)));
   const showHiddenItems = ref(JSON.parse(localStorage.getItem('showHiddenItems') || 'false'));
 
   // --- Слежение за изменениями и сохранение в localStorage (Watchers) ---
   // ✅ ИСПРАВЛЕНО: Предупреждение Vuetify. Теперь используется актуальный метод.
-  watch(currentTheme, (v) => { theme.global.name.value = v; localStorage.setItem('theme', v); }, { immediate: true });
+  watch(currentTheme, (newTheme) => {
+    theme.change(newTheme)
+    localStorage.setItem('theme', newTheme);
+  }, { immediate: true });
   watch(fontFamily, (v) => { document.documentElement.style.setProperty('--app-font-family', v); localStorage.setItem('fontFamily', v); }, { immediate: true });
-  watch(fontSizeMultiplier, (v) => localStorage.setItem('fontSizeMultiplier', v));
+  watch(fontSizeMultiplier, (newMultiplier) => { 
+    document.documentElement.style.setProperty('--font-size-multiplier', newMultiplier);
+    localStorage.setItem('fontSizeMultiplier', String(newMultiplier));
+  }, { immediate: true }); // immediate: true - применяет стиль при первой же загрузке
+
   watch(keepScreenOn, (v) => localStorage.setItem('keepScreenOn', v));
   watch(viewMode, (v) => localStorage.setItem('viewMode', v));
   watch(currentLanguage, (v) => { locale.value = v; localStorage.setItem('language', v); }, { immediate: true });
@@ -1941,77 +2172,134 @@ export const useSettingsStore = defineStore('settings', () => {
 
 ### src/styles/main.css
 ```
-body {
-  font-family: var(--app-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol');
-}
-
-/* Базовый сброс и переменные */
+/* ==========================================================================
+   Глобальные переменные
+   ========================================================================== */
 :root {
   --font-size-multiplier: 1.0;
+  /* Системный шрифт по умолчанию, если ничего не выбрано */
+  --app-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
-/* Стили для контента из редактора */
-.note-content-area h2, .ProseMirror h2 {
-  font-size: calc(1.5rem * var(--font-size-multiplier));
-  line-height: 1.4; margin: 1.5em 0 0.5em; font-weight: 500;
-}
-.note-content-area h3, .ProseMirror h3 {
-  font-size: calc(1.15rem * var(--font-size-multiplier));
-  line-height: 1.4; margin: 1.5em 0 0.5em; font-weight: 500;
-}
-.note-content-area p, .ProseMirror p {
-  font-size: calc(1rem * var(--font-size-multiplier));
-  line-height: 1.7; margin-bottom: 1em;
-}
-/* ✅ УБИРАЕМ ОТСТУП У ПЕРВОГО ЭЛЕМЕНТА ТЕКСТА */
-.note-content-area > *:first-child, .ProseMirror > *:first-child {
-  margin-top: 0 !important;
+/* ==========================================================================
+   ТОЧЕЧНОЕ ПРИМЕНЕНИЕ ШРИФТОВ
+   ========================================================================== */
+
+/* 1. Применяем шрифт к тексту внутри заметок и к редактору */
+.note-content-area, .ProseMirror {
+  font-family: var(--app-font-family);
 }
 
-.note-content-area .rubric, .ProseMirror .rubric {
-  color: rgb(var(--v-theme-error)); font-style: italic; text-align: center;
-}
-.note-content-area p[style*="text-align: justify;"],
-.note-content-area h2[style*="text-align: justify;"],
-.note-content-area h3[style*="text-align: justify;"] {
-  text-align: justify;
+/* 2. Применяем шрифт к заголовку приложения в AppBar и в боковом меню */
+.app-title {
+  font-family: var(--app-font-family) !important; /* !important нужен здесь, чтобы перебить Vuetify */
 }
 
-/* Правило для переноса текста в заголовках карточек и списков */
-.v-card-title, .v-list-item-title {
-  white-space: normal !important; word-break: break-word; line-height: 1.4;
-}
+/* ==========================================================================
+   Стили для контента заметок (где работает изменение размера)
+   ========================================================================== */
+.note-content-area h2 { font-size: calc(1.5rem * var(--font-size-multiplier)); }
+.note-content-area h3 { font-size: calc(1.15rem * var(--font-size-multiplier)); }
+.note-content-area p, .note-content-area div { font-size: calc(1rem * var(--font-size-multiplier)); }
+/* ... (остальные стили для .note-content-area и другие правила остаются как были) ... */
+.note-content-area .rubric { color: rgb(var(--v-theme-error)); font-style: italic; text-align: center; }
+.note-content-area > *:first-child { margin-top: 0 !important; }
 
-/* Стили для мобильных устройств */
-@media (max-width: 600px) {
-  .v-main .v-container.items-list-container {
-    padding: 8px 0 0 0 !important; /* ✅ ДОБАВЛЕН ОТСТУП СВЕРХУ */
-  }
-  .items-list-container .v-card {
-    margin-left: 8px; margin-right: 8px; margin-top: 12px; border-radius: 8px !important;
-  }
-  .items-list-container .v-card:first-child { margin-top: 0; } /* Убираем отступ у первой карточки */
-  .items-list-container .v-list { padding: 0; }
-}
-
-/* Стили для редактора */
+.wrappable-toolbar-title { white-space: normal !important; line-height: 1.25 !important; font-size: 1.15rem !important; }
+.lang-label { display: inline-block; padding: 2px 10px; background-color: rgba(var(--v-theme-on-surface), 0.08); color: rgba(var(--v-theme-on-surface), 0.7); border-radius: 12px; font-size: 0.8rem; font-weight: 700; margin-bottom: 12px; text-transform: uppercase; }
 .editor-container { border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); border-radius: 4px; }
 .editor-toolbar { display: flex; flex-wrap: wrap; align-items: center; padding: 4px 8px; border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); gap: 4px; }
-.editor-toolbar .v-btn.v-btn--active { background-color: rgba(var(--v-theme-primary), 0.1); color: rgb(var(--v-theme-primary)); }
-.ProseMirror {
-  min-height: 200px;
-  outline: none;
+.ProseMirror { min-height: 200px; padding: 8px 12px; outline: none; }
+/* ==========================================================================
+   Глобальные переменные
+   ========================================================================== */
+:root {
+  --font-size-multiplier: 1.0;
+  /* Системный шрифт по умолчанию, если ничего не выбрано */
+  --app-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
-.ProseMirror p { margin-bottom: 0; }
-.ProseMirror p.rubric { margin: 1em 0; }
-.ProseMirror-focused { border-color: transparent; box-shadow: none; }
+
+/* ==========================================================================
+   ТОЧЕЧНОЕ ПРИМЕНЕНИЕ ШРИФТОВ
+   ========================================================================== */
+
+/* 1. Применяем шрифт к тексту внутри заметок и к редактору */
+.note-content-area, .ProseMirror {
+  font-family: var(--app-font-family);
+}
+
+/* 2. Применяем шрифт к заголовку приложения в AppBar и в боковом меню */
+.app-title {
+  font-family: var(--app-font-family) !important; /* !important нужен здесь, чтобы перебить Vuetify */
+}
+
+/* ==========================================================================
+   Стили для контента заметок (где работает изменение размера)
+   ========================================================================== */
+.note-content-area h2 { font-size: calc(1.5rem * var(--font-size-multiplier)); }
+.note-content-area h3 { font-size: calc(1.15rem * var(--font-size-multiplier)); }
+.note-content-area p, .note-content-area div { font-size: calc(1rem * var(--font-size-multiplier)); }
+/* ... (остальные стили для .note-content-area и другие правила остаются как были) ... */
+.note-content-area .rubric { color: rgb(var(--v-theme-error)); font-style: italic; text-align: center; }
+.note-content-area > *:first-child { margin-top: 0 !important; }
+
+.wrappable-toolbar-title { white-space: normal !important; line-height: 1.25 !important; font-size: 1.15rem !important; }
+.lang-label { display: inline-block; padding: 2px 10px; background-color: rgba(var(--v-theme-on-surface), 0.08); color: rgba(var(--v-theme-on-surface), 0.7); border-radius: 12px; font-size: 0.8rem; font-weight: 700; margin-bottom: 12px; text-transform: uppercase; }
+.editor-container { border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); border-radius: 4px; }
+.editor-toolbar { display: flex; flex-wrap: wrap; align-items: center; padding: 4px 8px; border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); gap: 4px; }
+.ProseMirror { min-height: 200px; padding: 8px 12px; outline: none; }
+
+.ProseMirror p { 
+  margin-bottom: 0; 
+}
+.ProseMirror p.rubric { 
+  margin: 1em 0; 
+}
+.ProseMirror-focused { 
+  border-color: transparent; 
+  box-shadow: none; 
+}
+
 
 /* Улучшенные стили для связанных заметок */
-.linked-notes-list .v-list-item__prepend .v-icon { margin-inline-end: 12px; }
+.linked-notes-list .v-list-item__prepend .v-icon { 
+  margin-inline-end: 12px; 
+}
 
-/* ✅ СТИЛИ ДЛЯ КОМПАКТНОГО СПИСКА */
+
+/* Стили для компактного списка */
 .v-list.v-list--density-compact .v-list-item {
-  min-height: 52px; /* Делаем строки выше */
-  border-bottom: 1px solid rgba(var(--v-border-color), 0.12); /* Добавляем разделитель */
+  min-height: 52px;
+  border-bottom: 1px solid rgba(var(--v-border-color), 0.12);
+}
+
+/* Общее правило для переноса длинных заголовков в карточках */
+.v-card-title {
+  white-space: normal !important; 
+  word-break: break-word; 
+  line-height: 1.4;
+}
+
+
+/* ==========================================================================
+   Адаптивные стили для мобильных устройств
+   ========================================================================== */
+
+@media (max-width: 600px) {
+  .v-main .v-container.items-list-container {
+    padding: 8px 0 0 0 !important;
+  }
+  .items-list-container .v-card {
+    margin-left: 8px; 
+    margin-right: 8px; 
+    margin-top: 12px; 
+    border-radius: 8px !important;
+  }
+  .items-list-container .v-card:first-child { 
+    margin-top: 0; 
+  }
+  .items-list-container .v-list { 
+    padding: 0; 
+  }
 }
 ```
