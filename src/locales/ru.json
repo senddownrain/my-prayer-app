@@ -84,12 +84,14 @@
   "langNames": {
     "ru": "Русский",
     "be": "Беларуская",
-    "la": "Latina"
+    "la": "Latina",
+    "pl": "Polski"
   },
   "langLabels": {
     "ru": "Рус",
     "be": "Бел",
-    "la": "Lat"
+    "la": "Lat",
+    "pl": "Pl"
   },
   "startNovena": "Начать новенну",
   "novenaDurationTitle": "Длительность новенны",
@@ -100,5 +102,9 @@
   "daysCompleted": "дней выполнено",
   "day": "День",
   "todayCompleted": "Сегодня выполнено!",
-  "markTodayAsCompleted": "Отметить сегодня"
+  "markTodayAsCompleted": "Отметить сегодня",
+   "endNovena": "Завершить новенну",
+  "novenaTrackerHint": "Нажимайте на ячейки, чтобы отметить выполненные или пропущенные дни.",
+  "novenaReminderTitle": "Напоминание о молитве",
+  "novenaReminderBody": "Не забудьте помолиться новенну: {title}"
 }

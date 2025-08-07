@@ -6,6 +6,7 @@
         <v-tab value="be">Бел</v-tab>
         <v-tab value="ru">Рус</v-tab>
         <v-tab value="la">Lat</v-tab>
+        <v-tab value="pl">Pol</v-tab>
       </v-tabs>
       <v-window v-model="currentLangTab">
         <v-window-item value="be"><Editor v-model="form.textVersions.be" /></v-window-item>
@@ -165,7 +166,7 @@ onMounted(() => {
           ...itemToEdit,
           source: itemToEdit.source || '',
           tags: itemToEdit.tags || [],
-          textVersions: itemToEdit.textVersions || { ru: '', be: '', la: '' },
+          textVersions: itemToEdit.textVersions || { ru: '', be: '', la: '', pl: '' },
           linkedNoteIds: itemToEdit.linkedNoteIds || [],
             hidden: itemToEdit.hidden || false // ✅ Получаем значение при загрузке
         };

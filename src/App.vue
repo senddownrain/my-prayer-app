@@ -106,6 +106,11 @@
               @click="settings.togglePin(currentItemId)"
             ></v-btn>
             <v-btn icon="mdi-tune-variant" @click="openTextSettings"></v-btn>
+            <v-btn 
+        v-if="isItemViewPage && authStore.user" 
+        icon="mdi-pencil" 
+        @click="router.push({ name: 'ItemEdit', params: { id: currentItemId } })"
+      ></v-btn>
           </template>
           <v-btn v-if="showSaveButton" icon="mdi-check" @click="triggerSave"></v-btn>
       </template>

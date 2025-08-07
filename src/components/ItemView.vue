@@ -1,22 +1,41 @@
 <template>
   <v-container>
     <div v-if="!isLoading && item">
+      <!-- Заголовок -->
       <h2 class="text-h5 font-weight-bold mb-4 note-content-area">{{ item.title }}</h2>
-      <div v-for="(text, lang) in availableVersions" :key="lang" class="mb-4" 
-        @click="handleContentClick" >
+
+      <!-- Текст молитвы (с перехватом кликов по ссылкам) -->
+      <div 
+        v-for="(text, lang) in availableVersions" 
+        :key="lang" 
+        class="mb-4"
+        @click="handleContentClick"
+      >
         <div class="lang-label">{{ t('langLabels.' + lang) }}</div>
         <div v-html="text" class="note-content-area ProseMirror"></div>
       </div>
-      
+
+      <!-- Кнопка для старта новенны (видна, если новенна не активна) -->
+      <div v-if="!novenaStore.isNovenaActive(props.id)" class="text-center my-8">
+        <v-btn
+          @click="isNovenaDialogVisible = true"
+          color="primary"
+          variant="tonal"
+          size="large"
+          prepend-icon="mdi-play-circle-outline"
+        >
+          {{ $t('startNovena') }}
+        </v-btn>
+      </div>
+
+      <!-- Связанные заметки -->
       <div v-if="linkedNotes.length > 0" class="mt-8">
         <v-divider class="mb-4"></v-divider>
-        <h3 class="text-subtitle-1 font-weight-bold mb-2">{{ $t('linkedNotesTitle') }}</h3>
         <v-list lines="one" density="compact" class="pa-0 bg-transparent linked-notes-list">
           <v-list-item
             v-for="linkedNote in linkedNotes"
             :key="linkedNote.id"
             @click="router.push({ name: 'ItemView', params: { id: linkedNote.id } })"
-            
             class="mb-1"
           >
             <template v-slot:prepend>
@@ -27,6 +46,12 @@
         </v-list>
       </div>
 
+      
+      <!-- Трекер новенны (виден, если новенна активна) -->
+      <NovenaTracker v-if="novenaStore.isNovenaActive(props.id)" :note-id="props.id" class="my-8" />
+      
+
+      <!-- Источник и теги -->
       <div class="mt-6 text-body-2 text-medium-emphasis">
         <div v-if="item.source">
           <v-divider class="my-3"></v-divider>
@@ -38,54 +63,76 @@
       </div>
     </div>
     
+    <!-- Загрузка и состояние "не найдено" -->
     <div v-else-if="!isLoading && !item" class="text-center mt-16">
         <v-icon size="64" class="mb-4">mdi-file-question-outline</v-icon>
         <h2 class="text-h5 mb-4">{{ $t('noteNotFound') }}</h2>
         <p class="text-medium-emphasis mb-6">{{ $t('noteNotFoundMessage') }}</p>
         <v-btn color="primary" :to="{ name: 'ItemsList' }">{{ $t('backToHome') }}</v-btn>
     </div>
-    
     <div v-else class="text-center text-grey-darken-1 mt-16">
       <v-progress-circular indeterminate color="primary"></v-progress-circular>
     </div>
-
-    <v-btn
-      v-if="authStore.user"
-      icon="mdi-pencil"
-      location="bottom right" size="large" color="primary" position="fixed"
-      variant="elevated" elevation="8" class="ma-4"
-      @click="router.push({ name: 'ItemEdit', params: { id: props.id } })"
-    ></v-btn>
+    
+    <!-- Диалог старта новенны -->
+    <v-dialog v-model="isNovenaDialogVisible" max-width="400px">
+      <v-card>
+        <v-card-title>{{ $t('novenaDurationTitle') }}</v-card-title>
+        <v-card-text>
+          <v-text-field
+            v-model.number="novenaDays"
+            :label="$t('novenaDaysLabel')"
+            type="number"
+            variant="outlined"
+            autofocus
+          ></v-text-field>
+          <v-chip-group v-model="novenaDays" mandatory class="mt-2">
+            <v-chip v-for="d in [7, 9, 33, 54]" :key="d" :value="d" filter>{{ d }} {{ $t('days') }}</v-chip>
+          </v-chip-group>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn text @click="isNovenaDialogVisible = false">{{ $t('cancel') }}</v-btn>
+          <v-btn color="primary" variant="flat" @click="handleStartNovena">{{ $t('start') }}</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useItems } from '@/composables/useItems';
 import { useAuthStore } from '@/stores/auth';
 import { useI18n } from 'vue-i18n';
+import { useNovenaStore } from '@/stores/novena';
+import NovenaTracker from '@/components/NovenaTracker.vue';
 
 const props = defineProps({ id: { type: String, required: true } });
 const router = useRouter();
 const { t } = useI18n();
 const { items, isLoading } = useItems();
 const authStore = useAuthStore();
+const novenaStore = useNovenaStore();
+
+const isNovenaDialogVisible = ref(false);
+const novenaDays = ref(9);
 
 const item = computed(() => items.value.find(i => i.id === props.id));
 const linkedNotes = computed(() => item.value?.linkedNoteIds?.map(id => items.value.find(note => note.id === id)).filter(Boolean) || []);
 const availableVersions = computed(() => item.value ? Object.fromEntries(Object.entries(item.value.textVersions).filter(([_, v]) => v)) : {});
-// ✅ НОВАЯ ФУНКЦИЯ ДЛЯ ПЕРЕХВАТА КЛИКОВ
+
 function handleContentClick(event) {
-  // Находим ближайший родительский элемент <a>, по которому кликнули
   const link = event.target.closest('a');
-  // Проверяем, что это ссылка и что она ведет на внутренний маршрут
   if (link && link.pathname.startsWith('/item/')) {
-    // Отменяем стандартное поведение браузера (перезагрузку страницы)
     event.preventDefault(); 
-    
-    // Используем Vue Router для навигации
     router.push(link.pathname);
   }
+}
+
+function handleStartNovena() {
+  novenaStore.startNovena(props.id, novenaDays.value);
+  isNovenaDialogVisible.value = false;
 }
 </script>

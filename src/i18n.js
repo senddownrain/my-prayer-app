@@ -7,10 +7,14 @@ const savedLanguage = localStorage.getItem('language') || 'ru';
 const i18n = createI18n({
   legacy: false, 
   locale: savedLanguage,
-  fallbackLocale: 'ru',
+  fallbackLocale: 'be',
   messages: {
     ru,
     be
+  },
+  datetimeFormats: {
+    'ru': { short: { day: 'numeric', month: 'short' } },
+    'be': { short: { day: 'numeric', month: 'short' } }
   }
 });
 

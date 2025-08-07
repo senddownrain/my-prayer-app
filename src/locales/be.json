@@ -102,5 +102,9 @@
   "daysCompleted": "дзён выканана",
   "day": "Дзень",
   "todayCompleted": "Сёння выканана!",
-  "markTodayAsCompleted": "Адзначыць сёння"
+  "markTodayAsCompleted": "Адзначыць сёння",
+   "endNovena": "Завершить новенну",
+  "novenaTrackerHint": "Нажимайте на ячейки, чтобы отметить выполненные или пропущенные дни.",
+  "novenaReminderTitle": "Напоминание о молитве",
+  "novenaReminderBody": "Не забудьте помолиться новенну: {title}"
 }
