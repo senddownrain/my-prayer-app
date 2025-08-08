@@ -4,52 +4,60 @@
       <!-- Заголовок -->
       <h2 class="text-h5 font-weight-bold mb-4 note-content-area">{{ item.title }}</h2>
 
+      <!-- Панель Новенны -->
       <v-expansion-panels v-if="novenaStore.isNovenaActive(props.id)" class="my-6">
-  <v-expansion-panel>
-    <v-expansion-panel-title>
-        <!-- ✅ Слот по умолчанию для содержимого заголовка -->
-        <div class="d-flex align-center justify-space-between w-100">
-          <div class="d-flex align-center">
-            <v-icon start color="primary">mdi-calendar-check</v-icon>
-            <span class="font-weight-medium">{{ $t('prayerNovena') }}</span>
-          </div>
-          <!-- ✅ Индикатор прогресса -->
-          <div class="d-flex align-center mr-2">
-            <v-progress-circular
-              :model-value="novenaProgress.percentage"
-              :color="novenaProgress.color"
-              size="24"
-              width="2"
-              class="mr-2"
-            >
-              <small>{{ novenaProgress.completed }}</small>
-            </v-progress-circular>
-            <span class="text-body-2 text-medium-emphasis">
-              {{ novenaProgress.completed }} / {{ novenaProgress.total }}
-            </span>
-          </div>
-        </div>
-    </v-expansion-panel-title>
+        <v-expansion-panel>
+          <v-expansion-panel-title>
+            <div class="d-flex align-center justify-space-between w-100">
+              <div class="d-flex align-center">
+                <v-icon start color="primary">mdi-calendar-check</v-icon>
+                <span class="font-weight-medium">{{ $t('prayerNovena') }}</span>
+              </div>
+              <div class="d-flex align-center mr-2">
+                <v-progress-circular
+                  :model-value="novenaProgress.percentage"
+                  :color="novenaProgress.color"
+                  size="24"
+                  width="2"
+                  class="mr-2"
+                >
+                  <small>{{ novenaProgress.completed }}</small>
+                </v-progress-circular>
+                <span class="text-body-2 text-medium-emphasis">
+                  {{ novenaProgress.completed }} / {{ novenaProgress.total }}
+                </span>
+              </div>
+            </div>
+          </v-expansion-panel-title>
+          <v-expansion-panel-text>
+            <NovenaTracker :note-id="props.id" />
+          </v-expansion-panel-text>
+        </v-expansion-panel>
+      </v-expansion-panels>
+      
+      <!-- ✅ ИЗМЕНЕНИЕ 2: БЫСТРАЯ НАВИГАЦИЯ ПО ЯЗЫКАМ -->
+      <v-chip-group v-if="sortedLangs.length > 1" class="mb-6">
+        <v-chip
+          v-for="lang in sortedLangs"
+          :key="`chip-${lang}`"
+          @click="scrollToLang(lang)"
+        >
+          {{ t(`langLabels.${lang}`) }}
+        </v-chip>
+      </v-chip-group>
 
-    <v-expansion-panel-text>
-      <!-- Наш трекер теперь живет здесь -->
-      <NovenaTracker :note-id="props.id" />
-    </v-expansion-panel-text>
-  </v-expansion-panel>
-</v-expansion-panels>
-
-
-      <!-- Текст молитвы (с перехватом кликов по ссылкам) -->
+      <!-- Текст молитвы (с перехватом кликов по ссылкам и динамическими ref) -->
+      <!-- ✅ ИЗМЕНЕНИЕ 1 и 3: Итерация по отсортированному списку языков -->
       <div 
-        v-for="(text, lang) in availableVersions" 
+        v-for="lang in sortedLangs" 
         :key="lang" 
         class="mb-4"
         @click="handleContentClick"
+        :ref="el => (langRefs[lang] = el)"
       >
         <div class="lang-label">{{ t('langLabels.' + lang) }}</div>
-        <div v-html="text" class="note-content-area ProseMirror"></div>
+        <div v-html="availableVersions[lang]" class="note-content-area ProseMirror"></div>
       </div>
-
 
       <!-- Связанные заметки -->
       <div v-if="linkedNotes.length > 0" class="mt-8">
@@ -69,8 +77,7 @@
         </v-list>
       </div>
 
-      
-<!-- Кнопка для старта новенны (видна, если новенна не активна) -->
+      <!-- Кнопка для старта новенны (видна, если новенна не активна) -->
       <div v-if="item.isNovenaPrayer && !novenaStore.isNovenaActive(props.id)"  class="text-center my-8">
         <v-btn
           @click="isNovenaDialogVisible = true"
@@ -83,8 +90,6 @@
         </v-btn>
       </div>
 
-      
-
       <!-- Источник и теги -->
       <div class="mt-6 text-body-2 text-medium-emphasis">
         <div v-if="item.source">
@@ -95,8 +100,9 @@
           <strong>{{ $t('tagsLabel') }}</strong> {{ item.tags.join(', ') }}
         </div>
       </div>
+
     </div>
-    
+
     <!-- Загрузка и состояние "не найдено" -->
     <div v-else-if="!isLoading && !item" class="text-center mt-16">
         <v-icon size="64" class="mb-4">mdi-file-question-outline</v-icon>
@@ -107,7 +113,7 @@
     <div v-else class="text-center text-grey-darken-1 mt-16">
       <v-progress-circular indeterminate color="primary"></v-progress-circular>
     </div>
-    
+
     <!-- Диалог старта новенны -->
     <v-dialog v-model="isNovenaDialogVisible" max-width="400px">
       <v-card>
@@ -135,7 +141,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, onBeforeUpdate } from 'vue';
 import { useRouter } from 'vue-router';
 import { useItems } from '@/composables/useItems';
 import { useAuthStore } from '@/stores/auth';
@@ -152,10 +158,43 @@ const novenaStore = useNovenaStore();
 
 const isNovenaDialogVisible = ref(false);
 const novenaDays = ref(9);
-
 const item = computed(() => items.value.find(i => i.id === props.id));
 const linkedNotes = computed(() => item.value?.linkedNoteIds?.map(id => items.value.find(note => note.id === id)).filter(Boolean) || []);
-const availableVersions = computed(() => item.value ? Object.fromEntries(Object.entries(item.value.textVersions).filter(([_, v]) => v)) : {});
+
+// ✅ ИЗМЕНЕНИЕ 1: Улучшенная логика для `availableVersions`, чтобы скрывать пустые теги
+const availableVersions = computed(() => {
+  if (!item.value?.textVersions) return {};
+  return Object.fromEntries(
+    Object.entries(item.value.textVersions).filter(([lang, text]) => {
+      // Отображаем, только если текст не пустой и не содержит лишь пустой тег <p>
+      return text && text.trim() !== '<p></p>';
+    })
+  );
+});
+
+// ✅ ИЗМЕНЕНИЕ 3: Создаем отсортированный список языков, где 'be' всегда первый
+const sortedLangs = computed(() => {
+  const langs = Object.keys(availableVersions.value);
+  return langs.sort((a, b) => {
+    if (a === 'be') return -1;
+    if (b === 'be') return 1;
+    return a.localeCompare(b); // остальные сортируем по алфавиту
+  });
+});
+
+// ✅ ИЗМЕНЕНИЕ 2: Логика для плавной прокрутки
+const langRefs = ref({});
+onBeforeUpdate(() => {
+  // Очищаем ссылки перед каждым обновлением, чтобы избежать утечек памяти
+  langRefs.value = {};
+});
+
+function scrollToLang(lang) {
+  const element = langRefs.value[lang];
+  if (element) {
+    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
 
 function handleContentClick(event) {
   const link = event.target.closest('a');
@@ -170,21 +209,18 @@ function handleStartNovena() {
   isNovenaDialogVisible.value = false;
 }
 
-// ✅ Добавляем computed-свойство для получения данных о прогрессе
 const novenaProgress = computed(() => {
     const data = novenaStore.getNovenaData(props.id);
     if (!data || !data.totalDays) {
         return { percentage: 0, color: 'grey', completed: 0, total: 0 };
     }
-    
     const todayStr = novenaStore.getTodayDateString();
     const isTodayCompleted = data.completedDates.includes(todayStr);
-    
     return {
         percentage: (data.completedDates.length / data.totalDays) * 100,
         completed: data.completedDates.length,
         total: data.totalDays,
-        color: isTodayCompleted ? 'success' : 'warning' // 'warning', если сегодня не сделано
+        color: isTodayCompleted ? 'success' : 'warning'
     };
 });
 </script>
