@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { useAuthStore } from '@/stores/auth';
 
 const getCurrentUser = () => {
   return new Promise((resolve, reject) => {
@@ -46,26 +47,13 @@ const router = createRouter({
 
 // --- ✅ НАВИГАЦИОННЫЙ СТРАЖ С ПОДРОБНЫМ ЛОГИРОВАНИЕМ ---
 router.beforeEach(async (to, from, next) => {
-  // Начинаем группу логов для этого конкретного перехода
-  console.group(`[ROUTER GUARD] ${new Date().toLocaleTimeString()}`);
-  console.log(`Attempting to navigate TO: '${to.path}' FROM: '${from.path}'`);
 
+  const authStore = useAuthStore();
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
-  console.log(`Does '${to.path}' require authentication? ->`, requiresAuth);
-
-  console.log('Awaiting Firebase auth state...');
-  const currentUser = await getCurrentUser();
-  const userIsLoggedIn = !!currentUser;
-  
-  console.log(`Firebase state received. User is logged in? ->`, userIsLoggedIn, currentUser ? `(UID: ${currentUser.uid})` : '(No user)');
-
+  const userIsLoggedIn = !!authStore.user;
   if (requiresAuth && !userIsLoggedIn) {
-    console.warn(`GUARD DECISION: Blocked. Redirecting to '/login'.`);
-    console.groupEnd(); // Закрываем группу логов
     next({ name: 'Login' });
   } else {
-    console.log(`GUARD DECISION: Allowed. Proceeding to '${to.path}'.`);
-    console.groupEnd(); // Закрываем группу логов
     next();
   }
 });

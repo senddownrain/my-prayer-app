@@ -9,7 +9,7 @@
         cover
       >
         <div class="d-flex flex-column justify-end h-100 pa-4">
-         <h2 class="font-weight-bold app-title">{{ $t('appTitle') }}</h2>
+         <h2 class="font-weight-bold app-title non-selectable">{{ $t('appTitle') }}</h2>
         </div>
       </v-img>
       
@@ -98,7 +98,7 @@
         style="cursor: pointer;"
         class="font-weight-medium"
       >
-       <span class="wrappable-toolbar-title app-title">{{ $t('appTitle') }}</span>
+       <span class="wrappable-toolbar-title app-title non-selectable">{{ $t('appTitle') }}</span>
       </v-toolbar-title>
       <template v-if="!isSearchActive">
           <template v-if="isHomePage">
@@ -162,10 +162,18 @@
           <v-spacer></v-spacer>
           <v-btn
             variant="text"
+            color="grey"
             @click="dismissSuggestion(true)"
+          >
+            {{ $t('decline') }}
+          </v-btn>
+          <v-btn
+            variant="text"
+            @click="dismissSuggestion(false)"
           >
             {{ $t('remindLater') }}
           </v-btn>
+          
           <v-btn
             color="primary"
             variant="flat"
@@ -266,3 +274,10 @@ async function handleLogout() {
     await authStore.logout();
 }
 </script>
+<style>
+.non-selectable {
+  -webkit-user-select: none; /* Safari */
+  -ms-user-select: none; /* IE 10+ */
+  user-select: none; /* Standard syntax */
+}
+</style>

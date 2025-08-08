@@ -12,6 +12,8 @@
         <v-window-item value="be"><Editor v-model="form.textVersions.be" /></v-window-item>
         <v-window-item value="ru"><Editor v-model="form.textVersions.ru" /></v-window-item>
         <v-window-item value="la"><Editor v-model="form.textVersions.la" /></v-window-item>
+        <v-window-item value="pl"><Editor v-model="form.textVersions.pl" /></v-window-item>
+     
       </v-window>
       <v-combobox
         v-model="form.tags"
@@ -126,7 +128,7 @@ const currentLangTab = ref('be');
 const form = ref({
   title: '',
   source: '',
-  textVersions: { ru: '', be: '', la: '' },
+  textVersions: { ru: '', be: '', la: '', pl: ''  },
   tags: [],
   linkedNoteIds: [],
   isNovenaPrayer: false,
@@ -195,7 +197,12 @@ onMounted(() => {
           ...itemToEdit,
           source: itemToEdit.source || '',
           tags: itemToEdit.tags || [],
-          textVersions: itemToEdit.textVersions || { ru: '', be: '', la: '', pl: '' },
+          textVersions: {
+            ru: itemToEdit.textVersions?.ru || '',
+            be: itemToEdit.textVersions?.be || '',
+            la: itemToEdit.textVersions?.la || '',
+            pl: itemToEdit.textVersions?.pl || ''
+          },
           isNovenaPrayer: itemToEdit.isNovenaPrayer || false,
     recommendedDate: itemToEdit.recommendedDate || null,
           linkedNoteIds: itemToEdit.linkedNoteIds || [],

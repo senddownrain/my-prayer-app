@@ -41,6 +41,7 @@ export function useNovenaSuggestions() {
 
                 if (startDate.getTime() === today.getTime()) {
                     const suggestionId = `${item.id}-${days}-${year}`;
+                    
             // ✅ Проверяем, не было ли это предложение уже отклонено
             if (!dismissedSuggestions.value[suggestionId]) {
                 suggestion.value = { item, days, id: suggestionId };
