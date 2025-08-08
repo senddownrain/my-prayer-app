@@ -1,3 +1,4 @@
+// vite.config.js
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import vuetify, { transformAssetUrls } from 'vite-plugin-vuetify';
@@ -20,14 +21,13 @@ export default defineConfig({
     VitePWA({
       // Стратегия обновления: сервис-воркер будет обновляться автоматически в фоне
       registerType: 'autoUpdate',
+      
       // Включаем регистрацию сервис-воркера
       injectRegister: 'auto',
-      
+
       workbox: {
-        // Эта опция критически важна: она удаляет старые кэши при обновлении,
-        // что помогает при смене иконок и других ассетов.
+        // Эта опция критически важна: она удаляет старые кэши при обновлении
         cleanupOutdatedCaches: true,
-        
         // Указываем, какие файлы нужно кэшировать для оффлайн-работы
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json,vue,txt,woff2}'],
       },
@@ -37,12 +37,11 @@ export default defineConfig({
         name: 'Мае малітвы', // Полное название приложения
         short_name: 'Малітвы', // Короткое название для иконки
         description: 'Личный сборник молитв и заметок',
-        theme_color: '#ffffff', // Цвет верхней панели в Android
+        theme_color: '#1867C0', // Цвет верхней панели в Android (взят из вашего App.vue)
         background_color: '#ffffff', // Цвет сплэш-скрина при запуске
         display: 'standalone', // Приложение открывается без интерфейса браузера
         start_url: '.', // Стартовый URL
-        
-        // Здесь должны быть пути к вашим ИКОНКАМ в папке /public
+        // Убедитесь, что эти иконки лежат в папке /public
         icons: [
           {
             src: 'pwa-192x192.png',
@@ -54,13 +53,17 @@ export default defineConfig({
             sizes: '512x512',
             type: 'image/png'
           },
-          // Вы можете добавить и другие размеры, например, для маскируемых иконок
-        
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable' // Добавлено для лучших иконок в Android
+          }
         ]
       }
     })
   ],
-  
+
   // Настройка псевдонима '@' для удобного импорта из папки /src
   resolve: {
     alias: {

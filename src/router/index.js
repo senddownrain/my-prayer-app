@@ -23,6 +23,7 @@ const routes = [
   { path: '/add', name: 'ItemAdd', component: () => import('@/components/ItemForm.vue'), meta: { requiresAuth: true } },
   { path: '/admin', name: 'Admin', component: () => import('@/components/AdminView.vue'), meta: { requiresAuth: true } },
   { path: '/about', name: 'About', component: () => import('@/components/AboutView.vue') },
+    { path: '/rule', name: 'PrayerRule', component: () => import('@/components/PrayerRuleView.vue') },
 ];
 
 const router = createRouter({

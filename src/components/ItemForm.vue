@@ -38,9 +38,34 @@
       </div>
 
       <v-btn @click="isLinkDialogOpen = true" prepend-icon="mdi-link-plus">{{ $t('linkedNotesAdd') }}</v-btn>
-    <!-- ✅ --- ПЕРЕКЛЮЧАТЕЛЬ "СКРЫТЫЙ" --- ✅ -->
+    <v-divider class="my-4"></v-divider>
      <v-text-field v-model="form.source" :label="$t('source')" variant="outlined" class="mb-4" clearable></v-text-field>
-       
+       <v-divider class="my-4"></v-divider>
+      <!-- ✅ НОВЫЙ БЛОК ДЛЯ НАСТРОЕК НОВЕННЫ -->
+      <h3 class="text-subtitle-1 mb-2">{{ $t('novenaSettings') }}</h3>
+      <v-switch
+        v-model="form.isNovenaPrayer"
+        :label="$t('isNovenaPrayerLabel')"
+        color="primary"
+        inset
+        class="mb-2"
+      ></v-switch>
+      
+      <!-- Поле даты появляется, только если переключатель активен -->
+      <v-expand-transition>
+        <div v-if="form.isNovenaPrayer">
+          <v-text-field
+            v-model="form.recommendedDate"
+            :label="$t('recommendedDateLabel')"
+            :hint="$t('recommendedDateHint')"
+            type="date"
+            variant="outlined"
+            clearable
+          ></v-text-field>
+        </div>
+      </v-expand-transition>
+      <v-divider class="my-4"></v-divider>
+<!-- ✅ --- ПЕРЕКЛЮЧАТЕЛЬ "СКРЫТЫЙ" --- ✅ -->
     <v-switch
         v-model="form.hidden"
         :label="$t('hiddenNote')"
@@ -104,6 +129,8 @@ const form = ref({
   textVersions: { ru: '', be: '', la: '' },
   tags: [],
   linkedNoteIds: [],
+  isNovenaPrayer: false,
+  recommendedDate: null,
   hidden: false // ✅ Добавлено поле по умолчанию
 });
 
@@ -139,6 +166,8 @@ async function handleSave() {
     source: form.value.source || '',
     textVersions: form.value.textVersions,
     tags: form.value.tags,
+    isNovenaPrayer: form.value.isNovenaPrayer || false,
+    recommendedDate: form.value.recommendedDate || null,
     linkedNoteIds: form.value.linkedNoteIds || [],
       hidden: form.value.hidden || false // ✅ Добавляем поле при сохранении
   };
@@ -167,6 +196,8 @@ onMounted(() => {
           source: itemToEdit.source || '',
           tags: itemToEdit.tags || [],
           textVersions: itemToEdit.textVersions || { ru: '', be: '', la: '', pl: '' },
+          isNovenaPrayer: itemToEdit.isNovenaPrayer || false,
+    recommendedDate: itemToEdit.recommendedDate || null,
           linkedNoteIds: itemToEdit.linkedNoteIds || [],
             hidden: itemToEdit.hidden || false // ✅ Получаем значение при загрузке
         };

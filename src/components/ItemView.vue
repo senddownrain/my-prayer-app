@@ -4,6 +4,41 @@
       <!-- Заголовок -->
       <h2 class="text-h5 font-weight-bold mb-4 note-content-area">{{ item.title }}</h2>
 
+      <v-expansion-panels v-if="novenaStore.isNovenaActive(props.id)" class="my-6">
+  <v-expansion-panel>
+    <v-expansion-panel-title>
+        <!-- ✅ Слот по умолчанию для содержимого заголовка -->
+        <div class="d-flex align-center justify-space-between w-100">
+          <div class="d-flex align-center">
+            <v-icon start color="primary">mdi-calendar-check</v-icon>
+            <span class="font-weight-medium">{{ $t('prayerNovena') }}</span>
+          </div>
+          <!-- ✅ Индикатор прогресса -->
+          <div class="d-flex align-center mr-2">
+            <v-progress-circular
+              :model-value="novenaProgress.percentage"
+              :color="novenaProgress.color"
+              size="24"
+              width="2"
+              class="mr-2"
+            >
+              <small>{{ novenaProgress.completed }}</small>
+            </v-progress-circular>
+            <span class="text-body-2 text-medium-emphasis">
+              {{ novenaProgress.completed }} / {{ novenaProgress.total }}
+            </span>
+          </div>
+        </div>
+    </v-expansion-panel-title>
+
+    <v-expansion-panel-text>
+      <!-- Наш трекер теперь живет здесь -->
+      <NovenaTracker :note-id="props.id" />
+    </v-expansion-panel-text>
+  </v-expansion-panel>
+</v-expansion-panels>
+
+
       <!-- Текст молитвы (с перехватом кликов по ссылкам) -->
       <div 
         v-for="(text, lang) in availableVersions" 
@@ -15,18 +50,6 @@
         <div v-html="text" class="note-content-area ProseMirror"></div>
       </div>
 
-      <!-- Кнопка для старта новенны (видна, если новенна не активна) -->
-      <div v-if="!novenaStore.isNovenaActive(props.id)" class="text-center my-8">
-        <v-btn
-          @click="isNovenaDialogVisible = true"
-          color="primary"
-          variant="tonal"
-          size="large"
-          prepend-icon="mdi-play-circle-outline"
-        >
-          {{ $t('startNovena') }}
-        </v-btn>
-      </div>
 
       <!-- Связанные заметки -->
       <div v-if="linkedNotes.length > 0" class="mt-8">
@@ -47,8 +70,19 @@
       </div>
 
       
-      <!-- Трекер новенны (виден, если новенна активна) -->
-      <NovenaTracker v-if="novenaStore.isNovenaActive(props.id)" :note-id="props.id" class="my-8" />
+<!-- Кнопка для старта новенны (видна, если новенна не активна) -->
+      <div v-if="item.isNovenaPrayer && !novenaStore.isNovenaActive(props.id)"  class="text-center my-8">
+        <v-btn
+          @click="isNovenaDialogVisible = true"
+          color="primary"
+          variant="tonal"
+          size="large"
+          prepend-icon="mdi-play-circle-outline"
+        >
+          {{ $t('startNovena') }}
+        </v-btn>
+      </div>
+
       
 
       <!-- Источник и теги -->
@@ -135,4 +169,22 @@ function handleStartNovena() {
   novenaStore.startNovena(props.id, novenaDays.value);
   isNovenaDialogVisible.value = false;
 }
+
+// ✅ Добавляем computed-свойство для получения данных о прогрессе
+const novenaProgress = computed(() => {
+    const data = novenaStore.getNovenaData(props.id);
+    if (!data || !data.totalDays) {
+        return { percentage: 0, color: 'grey', completed: 0, total: 0 };
+    }
+    
+    const todayStr = novenaStore.getTodayDateString();
+    const isTodayCompleted = data.completedDates.includes(todayStr);
+    
+    return {
+        percentage: (data.completedDates.length / data.totalDays) * 100,
+        completed: data.completedDates.length,
+        total: data.totalDays,
+        color: isTodayCompleted ? 'success' : 'warning' // 'warning', если сегодня не сделано
+    };
+});
 </script>

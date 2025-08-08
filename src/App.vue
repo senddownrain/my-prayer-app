@@ -31,6 +31,12 @@
         ></v-list-item>
         <v-divider></v-divider>
         <v-list-item 
+          prepend-icon="mdi-book-open-variant" 
+          :title="$t('myPrayerRule')"
+          :to="{ name: 'PrayerRule' }"
+        ></v-list-item>
+        <v-divider></v-divider>
+        <v-list-item 
           prepend-icon="mdi-cog-outline" 
           :title="$t('settings')"
           :to="{ name: 'Settings' }"
@@ -113,7 +119,18 @@
       ></v-btn>
           </template>
           <v-btn v-if="showSaveButton" icon="mdi-check" @click="triggerSave"></v-btn>
+
+          
+       <!-- ✅ НАША НОВАЯ КНОПКА РЕДАКТИРОВАНИЯ ПРАВИЛА -->
+      <v-btn
+        v-if="showPrayerRuleEditButton"
+  @click="toggleEditing"
+      >
+        <v-icon>{{ isEditing ? 'mdi-check' : 'mdi-pencil' }}</v-icon>
+
+      </v-btn>
       </template>
+
     </v-app-bar>
 
     <v-main>
@@ -127,17 +144,54 @@
       
     </v-main>
     <NotificationSnackbar ref="snackbar" />
+      <!-- ✅ НОВЫЙ ДИАЛОГ-ПРЕДЛОЖЕНИЕ НОВЕННЫ -->
+    <v-dialog 
+      :model-value="!!suggestion" 
+      max-width="500px" 
+      persistent
+    >
+      <v-card v-if="suggestion" class="pa-2">
+        <v-card-title class="d-flex align-center">
+          <v-icon color="primary" start>mdi-lightbulb-on-outline</v-icon>
+          <span class="text-h5">{{ $t('novenaSuggestionTitle') }}</span>
+        </v-card-title>
+        <v-card-text class="text-body-1 py-4">
+          {{ $t('novenaSuggestionText', { title: suggestion.item.title, days: suggestion.days }) }}
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn
+            variant="text"
+            @click="dismissSuggestion(true)"
+          >
+            {{ $t('remindLater') }}
+          </v-btn>
+          <v-btn
+            color="primary"
+            variant="flat"
+            @click="viewSuggestedNovena"
+          >
+            {{ $t('viewPrayer') }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-app>
 </template>
 
 <script setup>
 import { ref, onMounted, provide, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+
+import { useItems } from '@/composables/useItems';
 import { useSettingsStore } from '@/stores/settings';
 import { useAppBar } from '@/composables/useAppBar';
 import { useFilters } from '@/composables/useFilters';
+
+import { usePageMode } from '@/composables/usePageMode'; // ✅ Импорт
 import { useAuthStore } from '@/stores/auth';
 import { notifier } from '@/composables/useNotifier';
+import { useNovenaSuggestions } from '@/composables/useNovenaSuggestions';
 import FilterSheet from '@/components/FilterSheet.vue';
 import NotificationSnackbar from '@/components/NotificationSnackbar.vue';
 import TextSettingsSheet from '@/components/TextSettingsSheet.vue'; // ✅ ИМПОРТ
@@ -146,10 +200,15 @@ const settings = useSettingsStore();
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
+
+const { items, isLoading } = useItems();
 const { isDrawerOpen, isSearchActive, isFilterSheetOpen, isTextSettingsSheetOpen  } = useAppBar();
 const { selectedTags, search } = useFilters();
-const snackbar = ref(null);
+const { suggestion, checkSuggestions, viewSuggestedNovena, dismissSuggestion } = useNovenaSuggestions();
+const { isEditing, toggleEditing } = usePageMode(); // ✅ Получаем состояние
 
+const snackbar = ref(null);
+const showPrayerRuleEditButton = computed(() => route.name === 'PrayerRule');
 const isHomePage = computed(() => route.name === 'ItemsList');
 const showBackButton = computed(() => !isHomePage.value);
 const showSaveButton = computed(() => ['ItemEdit', 'ItemAdd'].includes(route.name));
@@ -162,11 +221,21 @@ function openTextSettings() {
   isTextSettingsSheetOpen.value = true;
   console.log(`[App.vue] State changed. 'isTextSettingsSheetOpen' is now: ${isTextSettingsSheetOpen.value}`);
 }
-// ✅ ЛОГ 3: Отслеживаем изменение переменной, чтобы убедиться в её реактивности
-watch(isTextSettingsSheetOpen, (newValue, oldValue) => {
-  console.log(`[App.vue WATCHER] 'isTextSettingsSheetOpen' changed from ${oldValue} to ${newValue}`);
+
+watch(isLoading, (newIsLoading) => {
+  if (!newIsLoading && settings.novenaNotificationsEnabled) {
+    checkSuggestions();
+  }
 });
 
+watch(() => route.name, (newName) => {
+  console.group(`[App.vue WATCHER] Имя маршрута изменилось!`);
+  console.log(`Новое имя маршрута: %c'${newName}'`, 'color: blue; font-weight: bold;');
+  const isPrayerRule = newName === 'PrayerRule';
+  console.log(`Сравнение с 'PrayerRule' дает: %c${isPrayerRule}`, `color: ${isPrayerRule ? 'green' : 'red'}; font-weight: bold;`);
+  console.log(`Итоговое значение showPrayerRuleEditButton: %c${showPrayerRuleEditButton.value}`, `color: ${showPrayerRuleEditButton.value ? 'green' : 'red'}; font-weight: bold;`);
+  console.groupEnd();
+}, { immediate: true }); // immediate: true выполнит проверку сразу при загрузке
 const saveAction = ref(null);
 const triggerSave = () => {
   if (saveAction.value) saveAction.value();
@@ -174,6 +243,7 @@ const triggerSave = () => {
 provide('registerSaveAction', (action) => {
   saveAction.value = action;
 });
+
 
 onMounted(() => {
   notifier.value = snackbar.value;

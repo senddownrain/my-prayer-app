@@ -1,6 +1,6 @@
 <!-- src/components/NovenaTracker.vue -->
 <template>
-  <v-card variant="outlined" class="pa-4">
+  <div class="pa-2">
     <div class="d-flex justify-space-between align-center mb-4">
       <h3 class="text-h6 font-weight-medium">{{ $t('prayerNovena') }}</h3>
       <v-chip color="primary" variant="flat" label>
@@ -39,7 +39,7 @@
       {{ $t('endNovena') }}
     </v-btn>
 
-  </v-card>
+</div>
 </template>
 
 <script setup>

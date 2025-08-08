@@ -1,6 +1,23 @@
 <template>
   <v-container>
+    
     <v-list lines="two" subheader>
+      <!-- ✅ ВРЕМЕННЫЙ БЛОК ДЛЯ ТЕСТИРОВАНИЯ НОВЕНН
+    <v-list-subheader>Инструменты разработчика</v-list-subheader>
+    <v-card variant="outlined" class="pa-4 mt-2">
+       <h3 class="text-subtitle-1 mb-3">Тестирование предложений новенн</h3>
+       <v-text-field
+            v-model="simulatedDate"
+            label="Симулировать дату"
+            type="date"
+            variant="outlined"
+            density="compact"
+            class="mb-2"
+        ></v-text-field>
+        <v-btn @click="runTestCheck" block>Запустить проверку для даты</v-btn>
+    </v-card>
+    <v-divider class="my-4"></v-divider> -->
+    
       <v-list-subheader>{{ $t('generalSettings') }}</v-list-subheader>
       <v-list-item :title="$t('keepScreenOn')" :subtitle="$t('keepScreenOnHint')">
         <template v-slot:prepend><v-icon>mdi-lightbulb-on-outline</v-icon></template>
@@ -75,6 +92,22 @@
     </v-item-group>
 
     <v-divider class="my-4"></v-divider>
+
+     <!-- ✅ НОВЫЙ ПЕРЕКЛЮЧАТЕЛЬ ДЛЯ УВЕДОМЛЕНИЙ -->
+      <v-list-item :title="$t('enableNovenaSuggestions')" :subtitle="$t('enableNovenaSuggestionsHint')">
+        <template v-slot:prepend>
+          <v-icon>mdi-bell-ring-outline</v-icon>
+        </template>
+        <template v-slot:append>
+          <v-switch
+            v-model="settings.novenaNotificationsEnabled"
+            color="primary"
+            inset
+            hide-details
+          ></v-switch>
+        </template>
+      </v-list-item>
+    <v-divider class="my-4"></v-divider>
       <!-- ✅ --- ВОЗВРАЩАЕМ ЛОГИКУ ДОБАВЛЕНИЯ КАТЕГОРИЙ --- ✅ -->
     <v-list-subheader>{{ $t('menuCategories') }}</v-list-subheader>
     <v-list-item v-for="(cat, index) in settings.menuCategories" :key="index">
@@ -135,5 +168,16 @@ function onAddCategory() {
     settings.addCategory({ ...newCategory.value });
     newCategory.value = { name: '', tags: [] };
   }
+}
+
+import { useNovenaSuggestions } from '@/composables/useNovenaSuggestions'; // ✅ Импортируем
+// ... (остальные ref'ы и функции)
+const { checkSuggestions } = useNovenaSuggestions(); // ✅ Получаем функцию
+const simulatedDate = ref(new Date().toISOString().split('T')[0]); // ✅ Сегодня по умолчанию
+function runTestCheck() {
+    if (simulatedDate.value) {
+        console.log(`--- Запуск теста для даты: ${simulatedDate.value} ---`);
+        checkSuggestions(simulatedDate.value);
+    }
 }
 </script>

@@ -25,6 +25,8 @@ export const useSettingsStore = defineStore('settings', () => {
   const menuCategories = ref(JSON.parse(localStorage.getItem('menuCategories') || JSON.stringify(defaultCategories)));
   const showHiddenItems = ref(JSON.parse(localStorage.getItem('showHiddenItems') || 'false'));
 
+    // ✅ НОВАЯ НАСТРОЙКА
+const novenaNotificationsEnabled = ref(JSON.parse(localStorage.getItem('prayer-novena-notifications') || 'true'));
   // --- Слежение за изменениями и сохранение в localStorage (Watchers) ---
   // ✅ ИСПРАВЛЕНО: Предупреждение Vuetify. Теперь используется актуальный метод.
   watch(currentTheme, (newTheme) => {
@@ -85,6 +87,6 @@ export const useSettingsStore = defineStore('settings', () => {
     viewMode, toggleViewMode,
     pinnedIds, isPinned, togglePin, // ✅ Экспортируем isPinned
     menuCategories, addCategory, removeCategory,
-    showHiddenItems, toggleShowHiddenItems
+    showHiddenItems, toggleShowHiddenItems, novenaNotificationsEnabled
   };
 });
