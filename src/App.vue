@@ -144,6 +144,7 @@
       
     </v-main>
     <NotificationSnackbar ref="snackbar" />
+      <ReloadPrompt /> <!-- ✅ ДОБАВЬТЕ ЭТУ СТРОКУ -->
       <!-- ✅ НОВЫЙ ДИАЛОГ-ПРЕДЛОЖЕНИЕ НОВЕННЫ -->
     <v-dialog 
       :model-value="!!suggestion" 
@@ -204,6 +205,8 @@ import FilterSheet from '@/components/FilterSheet.vue';
 import NotificationSnackbar from '@/components/NotificationSnackbar.vue';
 import TextSettingsSheet from '@/components/TextSettingsSheet.vue'; // ✅ ИМПОРТ
 import { getTitleByLang } from '@/utils/i18n'; // Добавьте этот импорт
+import ReloadPrompt from '@/components/ReloadPrompt.vue'; // ✅ ДОБАВЬТЕ ЭТОТ ИМПОРТ
+
 const getTitle = (item) => getTitleByLang(item); // Добавьте эту строку
 
 const settings = useSettingsStore();

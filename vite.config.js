@@ -7,41 +7,30 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [
-    // Плагин для Vue, с обязательной трансформацией для Vuetify
     vue({ 
       template: { transformAssetUrls }
     }),
-
-    // Плагин для Vuetify 3, с автоматическим импортом компонентов
     vuetify({
       autoImport: true,
     }),
-
-    // Плагин для Progressive Web App (PWA)
     VitePWA({
-      // Стратегия обновления: сервис-воркер будет обновляться автоматически в фоне
-      registerType: 'autoUpdate',
-      
-      // Включаем регистрацию сервис-воркера
+      registerType: 'prompt', 
       injectRegister: 'auto',
-
       workbox: {
-        // Эта опция критически важна: она удаляет старые кэши при обновлении
         cleanupOutdatedCaches: true,
-        // Указываем, какие файлы нужно кэшировать для оффлайн-работы
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,json,vue,txt,woff2}'],
+        // ✅ ИЗМЕНЕНИЕ: Добавляем .webmanifest в список кэшируемых файлов
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,json,vue,txt,woff2,webmanifest}'],
       },
-
-      // Манифест вашего приложения
+      // ✅ ИЗМЕНЕНИЕ: Указываем новое имя файла манифеста
+      manifestFilename: 'manifest.webmanifest',
       manifest: {
-        name: 'Мае малітвы', // Полное название приложения
-        short_name: 'Малітвы', // Короткое название для иконки
+        name: 'Мае малітвы',
+        short_name: 'Малітвы',
         description: 'Личный сборник молитв и заметок',
-        theme_color: '#1867C0', // Цвет верхней панели в Android (взят из вашего App.vue)
-        background_color: '#ffffff', // Цвет сплэш-скрина при запуске
-        display: 'standalone', // Приложение открывается без интерфейса браузера
-        start_url: '.', // Стартовый URL
-        // Убедитесь, что эти иконки лежат в папке /public
+        theme_color: '#1867C0',
+        background_color: '#ffffff',
+        display: 'standalone',
+        start_url: '.',
         icons: [
           {
             src: 'pwa-192x192.png',
@@ -57,14 +46,12 @@ export default defineConfig({
             src: 'pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'maskable' // Добавлено для лучших иконок в Android
+            purpose: 'maskable'
           }
         ]
       }
     })
   ],
-
-  // Настройка псевдонима '@' для удобного импорта из папки /src
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
