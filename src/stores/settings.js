@@ -4,8 +4,8 @@ import { useTheme } from 'vuetify';
 import { useI18n } from 'vue-i18n';
 
 const defaultCategories = [
-  { name: 'Основные молитвы', tags: ['основные'] },
-  { name: 'Марианские молитвы', tags: ['марианские'] }
+  { name: 'Марыйныя', tags: ['Марыя'] },
+  { name: 'Літаніі', tags: ['Літанія'] }
 ];
 
 const systemFont = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'";
