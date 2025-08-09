@@ -2,7 +2,7 @@
   <v-container>
     <div v-if="!isLoading && item">
       <!-- Заголовок -->
-      <h2 class="text-h5 font-weight-bold mb-4 note-content-area">{{ item.title }}</h2>
+      <h2 class="text-h5 font-weight-bold mb-4 note-content-area">{{ getTitle(item) }}</h2>
 
       <!-- Панель Новенны -->
       <v-expansion-panels v-if="novenaStore.isNovenaActive(props.id)" class="my-6">
@@ -72,7 +72,7 @@
             <template v-slot:prepend>
               <v-icon color="grey-darken-1">mdi-link-variant</v-icon>
             </template>
-            <v-list-item-title class="text-primary font-weight-medium">{{ linkedNote.title }}</v-list-item-title>
+          <v-list-item-title class="text-primary font-weight-medium">{{ getTitle(linkedNote) }}</v-list-item-title>
           </v-list-item>
         </v-list>
       </div>
@@ -148,6 +148,7 @@ import { useAuthStore } from '@/stores/auth';
 import { useI18n } from 'vue-i18n';
 import { useNovenaStore } from '@/stores/novena';
 import NovenaTracker from '@/components/NovenaTracker.vue';
+import { getTitleByLang } from '@/utils/i18n'; // Добавьте этот импорт
 
 const props = defineProps({ id: { type: String, required: true } });
 const router = useRouter();
@@ -159,6 +160,8 @@ const novenaStore = useNovenaStore();
 const isNovenaDialogVisible = ref(false);
 const novenaDays = ref(9);
 const item = computed(() => items.value.find(i => i.id === props.id));
+const getTitle = (item) => getTitleByLang(item); // Добавьте эту строку
+
 const linkedNotes = computed(() => item.value?.linkedNoteIds?.map(id => items.value.find(note => note.id === id)).filter(Boolean) || []);
 
 // ✅ ИЗМЕНЕНИЕ 1: Улучшенная логика для `availableVersions`, чтобы скрывать пустые теги

@@ -112,7 +112,7 @@ import { usePageMode } from '@/composables/usePageMode';
 import { usePrayerRuleStore } from '@/stores/prayerRule';
 import { useItems } from '@/composables/useItems';
 import { useI18n } from 'vue-i18n';
-
+import { getTitleByLang } from '@/utils/i18n';
 // Управление состоянием режима редактирования
 const { isEditing, setEditing } = usePageMode();
 
@@ -139,7 +139,8 @@ const availableItems = computed(() => {
 // Вспомогательная функция для получения заголовка молитвы по ее ID
 const getItemTitle = (itemId) => {
     const item = items.value.find(i => i.id === itemId);
-    return item ? item.title : `[${t('noteNotFound')}]`;
+    // Используем наш новый хелпер
+    return item ? getTitleByLang(item) : `[${t('noteNotFound')}]`;
 };
 
 // Вспомогательная функция для получения текста молитвы с учетом выбранного языка

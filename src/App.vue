@@ -156,7 +156,7 @@
           <span class="text-h5">{{ $t('novenaSuggestionTitle') }}</span>
         </v-card-title>
         <v-card-text class="text-body-1 py-4">
-          {{ $t('novenaSuggestionText', { title: suggestion.item.title, days: suggestion.days }) }}
+          {{ $t('novenaSuggestionText', { title: getTitle(suggestion.item), days: suggestion.days }) }}
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
@@ -203,6 +203,8 @@ import { useNovenaSuggestions } from '@/composables/useNovenaSuggestions';
 import FilterSheet from '@/components/FilterSheet.vue';
 import NotificationSnackbar from '@/components/NotificationSnackbar.vue';
 import TextSettingsSheet from '@/components/TextSettingsSheet.vue'; // ✅ ИМПОРТ
+import { getTitleByLang } from '@/utils/i18n'; // Добавьте этот импорт
+const getTitle = (item) => getTitleByLang(item); // Добавьте эту строку
 
 const settings = useSettingsStore();
 const router = useRouter();

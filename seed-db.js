@@ -1,5 +1,4 @@
 const { initializeApp } = require("firebase/app");
-// ✅ --- ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ: Добавил 'doc' в список --- ✅
 const { getFirestore, collection, getDocs, writeBatch, addDoc, serverTimestamp, updateDoc, doc } = require("firebase/firestore");
 
 const firebaseConfig = {
@@ -14,11 +13,12 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// ✅ ИЗМЕНЕНИЕ: структура данных теперь использует titleVersions
 const prayersData = [
-  { id: "pater_noster", title: "Отче наш", tags: ["основные"], textVersions: { ru: "<p>Текст...</p>", be: "<p>Тэкст...</p>", la: "<p>Text...</p>" } },
-  { id: "ave_maria", title: "Радуйся, Мария", tags: ["основные", "марианские"], textVersions: { ru: "<p>Текст...</p>", be: "<p>Тэкст...</p>", la: "<p>Text...</p>" } },
-  { id: "credo", title: "Символ веры", tags: ["основные"], textVersions: { ru: "<p>Текст...</p>", be: "<p>Тэкст...</p>", la: "<p>Text...</p>" }, linkedNoteIds: ["pater_noster", "ave_maria"] },
-  { id: "gloria_patri", title: "Слава", tags: ["основные"], textVersions: { ru: "<p>Текст...</p>", be: "<p>Тэкст...</p>", la: "<p>Text...</p>" }, linkedNoteIds: ["pater_noster"] },
+  { id: "pater_noster", titleVersions: { ru: "Отче наш", be: "Ойча наш", la: "Pater Noster" }, tags: ["основные"], textVersions: { ru: "<p>Текст...</p>", be: "<p>Тэкст...</p>", la: "<p>Text...</p>" } },
+  { id: "ave_maria", titleVersions: { ru: "Радуйся, Мария", be: "Вітай, Марыя", la: "Ave Maria" }, tags: ["основные", "марианские"], textVersions: { ru: "<p>Текст...</p>", be: "<p>Тэкст...</p>", la: "<p>Text...</p>" } },
+  { id: "credo", titleVersions: { ru: "Символ веры", be: "Сімвал веры", la: "Credo" }, tags: ["основные"], textVersions: { ru: "<p>Текст...</p>", be: "<p>Тэкст...</p>", la: "<p>Text...</p>" }, linkedNoteIds: ["pater_noster", "ave_maria"] },
+  { id: "gloria_patri", titleVersions: { ru: "Слава", be: "Хвала", la: "Gloria Patri" }, tags: ["основные"], textVersions: { ru: "<p>Текст...</p>", be: "<p>Тэкст...</p>", la: "<p>Text...</p>" }, linkedNoteIds: ["pater_noster"] },
 ];
 
 async function clearCollection(db, collectionPath) {
@@ -40,16 +40,16 @@ async function seedDatabase() {
     const addedIds = {};
 
     for (const prayer of prayersData) {
+      // ✅ ИЗМЕНЕНИЕ: Собираем данные с titleVersions
       const dataToAdd = {
-        title: prayer.title,
+        titleVersions: prayer.titleVersions,
         tags: prayer.tags,
         textVersions: prayer.textVersions,
         createdAt: serverTimestamp()
       };
-      
       const docRef = await addDoc(itemsCollection, dataToAdd);
       addedIds[prayer.id] = docRef.id;
-      console.log(`- Добавлена: "${prayer.title}"`);
+      console.log(`- Добавлена: "${prayer.titleVersions.be || prayer.titleVersions.ru}"`);
     }
 
     console.log("Обновление связей...");
@@ -57,9 +57,8 @@ async function seedDatabase() {
         if (prayer.linkedNoteIds && prayer.linkedNoteIds.length > 0) {
             const realLinkedIds = prayer.linkedNoteIds.map(tempId => addedIds[tempId]);
             const realDocId = addedIds[prayer.id];
-            // Теперь и doc(), и updateDoc() импортированы и будут работать
             await updateDoc(doc(db, "items", realDocId), { linkedNoteIds: realLinkedIds });
-            console.log(`- Обновлены связи для "${prayer.title}"`);
+            console.log(`- Обновлены связи для "${prayer.titleVersions.be || prayer.titleVersions.ru}"`);
         }
     }
     console.log("Наполнение базы завершено!");

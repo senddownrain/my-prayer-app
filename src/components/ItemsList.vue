@@ -1,29 +1,20 @@
 <template>
   <v-container class="items-list-container">
-    <!-- Индикатор загрузки в виде "скелета" -->
     <div v-if="isLoading">
-        <v-skeleton-loader v-for="n in 3" :key="n" type="card" class="mb-4"></v-skeleton-loader>
+      <v-skeleton-loader v-for="n in 3" :key="n" type="card" class="mb-4"></v-skeleton-loader>
     </div>
-    <!-- Основной контент, когда загрузка завершена -->
     <div v-else>
-      <!-- Режим отображения: Карточки -->
       <div v-if="settings.viewMode === 'card'">
         <v-card v-for="item in filteredItems" :key="item.id" class="mb-4" elevation="2">
+          <!-- ✅ ИЗМЕНЕНИЕ: Используем хелпер getTitle -->
           <v-card-title class="font-weight-bold d-flex align-center">
             <v-icon v-if="novenaStore.isNovenaActive(item.id)" color="primary" class="mr-2">mdi-calendar-check</v-icon>
-            <v-btn
-              :icon="settings.isPinned(item.id) ? 'mdi-pin' : 'mdi-pin-outline'"
-              :color="settings.isPinned(item.id) ? 'primary' : 'grey'"
-              variant="text" size="small" class="mr-2"
-              @click.stop="settings.togglePin(item.id)"
-            ></v-btn>
-            <span @click="viewItem(item.id)" class="flex-grow-1" style="cursor: pointer;">{{ item.title }}</span>
+            <v-btn :icon="settings.isPinned(item.id) ? 'mdi-pin' : 'mdi-pin-outline'" :color="settings.isPinned(item.id) ? 'primary' : 'grey'" variant="text" size="small" class="mr-2" @click.stop="settings.togglePin(item.id)"></v-btn>
+            <span @click="viewItem(item.id)" class="flex-grow-1" style="cursor: pointer;">{{ getTitle(item) }}</span>
           </v-card-title>
           <v-card-text class="pb-0" @click="viewItem(item.id)" style="cursor: pointer;">
             <p class="mb-4 text-medium-emphasis">{{ getPreviewText(item) }}</p>
-            <v-chip-group>
-              <v-chip v-for="tag in item.tags" :key="tag" size="small" color="primary" variant="tonal">{{ tag }}</v-chip>
-            </v-chip-group>
+            <v-chip-group><v-chip v-for="tag in item.tags" :key="tag" size="small" color="primary" variant="tonal">{{ tag }}</v-chip></v-chip-group>
           </v-card-text>
           <v-card-actions v-if="authStore.user">
             <v-icon v-if="item.hidden" color="grey" class="ml-2">mdi-eye-off-outline</v-icon>
@@ -33,69 +24,38 @@
           </v-card-actions>
         </v-card>
       </div>
-       <!-- Режим "Компактный список" -->
       <v-list v-else-if="settings.viewMode === 'compact'" lines="one" density="compact">
         <v-list-item v-for="item in filteredItems" :key="item.id" @click="viewItem(item.id)">
           <template v-slot:prepend>
-             <v-btn
-              :icon="settings.isPinned(item.id) ? 'mdi-pin' : 'mdi-pin-outline'"
-              :color="settings.isPinned(item.id) ? 'primary' : 'grey'"
-              variant="text" size="medium" class="mr-2"
-              @click.stop="settings.togglePin(item.id)"
-            ></v-btn>
+            <v-btn :icon="settings.isPinned(item.id) ? 'mdi-pin' : 'mdi-pin-outline'" :color="settings.isPinned(item.id) ? 'primary' : 'grey'" variant="text" size="medium" class="mr-2" @click.stop="settings.togglePin(item.id)"></v-btn>
           </template>
-          <v-list-item-title>{{ item.title }}</v-list-item-title>
+          <!-- ✅ ИЗМЕНЕНИЕ: Используем хелпер getTitle -->
+          <v-list-item-title>{{ getTitle(item) }}</v-list-item-title>
           <template v-if="!authStore.user" v-slot:append>
- <v-progress-circular
-                v-if="novenaStore.isNovenaActive(item.id)"
-                :model-value="getNovenaProgress(item.id).percentage"
-                :color="getNovenaProgress(item.id).color"
-                size="24"
-                width="2"
-                class="ml-2"
-            >
-              <small>{{ getNovenaProgress(item.id).completed }}</small>
-            </v-progress-circular>
+            <v-progress-circular v-if="novenaStore.isNovenaActive(item.id)" :model-value="getNovenaProgress(item.id).percentage" :color="getNovenaProgress(item.id).color" size="24" width="2" class="ml-2"><small>{{ getNovenaProgress(item.id).completed }}</small></v-progress-circular>
             <v-icon v-if="item.hidden" color="grey" class="ml-2">mdi-eye-off-outline</v-icon>
           </template>
           <template v-if="authStore.user" v-slot:append>
             <v-icon v-if="item.hidden" color="grey" class="ml-2">mdi-eye-off-outline</v-icon>
-           <v-progress-circular
-                v-if="novenaStore.isNovenaActive(item.id)"
-                :model-value="getNovenaProgress(item.id).percentage"
-                :color="getNovenaProgress(item.id).color"
-                size="24"
-                width="2"
-                class="ml-2"
-            >
-              <small>{{ getNovenaProgress(item.id).completed }}</small>
-            </v-progress-circular>
+            <v-progress-circular v-if="novenaStore.isNovenaActive(item.id)" :model-value="getNovenaProgress(item.id).percentage" :color="getNovenaProgress(item.id).color" size="24" width="2" class="ml-2"><small>{{ getNovenaProgress(item.id).completed }}</small></v-progress-circular>
             <v-btn icon="mdi-pencil" variant="text" size="small" @click.stop="navigateToEdit(item.id)"></v-btn>
             <v-btn icon="mdi-delete" variant="text" size="small" @click.stop="openDeleteDialog(item.id)"></v-btn>
           </template>
         </v-list-item>
       </v-list>
-      <!-- Сообщение, если заметок не найдено -->
       <div v-if="!isLoading && filteredItems.length === 0" class="text-center text-grey-darken-1 mt-16">
         <v-icon size="48" class="mb-2">mdi-note-off-outline</v-icon>
         <p>{{ $t('noNotesFound') }}</p>
       </div>
     </div>
-    <!-- Плавающая кнопка "Добавить" -->
-    <v-btn
-      v-if="authStore.user"
-      icon
-      location="bottom right" size="large" color="primary" position="fixed"
-      variant="elevated" elevation="8" class="ma-4"
-      @click="router.push({ name: 'ItemAdd' })"
-    >
+    <v-btn v-if="authStore.user" icon location="bottom right" size="large" color="primary" position="fixed" variant="elevated" elevation="8" class="ma-4" @click="router.push({ name: 'ItemAdd' })">
       <v-icon>mdi-plus</v-icon>
     </v-btn>
-    <!-- Диалог подтверждения удаления -->
     <v-dialog v-model="isDeleteDialogOpen" persistent max-width="400px">
       <v-card>
         <v-card-title class="text-h5">{{ $t('confirmDeletion') }}</v-card-title>
-        <v-card-text>{{ $t('deleteConfirmationMessage', { title: itemToDelete ? itemToDelete.title : '' }) }}</v-card-text>
+        <!-- ✅ ИЗМЕНЕНИЕ: Используем хелпер getTitle -->
+        <v-card-text>{{ $t('deleteConfirmationMessage', { title: getTitle(itemToDelete) }) }}</v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn variant="text" @click="closeDeleteDialog">{{ $t('cancel') }}</v-btn>
@@ -116,6 +76,7 @@ import { useSettingsStore } from '@/stores/settings';
 import { useAuthStore } from '@/stores/auth';
 import { useNotifier } from '@/composables/useNotifier';
 import { useNovenaStore } from '@/stores/novena';
+import { getTitleByLang } from '@/utils/i18n'; // ✅ Импортируем наш хелпер
 
 const router = useRouter();
 const { t } = useI18n();
@@ -126,18 +87,18 @@ const authStore = useAuthStore();
 const novenaStore = useNovenaStore();
 const { showSuccess } = useNotifier();
 
+// ✅ Хелпер для отображения заголовков в этом компоненте
+const getTitle = (item) => getTitleByLang(item);
+
 const isDeleteDialogOpen = ref(false);
 const itemToDeleteId = ref(null);
-
 const itemToDelete = computed(() => itemToDeleteId.value ? items.value.find(item => item.id === itemToDeleteId.value) : null);
 
 function getNovenaProgress(noteId) {
     const data = novenaStore.getNovenaData(noteId);
     if (!data || !data.totalDays) return { percentage: 0, color: 'grey', completed: 0 };
-    
     const todayStr = novenaStore.getTodayDateString();
     const isTodayCompleted = data.completedDates.includes(todayStr);
-    
     return {
         percentage: (data.completedDates.length / data.totalDays) * 100,
         completed: data.completedDates.length,
@@ -182,7 +143,10 @@ const filteredItems = computed(() => {
     const tagMatch = selectedTags.value.length === 0 || (item.tags && selectedTags.value.some(tag => item.tags.includes(tag)));
     if (!tagMatch) return false;
     if (searchLower) {
-      const fullText = (item.title + ' ' + Object.values(item.textVersions || {}).join(' ')).toLowerCase();
+      // ✅ ИЗМЕНЕНИЕ: Поиск по всем версиям заголовков и текстов
+      const titles = Object.values(item.titleVersions || {}).join(' ');
+      const texts = Object.values(item.textVersions || {}).join(' ');
+      const fullText = (titles + ' ' + texts).toLowerCase();
       return fullText.includes(searchLower);
     }
     return true;
