@@ -117,25 +117,11 @@
         <v-btn icon="mdi-delete-outline" variant="text" color="grey" @click="settings.removeCategory(index)"></v-btn>
       </template>
     </v-list-item>
-    <v-card variant="tonal" class="pa-4 mt-4">
-      <h3 class="text-subtitle-1 mb-3">{{ $t('addCategory') }}</h3>
-      <v-form @submit.prevent="onAddCategory">
-        <v-text-field v-model="newCategory.name" :label="$t('categoryName')" density="compact" variant="solo-filled" flat></v-text-field>
-        <v-combobox
-          v-model="newCategory.tags"
-          :items="allTags"
-          :label="$t('categoryTags')"
-          density="compact"
-          variant="solo-filled"
-          flat
-          multiple
-          chips
-          clearable
-          class="mt-2"
-        ></v-combobox>
-        <v-btn type="submit" color="primary" block class="mt-2">{{ $t('add') }}</v-btn>
-      </v-form>
-    </v-card>
+    <div class="pa-2">
+       <v-btn color="primary" block @click="isAddCategoryDialogOpen = true">{{ $t('addCategory') }}</v-btn>
+    </div>
+
+    <AddCategoryDialog v-model="isAddCategoryDialogOpen" />
   </v-container>
 </template>
 
@@ -143,9 +129,10 @@
 import { ref } from 'vue';
 import { useSettingsStore } from '@/stores/settings';
 import { useItems } from '@/composables/useItems';
-
+import AddCategoryDialog from '@/components/AddCategoryDialog.vue';
 const settings = useSettingsStore();
 const { allTags } = useItems();
+const isAddCategoryDialogOpen = ref(false);
 
 const fontOptions = ref([
   { title: 'Системный', value: settings.systemFont },
@@ -160,15 +147,6 @@ const langOptions = ref([
   { title: 'Беларуская', value: 'be' },
   { title: 'Русский', value: 'ru' },
 ]);
-
-const newCategory = ref({ name: '', tags: [] });
-
-function onAddCategory() {
-  if (newCategory.value.name && newCategory.value.tags.length > 0) {
-    settings.addCategory({ ...newCategory.value });
-    newCategory.value = { name: '', tags: [] };
-  }
-}
 
 import { useNovenaSuggestions } from '@/composables/useNovenaSuggestions'; // ✅ Импортируем
 // ... (остальные ref'ы и функции)

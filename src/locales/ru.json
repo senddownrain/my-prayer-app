@@ -117,5 +117,8 @@
   "noRuleCreated": "Молитвенное правило еще не создано",
   "noRuleCreatedHint": "Нажмите кнопку ниже, чтобы составить свой список ежедневных молитв.",
   "createRule": "Создать правило",
-  "decline": "Отклонить"
+  "decline": "Отклонить",
+
+  "novenaDurationChoice": "Выбери колличество дней",
+  "novenaDurationInput": "Или, введи"
 }

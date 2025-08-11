@@ -117,5 +117,8 @@
   "noRuleCreated": "Малітоўнае правіла яшчэ не створана",
   "noRuleCreatedHint": "Націсніце кнопку ніжэй, каб скласці свой спіс штодзённых малітваў.",
   "createRule": "Стварыць правіла",
-  "decline": "Адхіліць"
+  "decline": "Адхіліць",
+
+  "novenaDurationChoice": "Выберы колькасць дзён",
+  "novenaDurationInput": "Альбо, напішы"
 }

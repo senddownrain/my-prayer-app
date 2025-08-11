@@ -81,7 +81,7 @@
           <v-list-item
             v-for="note in filteredNotes"
             :key="note.id"
-            :title="note.title"
+            :title="getTitle(note)"
             @click="setLink(note.id)"
           >
             <template v-slot:prepend>
@@ -103,6 +103,8 @@ import TextAlign from '@tiptap/extension-text-align';
 import { Paragraph } from '@tiptap/extension-paragraph';
 import { Node } from '@tiptap/core';
 import { useI18n } from 'vue-i18n';
+
+import { getTitleByLang } from '@/utils/i18n'; // ✅ 1. Импортируем хелпер
 
 import Link from '@tiptap/extension-link';
 import { useItems } from '@/composables/useItems';
@@ -171,9 +173,12 @@ const filteredNotes = computed(() => {
     return items.value;
   }
   return items.value.filter(note => 
-    note.title.toLowerCase().includes(searchQuery.value.toLowerCase())
+    getTitleByLang(note).toLowerCase().includes(searchQuery.value.toLowerCase())
   );
 });
+// ✅ 3. Создаем хелпер для шаблона
+const getTitle = (item) => getTitleByLang(item);
+
 function openLinkDialog() {
   // Команда `isActive('link')` проверяет, стоит ли курсор на ссылке
   // Если да, мы убираем ссылку. Если нет, открываем диалог для её создания.

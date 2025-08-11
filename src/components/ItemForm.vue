@@ -54,7 +54,7 @@
           {{ getTitle(linkedNote) }} <!-- Используем хелпер -->
         </v-chip>
       </div>
-      <v-btn @click="isLinkDialogOpen = true" prepend-icon="mdi-link-plus">{{ $t('linkedNotesAdd') }}</v-btn>
+ <v-btn @click="isLinkDialogOpen = true" prepend-icon="mdi-link-plus">{{ $t('linkedNotesAdd') }}</v-btn>
 
       <v-divider class="my-4"></v-divider>
       <v-text-field v-model="form.source" :label="$t('source')" variant="outlined" class="mb-4" clearable></v-text-field>
@@ -84,7 +84,7 @@
           <v-list-item
             v-for="note in availableNotesToLink"
             :key="note.id"
-            :title="getTitle(note)" <!-- Используем хелпер -->
+            :title="getTitle(note)" 
             @click="addLink(note.id)"
           ></v-list-item>
         </v-list>

@@ -14,15 +14,14 @@ export default defineConfig({
       autoImport: true,
     }),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       injectRegister: 'auto',
       workbox: {
         cleanupOutdatedCaches: true,
-        // ✅ ИЗМЕНЕНИЕ: Добавляем .webmanifest в список кэшируемых файлов
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json,vue,txt,woff2,webmanifest}'],
       },
-      // ✅ ИЗМЕНЕНИЕ: Указываем новое имя файла манифеста
-      manifestFilename: 'manifest.webmanifest',
+      // ✅ Мы УДАЛИЛИ опцию manifestFile/manifestFilename.
+      // Плагин по умолчанию создаст manifest.webmanifest, что нам и нужно.
       manifest: {
         name: 'Мае малітвы',
         short_name: 'Малітвы',

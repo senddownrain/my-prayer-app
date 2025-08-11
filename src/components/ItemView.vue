@@ -119,6 +119,12 @@
       <v-card>
         <v-card-title>{{ $t('novenaDurationTitle') }}</v-card-title>
         <v-card-text>
+          <p class="text-subtitle-1 mb-2">{{ $t('novenaDurationChoice') }}</p>
+          <v-chip-group v-model="novenaDays" mandatory class="mb-4">
+            <v-chip v-for="d in [7, 9, 33, 54]" :key="d" :value="d" filter>{{ d }} {{ $t('days') }}</v-chip>
+          </v-chip-group>
+
+          <p class="text-subtitle-1 mb-2">{{ $t('novenaDurationInput') }}</p>
           <v-text-field
             v-model.number="novenaDays"
             :label="$t('novenaDaysLabel')"
@@ -126,9 +132,6 @@
             variant="outlined"
             autofocus
           ></v-text-field>
-          <v-chip-group v-model="novenaDays" mandatory class="mt-2">
-            <v-chip v-for="d in [7, 9, 33, 54]" :key="d" :value="d" filter>{{ d }} {{ $t('days') }}</v-chip>
-          </v-chip-group>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
