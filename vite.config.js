@@ -14,7 +14,7 @@ export default defineConfig({
       autoImport: true,
     }),
     VitePWA({
-      registerType: 'prompt', 
+      registerType: 'autoUpdate',
       injectRegister: 'auto',
       workbox: {
         cleanupOutdatedCaches: true,
