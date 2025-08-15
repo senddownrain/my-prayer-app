@@ -1,5 +1,5 @@
 <template>
-  <div v-if="editor" class="editor-container">
+ <div v-if="editor" class="editor-wrapper">
     <!-- ✅ ОБНОВЛЕННАЯ ПАНЕЛЬ ИНСТРУМЕНТОВ -->
     <div class="editor-toolbar">
       <!-- Выпадающий список для стилей -->
@@ -61,7 +61,9 @@
 
     </div>
 
-    <editor-content :editor="editor" />
+    <div class="editor-content-wrapper">
+      <editor-content :editor="editor" />
+    </div>
   </div>
 
    <v-dialog v-model="isLinkDialogOpen" max-width="600px" scrollable>
@@ -207,3 +209,45 @@ onBeforeUnmount(() => {
   }
 });
 </script>
+<!-- ... ваш <template> ... -->
+<!-- ... ваш <script setup> ... -->
+
+<style scoped>
+/* 1. Стили для контейнера-обертки */
+.editor-wrapper {
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 4px;
+  /* Важно, чтобы sticky-позиционирование работало внутри этого блока */
+  position: relative; 
+  display: flex;
+  flex-direction: column;
+  /* Ограничиваем максимальную высоту редактора. Подберите значение по вкусу */
+  max-height: 70vh; 
+}
+/* 2. Стили для панели инструментов */
+.editor-toolbar {
+  position: sticky;
+  top: 0; /* Прилипает к верху своего родителя .editor-wrapper */
+  z-index: 10;
+  background-color: rgb(var(--v-theme-surface));
+  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  /* Чтобы панель не сжималась по вертикали */
+  flex-shrink: 0; 
+  
+  /* Стили из вашего предыдущего файла */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 4px 8px;
+  gap: 4px;
+}
+/* 3. Стили для прокручиваемого контейнера с текстом */
+.editor-content-wrapper {
+  overflow-y: auto; /* Создаем вертикальный скролл */
+  flex-grow: 1; /* Занимает все оставшееся место по высоте */
+}
+/* 4. Небольшие отступы для самого текста внутри */
+.editor-content-wrapper > :deep(.ProseMirror) {
+  padding: 8px 12px;
+}
+</style>
