@@ -1,5 +1,5 @@
 <template>
-  <v-container>
+  <v-container class="note-view-container">
     <div v-if="!isLoading && item">
       <!-- Заголовок -->
       <h2 class="text-h5 font-weight-bold mb-4 note-content-area">{{ getTitle(item) }}</h2>
@@ -144,6 +144,10 @@
 </template>
 
 <script setup>
+import { watchEffect } from 'vue';
+import { useSettingsStore } from '@/stores/settings';
+import { useWakeLock } from '@/composables/useWakeLock';
+
 import { computed, ref, onBeforeUpdate } from 'vue';
 import { useRouter } from 'vue-router';
 import { useItems } from '@/composables/useItems';
@@ -159,6 +163,9 @@ const { t } = useI18n();
 const { items, isLoading } = useItems();
 const authStore = useAuthStore();
 const novenaStore = useNovenaStore();
+// ✅ 2. Инициализируйте новые константы
+const settings = useSettingsStore();
+const { requestWakeLock, releaseWakeLock } = useWakeLock();
 
 const isNovenaDialogVisible = ref(false);
 const novenaDays = ref(9);
@@ -229,4 +236,24 @@ const novenaProgress = computed(() => {
         color: isTodayCompleted ? 'success' : 'warning'
     };
 });
+
+// ✅ 3. Добавьте этот блок watchEffect
+// Он будет автоматически следить за изменением настройки и включать/выключать блокировку
+watchEffect(() => {
+  if (settings.keepScreenOn) {
+    requestWakeLock();
+  } else {
+    releaseWakeLock();
+  }
+});
 </script>
+<style scoped>
+.note-view-container {
+  /* 
+    Стандартные отступы у v-container на мобильных - 16px.
+    Мы уменьшаем их до 8px, что ровно в два раза меньше.
+  */
+  padding-left: 8px;
+  padding-right: 8px;
+}
+</style>
