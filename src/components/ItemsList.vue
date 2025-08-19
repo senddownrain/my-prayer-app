@@ -76,19 +76,15 @@ import { useSettingsStore } from '@/stores/settings';
 import { useAuthStore } from '@/stores/auth';
 import { useNotifier } from '@/composables/useNotifier';
 import { useNovenaStore } from '@/stores/novena';
-import { getTitleByLang } from '@/utils/i18n'; // ✅ Импортируем наш хелпер
 
 const router = useRouter();
 const { t } = useI18n();
-const { items, isLoading, deleteItem } = useItems();
+const { items, isLoading, deleteItem, getTitle } = useItems();
 const { search, selectedTags } = useFilters();
 const settings = useSettingsStore();
 const authStore = useAuthStore();
 const novenaStore = useNovenaStore();
 const { showSuccess } = useNotifier();
-
-// ✅ Хелпер для отображения заголовков в этом компоненте
-const getTitle = (item) => getTitleByLang(item);
 
 const isDeleteDialogOpen = ref(false);
 const itemToDeleteId = ref(null);

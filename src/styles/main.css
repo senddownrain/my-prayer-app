@@ -106,6 +106,74 @@ html {
 
 
 /* ==========================================================================
+   СТИЛИ ДЛЯ НОВЕНН
+   ========================================================================== */
+.note-content-area .current-day-marker {
+  background-color: rgba(var(--v-theme-primary), 0.08);
+  border-left: 3px solid rgba(var(--v-theme-primary), 0.7);
+  /* Плавный переход для красоты */
+  transition: all 0.3s ease-in-out;
+  /* Отступы, чтобы текст не прилипал к рамке */
+  padding-left: 12px;
+  /* Компенсация отступа, чтобы текст визуально остался на месте */
+  margin-left: -15px; 
+}
+
+/* Добавляем немного больше отступа сверху и снизу для выделенного блока */
+.note-content-area .current-day-marker {
+    margin-top: 1em;
+    margin-bottom: 1em;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+/* Общие стили для всех меток в редакторе */
+.ProseMirror p[data-day]::before,
+.ProseMirror p[data-marker]::before {
+  font-family: "Material Design Icons"; /* ✅ Используем шрифт иконок */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2em; /* Размер иконки */
+  font-weight: normal;
+  color: rgb(var(--v-theme-primary));
+  background-color: rgba(var(--v-theme-primary), 0.1);
+  margin-right: 12px;
+  vertical-align: middle;
+  width: 26px;
+  height: 26px;
+  line-height: 26px;
+  text-align: center;
+  border-radius: 50%;
+  border: 1px solid rgba(var(--v-theme-primary), 0.2);
+}
+/* Иконка для метки дня */
+.ProseMirror p[data-day]::before {
+  content: attr(data-day); /* Оставляем номер для дней */
+  font-family: var(--app-font-family); /* Возвращаем обычный шрифт */
+  font-size: 0.8em;
+  font-weight: bold;
+}
+/* Иконка для метки "старт" */
+.ProseMirror p[data-marker="start"]::before {
+  content: "\F040A"; /* Код иконки mdi-play-circle-outline */
+}
+/* Иконка для метки "финиш" */
+.ProseMirror p[data-marker="finish"]::before {
+  content: "\F023C"; /* Код иконки mdi-flag-checkered */
+}
+/* ==========================================================================
+   СТИЛИ ДЛЯ ПЛАВАЮЩИХ КНОПОК
+   ========================================================================== */
+.fab-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    z-index: 5; /* Чуть ниже стандартных диалогов */
+}
+
+/* ==========================================================================
    Адаптивные стили для мобильных устройств
    ========================================================================== */
 

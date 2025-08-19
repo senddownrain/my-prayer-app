@@ -12,6 +12,7 @@ import {
   orderBy
 } from 'firebase/firestore';
 import { useSettingsStore } from '@/stores/settings';
+import { getTitleByLang } from '@/utils/i18n'; // ✅ 1. ИМПОРТИРУЕМ
 
 const items = ref([]);
 const allTags = ref([]);
@@ -70,6 +71,13 @@ export function useItems() {
     await updateDoc(doc(db, 'items', id), dataToUpdate);
   };
 
+   // ✅ 2. СОЗДАЕМ И ЭКСПОРТИРУЕМ ФУНКЦИЮ
+  const getTitle = (item) => {
+    if (!item) return '';
+    // Можно указать предпочитаемый порядок языков прямо здесь
+    return getTitleByLang(item, ['be', 'ru', 'la', 'pl']);
+  };
+
   return {
     items: sortedItems, // ✅ Экспортируем уже отсортированный массив
     allTags,
@@ -77,5 +85,6 @@ export function useItems() {
     addItem,
     deleteItem,
     updateItem,
+    getTitle // ✅ 3. ЭКСПОРТИРУЕМ
   };
 }

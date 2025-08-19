@@ -34,8 +34,8 @@
           </v-expansion-panel-text>
         </v-expansion-panel>
       </v-expansion-panels>
-      
-      <!-- ✅ ИЗМЕНЕНИЕ 2: БЫСТРАЯ НАВИГАЦИЯ ПО ЯЗЫКАМ -->
+
+      <!-- Быстрая навигация по языкам -->
       <v-chip-group v-if="sortedLangs.length > 1" class="mb-6">
         <v-chip
           v-for="lang in sortedLangs"
@@ -46,8 +46,7 @@
         </v-chip>
       </v-chip-group>
 
-      <!-- Текст молитвы (с перехватом кликов по ссылкам и динамическими ref) -->
-      <!-- ✅ ИЗМЕНЕНИЕ 1 и 3: Итерация по отсортированному списку языков -->
+      <!-- Текст молитвы -->
       <div 
         v-for="lang in sortedLangs" 
         :key="lang" 
@@ -56,7 +55,7 @@
         :ref="el => (langRefs[lang] = el)"
       >
         <div class="lang-label">{{ t('langLabels.' + lang) }}</div>
-        <div v-html="availableVersions[lang]" class="note-content-area ProseMirror"></div>
+        <div v-html="processedHtml[lang]" class="note-content-area ProseMirror"></div>
       </div>
 
       <!-- Связанные заметки -->
@@ -77,7 +76,7 @@
         </v-list>
       </div>
 
-      <!-- Кнопка для старта новенны (видна, если новенна не активна) -->
+      <!-- Кнопка для старта новенны -->
       <div v-if="item.isNovenaPrayer && !novenaStore.isNovenaActive(props.id)"  class="text-center my-8">
         <v-btn
           @click="isNovenaDialogVisible = true"
@@ -100,7 +99,6 @@
           <strong>{{ $t('tagsLabel') }}</strong> {{ item.tags.join(', ') }}
         </div>
       </div>
-
     </div>
 
     <!-- Загрузка и состояние "не найдено" -->
@@ -114,91 +112,91 @@
       <v-progress-circular indeterminate color="primary"></v-progress-circular>
     </div>
 
+    <!-- БЛОК С ПЛАВАЮЩИМИ КНОПКАМИ НАВИГАЦИИ -->
+    <div v-if="isNovenaActiveAndInProgress" class="fab-container">
+      <v-btn
+        v-if="hasStartMarker"
+        icon="mdi-transfer-up"
+        color="secondary"
+        variant="tonal"
+        class="mb-2"
+        @click="scrollToMarker('start')"
+        title="Да ўступу"
+      ></v-btn>
+      <v-btn
+        v-if="currentNovenaDay"
+        icon="mdi-crosshairs-gps"
+        color="primary"
+        variant="flat"
+        class="mb-2"
+        @click="scrollToCurrentDay"
+        title="Да сённяшняга дня"
+      ></v-btn>
+      <v-btn
+        v-if="hasFinishMarker"
+        icon="mdi-transfer-down"
+        color="secondary"
+        variant="tonal"
+        @click="scrollToMarker('finish')"
+        title="Да заканчэння"
+      ></v-btn>
+    </div>
+
     <!-- Диалог старта новенны -->
     <v-dialog v-model="isNovenaDialogVisible" max-width="400px">
-      <v-card>
-        <v-card-title>{{ $t('novenaDurationTitle') }}</v-card-title>
-        <v-card-text>
-          <p class="text-subtitle-1 mb-2">{{ $t('novenaDurationChoice') }}</p>
-          <v-chip-group v-model="novenaDays" mandatory class="mb-4">
-            <v-chip v-for="d in [7, 9, 33, 54]" :key="d" :value="d" filter>{{ d }} {{ $t('days') }}</v-chip>
-          </v-chip-group>
-
-          <p class="text-subtitle-1 mb-2">{{ $t('novenaDurationInput') }}</p>
-          <v-text-field
-            v-model.number="novenaDays"
-            :label="$t('novenaDaysLabel')"
-            type="number"
-            variant="outlined"
-            autofocus
-          ></v-text-field>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn text @click="isNovenaDialogVisible = false">{{ $t('cancel') }}</v-btn>
-          <v-btn color="primary" variant="flat" @click="handleStartNovena">{{ $t('start') }}</v-btn>
-        </v-card-actions>
-      </v-card>
+        <!-- ... -->
     </v-dialog>
   </v-container>
 </template>
 
 <script setup>
-import { watchEffect } from 'vue';
-import { useSettingsStore } from '@/stores/settings';
-import { useWakeLock } from '@/composables/useWakeLock';
-
-import { computed, ref, onBeforeUpdate } from 'vue';
+import { ref, computed, watch, onBeforeUpdate, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
 import { useItems } from '@/composables/useItems';
-import { useAuthStore } from '@/stores/auth';
+import { useSettingsStore } from '@/stores/settings';
+import { useWakeLock } from '@/composables/useWakeLock';
 import { useI18n } from 'vue-i18n';
 import { useNovenaStore } from '@/stores/novena';
 import NovenaTracker from '@/components/NovenaTracker.vue';
-import { getTitleByLang } from '@/utils/i18n'; // Добавьте этот импорт
 
 const props = defineProps({ id: { type: String, required: true } });
 const router = useRouter();
 const { t } = useI18n();
-const { items, isLoading } = useItems();
-const authStore = useAuthStore();
+const { items, isLoading, getTitle } = useItems();
 const novenaStore = useNovenaStore();
-// ✅ 2. Инициализируйте новые константы
 const settings = useSettingsStore();
 const { requestWakeLock, releaseWakeLock } = useWakeLock();
 
+const item = computed(() => items.value.find(i => i.id === props.id));
 const isNovenaDialogVisible = ref(false);
 const novenaDays = ref(9);
-const item = computed(() => items.value.find(i => i.id === props.id));
-const getTitle = (item) => getTitleByLang(item); // Добавьте эту строку
 
+// --- Логика для связанных заметок и ссылок в тексте ---
 const linkedNotes = computed(() => item.value?.linkedNoteIds?.map(id => items.value.find(note => note.id === id)).filter(Boolean) || []);
 
-// ✅ ИЗМЕНЕНИЕ 1: Улучшенная логика для `availableVersions`, чтобы скрывать пустые теги
+function handleContentClick(event) {
+  const link = event.target.closest('a');
+  if (link && link.pathname.startsWith('/item/')) {
+    event.preventDefault(); 
+    router.push(link.pathname);
+  }
+}
+
+// --- Логика для языковых версий ---
 const availableVersions = computed(() => {
   if (!item.value?.textVersions) return {};
   return Object.fromEntries(
-    Object.entries(item.value.textVersions).filter(([lang, text]) => {
-      // Отображаем, только если текст не пустой и не содержит лишь пустой тег <p>
-      return text && text.trim() !== '<p></p>';
-    })
+    Object.entries(item.value.textVersions).filter(([lang, text]) => text && text.trim() !== '<p></p>')
   );
 });
 
-// ✅ ИЗМЕНЕНИЕ 3: Создаем отсортированный список языков, где 'be' всегда первый
 const sortedLangs = computed(() => {
   const langs = Object.keys(availableVersions.value);
-  return langs.sort((a, b) => {
-    if (a === 'be') return -1;
-    if (b === 'be') return 1;
-    return a.localeCompare(b); // остальные сортируем по алфавиту
-  });
+  return langs.sort((a, b) => (a === 'be' ? -1 : b === 'be' ? 1 : a.localeCompare(b)));
 });
 
-// ✅ ИЗМЕНЕНИЕ 2: Логика для плавной прокрутки
 const langRefs = ref({});
 onBeforeUpdate(() => {
-  // Очищаем ссылки перед каждым обновлением, чтобы избежать утечек памяти
   langRefs.value = {};
 });
 
@@ -209,24 +207,62 @@ function scrollToLang(lang) {
   }
 }
 
-function handleContentClick(event) {
-  const link = event.target.closest('a');
-  if (link && link.pathname.startsWith('/item/')) {
-    event.preventDefault(); 
-    router.push(link.pathname);
-  }
-}
+// --- Логика Новенн ---
+const isNovenaActiveAndInProgress = computed(() => novenaStore.isNovenaActive(props.id));
 
-function handleStartNovena() {
-  novenaStore.startNovena(props.id, novenaDays.value);
-  isNovenaDialogVisible.value = false;
-}
+const currentNovenaDay = computed(() => {
+  if (!isNovenaActiveAndInProgress.value) return null;
+  const data = novenaStore.getNovenaData(props.id);
+  if (!data) return null;
+  const startDate = new Date(data.startDate);
+  const today = new Date(novenaStore.getTodayDateString());
+  const diffTime = Math.abs(today.getTime() - startDate.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const dayNumber = diffDays + 1;
+  return dayNumber > 0 && dayNumber <= data.totalDays ? dayNumber : null;
+});
+
+// ✅ ИСПРАВЛЕНИЕ: Логика разделена на watchEffect (для побочных эффектов) и computed (для вычислений)
+const hasStartMarker = ref(false);
+const hasFinishMarker = ref(false);
+
+watchEffect(() => {
+  const versions = availableVersions.value;
+  if (typeof window === 'undefined' || !item.value || Object.keys(versions).length === 0) {
+    hasStartMarker.value = false;
+    hasFinishMarker.value = false;
+    return;
+  }
+  const firstLangHtml = versions[sortedLangs.value[0]];
+  if (!firstLangHtml) return;
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(firstLangHtml, 'text/html');
+  hasStartMarker.value = !!doc.querySelector('[data-marker="start"]');
+  hasFinishMarker.value = !!doc.querySelector('[data-marker="finish"]');
+});
+
+const processedHtml = computed(() => {
+  const versions = availableVersions.value;
+  const dayToHighlight = currentNovenaDay.value;
+  if (!dayToHighlight) return versions;
+
+  const processed = {};
+  for (const lang in versions) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(versions[lang], 'text/html');
+    const element = doc.querySelector(`[data-day="${dayToHighlight}"]`);
+    if (element) {
+      element.classList.add('current-day-marker');
+    }
+    processed[lang] = doc.body.innerHTML;
+  }
+  return processed;
+});
 
 const novenaProgress = computed(() => {
     const data = novenaStore.getNovenaData(props.id);
-    if (!data || !data.totalDays) {
-        return { percentage: 0, color: 'grey', completed: 0, total: 0 };
-    }
+    if (!data || !data.totalDays) return { percentage: 0, color: 'grey', completed: 0, total: 0 };
     const todayStr = novenaStore.getTodayDateString();
     const isTodayCompleted = data.completedDates.includes(todayStr);
     return {
@@ -237,23 +273,38 @@ const novenaProgress = computed(() => {
     };
 });
 
-// ✅ 3. Добавьте этот блок watchEffect
-// Он будет автоматически следить за изменением настройки и включать/выключать блокировку
+function handleStartNovena() {
+  novenaStore.startNovena(props.id, novenaDays.value);
+  isNovenaDialogVisible.value = false;
+}
+
+function scrollToCurrentDay() {
+  const el = document.querySelector('.current-day-marker');
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function scrollToMarker(markerType) {
+  const el = document.querySelector(`[data-marker="${markerType}"]`);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
 watchEffect(() => {
-  if (settings.keepScreenOn) {
-    requestWakeLock();
-  } else {
-    releaseWakeLock();
-  }
+  if (settings.keepScreenOn) requestWakeLock();
+  else releaseWakeLock();
 });
 </script>
+
 <style scoped>
 .note-view-container {
-  /* 
-    Стандартные отступы у v-container на мобильных - 16px.
-    Мы уменьшаем их до 8px, что ровно в два раза меньше.
-  */
   padding-left: 8px;
   padding-right: 8px;
+}
+.fab-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    z-index: 5;
 }
 </style>

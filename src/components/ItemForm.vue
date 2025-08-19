@@ -13,19 +13,19 @@
       <v-window v-model="currentLangTab">
         <v-window-item value="be">
           <v-text-field v-model="form.titleVersions.be" :label="`${t('title')} (${t('langLabels.be')})`" variant="outlined" class="my-4"></v-text-field>
-          <Editor v-model="form.textVersions.be" />
+          <Editor v-model="form.textVersions.be" :is-novena="form.isNovenaPrayer"  />
         </v-window-item>
         <v-window-item value="ru">
           <v-text-field v-model="form.titleVersions.ru" :label="`${t('title')} (${t('langLabels.ru')})`" variant="outlined" class="my-4"></v-text-field>
-          <Editor v-model="form.textVersions.ru" />
+          <Editor v-model="form.textVersions.ru" :is-novena="form.isNovenaPrayer"  />
         </v-window-item>
         <v-window-item value="la">
           <v-text-field v-model="form.titleVersions.la" :label="`${t('title')} (${t('langLabels.la')})`" variant="outlined" class="my-4"></v-text-field>
-          <Editor v-model="form.textVersions.la" />
+          <Editor v-model="form.textVersions.la" :is-novena="form.isNovenaPrayer" />
         </v-window-item>
         <v-window-item value="pl">
            <v-text-field v-model="form.titleVersions.pl" :label="`${t('title')} (${t('langLabels.pl')})`" variant="outlined" class="my-4"></v-text-field>
-           <Editor v-model="form.textVersions.pl" />
+           <Editor v-model="form.textVersions.pl" :is-novena="form.isNovenaPrayer" />
         </v-window-item>
       </v-window>
 
@@ -100,12 +100,11 @@ import { useItems } from '@/composables/useItems';
 import Editor from '@/components/Editor.vue';
 import { useI18n } from 'vue-i18n';
 import { useNotifier } from '@/composables/useNotifier';
-import { getTitleByLang } from '@/utils/i18n'; // ✅ Импортируем наш хелпер
 
 const props = defineProps({ id: { type: String, required: false } });
 const router = useRouter();
 const { t } = useI18n();
-const { items, addItem, updateItem, allTags } = useItems();
+const { items, addItem, updateItem, allTags, getTitle } = useItems();
 const { showSuccess } = useNotifier();
 
 const registerSaveAction = inject('registerSaveAction');
@@ -124,9 +123,6 @@ const form = ref({
   recommendedDate: null,
   hidden: false
 });
-
-// ✅ Хелпер для отображения заголовков в этом компоненте
-const getTitle = (item) => getTitleByLang(item);
 
 const isLinkDialogOpen = ref(false);
 const linkSearchQuery = ref('');

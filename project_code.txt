@@ -1718,6 +1718,90 @@ defineExpose({ show });
 </script>
 ```
 
+### src/components/NovenaBuilder.vue
+```
+<template>
+  <v-card variant="outlined" class="pa-3 mb-3">
+    <div class="d-flex align-center ga-3 flex-wrap mb-2">
+      <v-text-field
+        v-model.number="novena.totalDays"
+        type="number" min="1" max="99"
+        density="compact"
+        :label="$t('novenaDaysLabel')"
+        style="max-width: 160px"
+      />
+      <v-chip-group v-model="selectedDay" class="ml-2" mandatory>
+        <v-chip v-for="d in novena.totalDays" :key="`d-${lang}-${d}`" :value="d" size="small" filter>{{ d }}</v-chip>
+      </v-chip-group>
+
+      <v-spacer />
+
+      <v-switch
+        v-model="novena.useSingleText"
+        class="ml-auto"
+        inset
+        :label="$t('singleTextMode')"
+      />
+    </div>
+
+    <h4 class="text-subtitle-1 mb-2">{{ $t('opening') }}</h4>
+    <Editor v-model="novena.openingTextVersions[lang]" class="mb-4" />
+
+    <template v-if="novena.useSingleText">
+      <h4 class="text-subtitle-1 mb-2">{{ $t('day') }} 1…{{ novena.totalDays }}</h4>
+      <Editor v-model="novena.singleTextVersions[lang]" class="mb-4" />
+    </template>
+    <template v-else>
+      <h4 class="text-subtitle-1 mb-2">{{ $t('day') }} {{ selectedDay }}</h4>
+      <Editor v-model="dayModel" class="mb-4" />
+    </template>
+
+    <h4 class="text-subtitle-1 mb-2">{{ $t('closing') }}</h4>
+    <Editor v-model="novena.closingTextVersions[lang]" />
+  </v-card>
+</template>
+
+<script setup>
+import { computed, ref, watch } from 'vue';
+import Editor from '@/components/Editor.vue';
+
+const props = defineProps({
+  modelValue: { type: Object, required: true }, // novena
+  lang: { type: String, required: true },
+});
+
+const emit = defineEmits(['update:modelValue']);
+
+const novena = computed({
+  get: () => props.modelValue,
+  set: (v) => emit('update:modelValue', v),
+});
+
+const selectedDay = ref(1);
+
+// Дневной текст для текущего дня/языка
+const dayModel = computed({
+  get() {
+    const key = String(selectedDay.value);
+    return novena.value.dailyTextVersions?.[key]?.[props.lang] || '';
+  },
+  set(v) {
+    const key = String(selectedDay.value);
+    if (!novena.value.dailyTextVersions[key]) novena.value.dailyTextVersions[key] = {};
+    novena.value.dailyTextVersions[key][props.lang] = v;
+  }
+});
+
+// Инициализация структур
+watch(() => props.lang, () => {
+  if (!novena.value.openingTextVersions) novena.value.openingTextVersions = {};
+  if (!novena.value.closingTextVersions) novena.value.closingTextVersions = {};
+  if (!novena.value.singleTextVersions) novena.value.singleTextVersions = {};
+  if (!novena.value.dailyTextVersions) novena.value.dailyTextVersions = {};
+}, { immediate: true });
+</script>
+```
+
 ### src/components/NovenaTracker.vue
 ```
 <!-- src/components/NovenaTracker.vue -->
@@ -2692,66 +2776,6 @@ export function useWakeLock() {
     requestWakeLock,
     releaseWakeLock,
   };
-}
-```
-
-### src/export-code.js
-```
-const fs = require('fs');
-const path = require('path');
-
-// Список файлов и папок, которые мы хотим экспортировать
-const pathsToExport = [
-  'package.json',
-  'vite.config.js',
-  'src' // Экспортируем всю папку src
-];
-
-const outputFileName = 'project_code.txt';
-let output = '';
-
-// Функция для рекурсивного обхода папок
-function readDirectory(dirPath) {
-  const files = fs.readdirSync(dirPath);
-  for (const file of files) {
-    const filePath = path.join(dirPath, file);
-    const stat = fs.statSync(filePath);
-
-    if (stat.isDirectory()) {
-      readDirectory(filePath); // Если это папка, идем глубже
-    } else if (['.js', '.vue', '.css', '.json'].includes(path.extname(filePath))) {
-      // Если это файл с нужным расширением, добавляем его в вывод
-      const relativePath = path.relative(__dirname, filePath).replace(/\\/g, '/');
-      output += `\n### ${relativePath}\n`;
-      output += '```\n';
-      output += fs.readFileSync(filePath, 'utf-8');
-      output += '\n```\n';
-    }
-  }
-}
-
-// Основная логика
-try {
-  for (const p of pathsToExport) {
-    const fullPath = path.join(__dirname, p);
-    if (!fs.existsSync(fullPath)) continue;
-
-    const stat = fs.statSync(fullPath);
-    if (stat.isDirectory()) {
-      readDirectory(fullPath);
-    } else {
-      const relativePath = path.relative(__dirname, fullPath).replace(/\\/g, '/');
-      output += `\n### ${relativePath}\n`;
-      output += '```\n';
-      output += fs.readFileSync(fullPath, 'utf-8');
-      output += '\n```\n';
-    }
-  }
-
-  fs.writeFileSync(outputFileName, output);
-  console.log(`Проект успешно экспортирован в файл: ${outputFileName}`);
-} catch (error) {
-  console.error('Произошла ошибка при экспорте проекта:', error);
 }
 ```
 
