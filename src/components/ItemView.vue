@@ -55,7 +55,7 @@
         :ref="el => (langRefs[lang] = el)"
       >
         <div class="lang-label">{{ t('langLabels.' + lang) }}</div>
-        <div v-html="processedHtml[lang]" class="note-content-area ProseMirror"></div>
+        <div v-html="processedHtml[lang]" class="note-content-area"></div>
       </div>
 
       <!-- Связанные заметки -->
@@ -112,46 +112,100 @@
       <v-progress-circular indeterminate color="primary"></v-progress-circular>
     </div>
 
-    <!-- БЛОК С ПЛАВАЮЩИМИ КНОПКАМИ НАВИГАЦИИ -->
-    <div v-if="isNovenaActiveAndInProgress" class="fab-container">
+    <!-- БЛОК С ПЛАВАЮЩИМИ КНОПКАМИ "РИТУАЛА" -->
+    <div v-if="isNovenaActiveAndInProgress && !isTodayCompleted" class="fab-container">
+      <!-- Кнопка "К началу" -->
       <v-btn
         v-if="hasStartMarker"
-        icon="mdi-transfer-up"
-        color="secondary"
+        icon="mdi-cross"
+        :color="hasScrolledToStart ? 'success' : 'secondary'"
         variant="tonal"
         class="mb-2"
-        @click="scrollToMarker('start')"
+        @click="executeScrollStep('start')"
         title="Да ўступу"
       ></v-btn>
+
+      <!-- Кнопка "К текущему дню" -->
       <v-btn
         v-if="currentNovenaDay"
         icon="mdi-crosshairs-gps"
-        color="primary"
-        variant="flat"
+        :color="hasScrolledToDay ? 'success' : 'secondary'"
+        :disabled="!hasScrolledToStart"
+        variant="tonal"
         class="mb-2"
-        @click="scrollToCurrentDay"
+        @click="executeScrollStep('day')"
         title="Да сённяшняга дня"
       ></v-btn>
+
+      <!-- Кнопка "К окончанию" -->
       <v-btn
         v-if="hasFinishMarker"
-        icon="mdi-transfer-down"
-        color="secondary"
+        icon="mdi-flag-checkered"
+        :color="hasScrolledToFinish ? 'success' : 'secondary'"
+        :disabled="!hasScrolledToDay"
         variant="tonal"
-        @click="scrollToMarker('finish')"
+        class="mb-2"
+        @click="executeScrollStep('finish')"
         title="Да заканчэння"
       ></v-btn>
+      
+      <!-- Кнопка "Завершить день" -->
+      <v-expand-transition>
+          <v-btn
+            v-if="showCompleteButton"
+            icon="mdi-calendar-check"
+            color="primary"
+            variant="flat"
+            @click="novenaStore.toggleDayCompletion(props.id, novenaStore.getTodayDateString())"
+            title="Адзначыць дзень як выкананы"
+          ></v-btn>
+      </v-expand-transition>
     </div>
+    
+    <!-- Если день уже завершен, показываем одну кнопку-галочку -->
+     <div v-if="isNovenaActiveAndInProgress && isTodayCompleted" class="fab-container">
+        <v-btn
+            icon="mdi-calendar-check"
+            color="success"
+            variant="flat"
+            title="Дзень выкананы!"
+            @click="novenaStore.toggleDayCompletion(props.id, novenaStore.getTodayDateString())"
+          ></v-btn>
+     </div>
+
 
     <!-- Диалог старта новенны -->
     <v-dialog v-model="isNovenaDialogVisible" max-width="400px">
-        <!-- ... -->
+      <v-card>
+        <v-card-title>{{ $t('novenaDurationTitle') }}</v-card-title>
+        <v-card-text>
+          <p class="text-subtitle-1 mb-2">{{ $t('novenaDurationChoice') }}</p>
+          <v-chip-group v-model="novenaDays" mandatory class="mb-4">
+            <v-chip v-for="d in [7, 9, 33, 54]" :key="d" :value="d" filter>{{ d }} {{ $t('days') }}</v-chip>
+          </v-chip-group>
+          <p class="text-subtitle-1 mb-2">{{ $t('novenaDurationInput') }}</p>
+          <v-text-field
+            v-model.number="novenaDays"
+            :label="$t('novenaDaysLabel')"
+            type="number"
+            variant="outlined"
+            autofocus
+          ></v-text-field>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn text @click="isNovenaDialogVisible = false">{{ $t('cancel') }}</v-btn>
+          <v-btn color="primary" variant="flat" @click="handleStartNovena">{{ $t('start') }}</v-btn>
+        </v-card-actions>
+      </v-card>
     </v-dialog>
+
   </v-container>
 </template>
 
 <script setup>
-import { ref, computed, watch, onBeforeUpdate, watchEffect } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, computed, watch, onBeforeUpdate, watchEffect, onUnmounted } from 'vue';
+import { useRouter, onBeforeRouteLeave } from 'vue-router';
 import { useItems } from '@/composables/useItems';
 import { useSettingsStore } from '@/stores/settings';
 import { useWakeLock } from '@/composables/useWakeLock';
@@ -222,9 +276,45 @@ const currentNovenaDay = computed(() => {
   return dayNumber > 0 && dayNumber <= data.totalDays ? dayNumber : null;
 });
 
-// ✅ ИСПРАВЛЕНИЕ: Логика разделена на watchEffect (для побочных эффектов) и computed (для вычислений)
+// Логика "Ритуала"
+const hasScrolledToStart = ref(false);
+const hasScrolledToDay = ref(false);
+const hasScrolledToFinish = ref(false);
 const hasStartMarker = ref(false);
 const hasFinishMarker = ref(false);
+
+const isTodayCompleted = computed(() => {
+    if (!currentNovenaDay.value) return false;
+    const data = novenaStore.getNovenaData(props.id);
+    const todayStr = novenaStore.getTodayDateString();
+    return data?.completedDates.includes(todayStr) || false;
+});
+
+const showCompleteButton = computed(() => {
+    return hasScrolledToStart.value && hasScrolledToDay.value && hasScrolledToFinish.value;
+});
+
+function executeScrollStep(step) {
+    if (step === 'start') {
+        scrollToMarker('start');
+        hasScrolledToStart.value = true;
+    } else if (step === 'day') {
+        scrollToCurrentDay();
+        hasScrolledToDay.value = true;
+    } else if (step === 'finish') {
+        scrollToMarker('finish');
+        hasScrolledToFinish.value = true;
+    }
+}
+
+function resetRitualState() {
+    hasScrolledToStart.value = false;
+    hasScrolledToDay.value = false;
+    hasScrolledToFinish.value = false;
+}
+
+onBeforeRouteLeave(() => { resetRitualState(); });
+onUnmounted(() => { resetRitualState(); });
 
 watchEffect(() => {
   const versions = availableVersions.value;
@@ -292,6 +382,7 @@ watchEffect(() => {
   if (settings.keepScreenOn) requestWakeLock();
   else releaseWakeLock();
 });
+
 </script>
 
 <style scoped>

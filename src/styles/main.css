@@ -55,6 +55,13 @@ html {
 .note-content-area h2 { font-size: calc(1.5rem * var(--font-size-multiplier)); }
 .note-content-area h3 { font-size: calc(1.15rem * var(--font-size-multiplier)); }
 .note-content-area p, .note-content-area div { font-size: calc(1rem * var(--font-size-multiplier)); }
+.note-content-area p {
+  margin-bottom: 1em !important; 
+}
+/* Убираем лишний отступ у последнего элемента, чтобы не было "висячего" пробела */
+.note-content-area > *:last-child {
+    margin-bottom: 0 !important;
+}
 /* ... (остальные стили для .note-content-area и другие правила остаются как были) ... */
 .note-content-area .rubric { color: rgb(var(--v-theme-error)); font-style: italic; text-align: center; }
 .note-content-area > *:first-child { margin-top: 0 !important; }

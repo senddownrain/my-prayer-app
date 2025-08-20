@@ -105,7 +105,33 @@
 
     <!-- Диалог для вставки ссылок (без изменений) -->
     <v-dialog v-model="isLinkDialogOpen" max-width="600px" scrollable>
-       <!-- ... -->
+       <v-card>
+      <v-card-title class="headline">{{ $t('linkedNotesSelect') }}</v-card-title>
+      <v-card-text class="pa-4">
+        <v-text-field
+          v-model="searchQuery"
+          :placeholder="$t('searchPlaceholder')"
+          variant="outlined"
+          density="compact"
+          autofocus
+          hide-details
+          class="mb-4"
+        ></v-text-field>
+        <v-list v-if="filteredNotes.length > 0">
+          <v-list-item
+            v-for="note in filteredNotes"
+            :key="note.id"
+            :title="getTitle(note)"
+            @click="setLink(note.id)"
+          >
+            <template v-slot:prepend>
+              <v-icon>mdi-note-text-outline</v-icon>
+            </template>
+          </v-list-item>
+        </v-list>
+        <div v-else class="text-center text-grey py-4">{{ $t('noNotesFound') }}</div>
+      </v-card-text>
+    </v-card>
     </v-dialog>
   </div>
 </template>
@@ -181,6 +207,7 @@ const editor = useEditor({
       paragraph: false, // ❗ Важно: отключаем стандартный параграф
       link: false,      // ❗ Важно: отключаем стандартную ссылку
     }),
+    Paragraph,
     CustomParagraph,   // ✅ Используем наше кастомное расширение
     TextAlign.configure({
       types: ['heading', 'paragraph'],
