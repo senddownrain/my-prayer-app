@@ -120,5 +120,42 @@
   "decline": "Адхіліць",
 
   "novenaDurationChoice": "Выберы колькасць дзён",
-  "novenaDurationInput": "Альбо, напішы"
+  "novenaDurationInput": "Альбо, напішы",
+  "dataManagement": "Кіраванне данымі",
+  "exportToJson": "Экспарт у JSON",
+  "exportToCsv": "Экспарт у CSV",
+  "importFromFile": "Імпарт з файла",
+  "exportSuccess": "Экспарт паспяхова завершаны!",
+  "exportError": "Памылка падчас экспарту.",
+  "importParseError": "Не атрымалася прачытаць файл. Пераканайцеся, што гэта карэктны JSON-файл.",
+  "importDbError": "Адбылася памылка пры захаванні даных.",
+  "importSuccess": "Імпарт завершаны. Дададзена: {added}, Абноўлена: {updated}.",
+  "importConfirmationTitle": "Пацвярджэнне імпарту",
+  "importConfirmationMessage": "Вы збіраецеся імпартаваць {count} запісаў з файла {fileName}.",
+  "importWarning": "Гэта дзеянне нельга адмяніць. Існуючыя запісы могуць быць перазапісаны ў залежнасці ад абранага рэжыму.",
+  "importModeLabel": "Рэжым імпарту:",
+  "importMode": {
+    "add": "Дадаваць толькі новыя",
+    "overwrite": "Дадаваць новыя і перазапісваць існуючыя"
+  },
+  "import": "Імпартаваць",
+"noteLanguage": "Мова",
+"languageCannotBeChanged": "Мову нельга змяніць пасля стварэння.",
+"translations": "Пераклады",
+"addTranslation": "Дадаць пераклад",
+"selectTranslation": "Выберыце пераклад",
+"translationLinked": "Пераклад паспяхова прывязаны!",
+"translationUnlinked": "Сувязь з перакладам выдалена.",
+"titleRequired": "Калі ласка, ўвядзіце назву.",
+"langLabelsFull": {
+    "ru": "Русский",
+    "be": "Беларуская",
+    "la": "Latina",
+    "pl": "Polski"
+},
+ "share": "Падзяліцца",
+  "copyLink": "Капіяваць спасылку",
+  "linkCopied": "Спасылка скапіявана ў буфер абмену!",
+  "shareError": "Не атрымалася падзяліцца. Магчыма, ваш браўзер не падтрымлівае гэту функцыю.",
+  "filters": "Фільтры"
 }

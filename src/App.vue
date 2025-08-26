@@ -68,70 +68,107 @@
       </v-list>
     </v-navigation-drawer>
 
-    <!-- AppBar остается без изменений -->
-    <v-app-bar 
-  :elevation="2" 
-  app
-  :scroll-behavior="isItemViewPage ? 'hide' : undefined"
->
-      <v-btn v-if="showBackButton" icon="mdi-arrow-left" @click="router.back()"></v-btn>
-      <v-btn v-else icon="mdi-menu" @click="isDrawerOpen = !isDrawerOpen"></v-btn>
-      <v-expand-x-transition>
-          <v-text-field
-              v-if="isSearchActive"
-              v-model="search"
-              :placeholder="$t('searchPlaceholder')"
-              variant="solo-inverted"
-              flat
-              hide-details
-              autofocus
-              density="compact"
-              class="mr-2"
-              @blur="isSearchActive = false"
-              clearable  
-              @click:clear="isSearchActive = false; search = '';"
-          ></v-text-field>
-      </v-expand-x-transition>
-      <v-toolbar-title 
-        v-if="!isSearchActive" 
-        @click="goHome" 
-        style="cursor: pointer;"
-        class="font-weight-medium"
-      >
-       <span class="wrappable-toolbar-title app-title non-selectable">{{ $t('appTitle') }}</span>
-      </v-toolbar-title>
-      <template v-if="!isSearchActive">
-          <template v-if="isHomePage">
-            <v-btn icon="mdi-magnify" @click="isSearchActive = true"></v-btn>
-            <v-btn icon="mdi-filter-variant" @click="isFilterSheetOpen = true"></v-btn>
-          </template>
-          <template v-if="isItemViewPage">
-            <v-btn 
-              :icon="settings.isPinned(currentItemId) ? 'mdi-pin' : 'mdi-pin-outline'"
-              :color="settings.isPinned(currentItemId) ? 'primary' : 'grey'"
-              @click="settings.togglePin(currentItemId)"
-            ></v-btn>
-            <v-btn icon="mdi-tune-variant" @click="openTextSettings"></v-btn>
-            <v-btn 
-        v-if="isItemViewPage && authStore.user" 
-        icon="mdi-pencil" 
-        @click="router.push({ name: 'ItemEdit', params: { id: currentItemId } })"
-      ></v-btn>
-          </template>
-          <v-btn v-if="showSaveButton" icon="mdi-check" @click="triggerSave"></v-btn>
+      <v-app-bar 
+    :elevation="2" 
+    app
+    :scroll-behavior="isItemViewPage ? 'hide' : undefined"
+  >
+    <!-- Кнопка назад или меню-гамбургер -->
+    <v-btn v-if="showBackButton" icon="mdi-arrow-left" @click="router.back()"></v-btn>
+    <v-btn v-else icon="mdi-menu" @click="isDrawerOpen = !isDrawerOpen"></v-btn>
+    <!-- Поле поиска, которое появляется при активации -->
+    <v-expand-x-transition>
+        <v-text-field
+            v-if="isSearchActive"
+            v-model="search"
+            :placeholder="$t('searchPlaceholder')"
+            variant="solo-inverted"
+            flat
+            hide-details
+            autofocus
+            density="compact"
+            class="mr-2"
+            @blur="isSearchActive = false"
+            clearable  
+            @click:clear="isSearchActive = false; search = '';"
+        ></v-text-field>
+    </v-expand-x-transition>
+    <!-- Заголовок приложения -->
+    <v-toolbar-title 
+      v-if="!isSearchActive" 
+      @click="goHome" 
+      style="cursor: pointer;"
+      class="font-weight-medium"
+    >
+     <span class="wrappable-toolbar-title app-title non-selectable">{{ $t('appTitle') }}</span>
+    </v-toolbar-title>
+    <!-- Динамическая правая часть AppBar -->
+    <template v-if="!isSearchActive">
+        <!-- ===== КНОПКИ ДЛЯ ГЛАВНОЙ СТРАНИЦЫ ===== -->
+        <template v-if="isHomePage">
+          <v-btn icon="mdi-magnify" @click="isSearchActive = true"></v-btn>
+          <v-btn icon="mdi-filter-variant" @click="isFilterSheetOpen = true"></v-btn>
+        </template>
+        <!-- ===== ✅✅✅ НОВОЕ ВЫПАДАЮЩЕЕ МЕНЮ ДЛЯ СТРАНИЦЫ ПРОСМОТРА ЗАМЕТКИ ✅✅✅ ===== -->
+        <template v-if="isItemViewPage">
+          <!-- Оборачиваем все действия в компонент v-menu -->
+          <v-menu location="bottom end" transition="slide-y-transition">
+              <template v-slot:activator="{ props }">
+                  <!-- Единственная видимая кнопка - "три точки" -->
+                  <v-btn icon="mdi-dots-vertical" v-bind="props"></v-btn>
+              </template>
+              <!-- Содержимое выпадающего списка -->
+              <v-list density="compact">
+                  <!-- 1. Поделиться -->
+                  <v-list-item @click="shareCurrentItem">
+                      <template v-slot:prepend>
+                          <v-icon>mdi-share-variant-outline</v-icon>
+                      </template>
+                      <v-list-item-title>{{ $t('share') }}</v-list-item-title>
+                  </v-list-item>
+                  <!-- 2. Закрепить/Открепить -->
+                  <v-list-item @click="settings.togglePin(currentItemId)">
+                      <template v-slot:prepend>
+                          <v-icon :color="settings.isPinned(currentItemId) ? 'primary' : ''">
+                              {{ settings.isPinned(currentItemId) ? 'mdi-pin' : 'mdi-pin-outline' }}
+                          </v-icon>
+                      </template>
+                      <v-list-item-title>{{ settings.isPinned(currentItemId) ? $t('unpin') : $t('pin') }}</v-list-item-title>
+                  </v-list-item>
+                  <!-- 3. Настройки текста -->
+                  <v-list-item @click="openTextSettings">
+                      <template v-slot:prepend>
+                          <v-icon>mdi-tune-variant</v-icon>
+                      </template>
+                      <v-list-item-title>{{ $t('textSettings') }}</v-list-item-title>
+                  </v-list-item>
+                  <!-- 4. Редактировать (только для админа) -->
+                  <v-list-item
+                      v-if="authStore.user"
+                      @click="router.push({ name: 'ItemEdit', params: { id: currentItemId } })"
+                  >
+                      <template v-slot:prepend>
+                          <v-icon>mdi-pencil-outline</v-icon>
+                      </template>
+                      <v-list-item-title>{{ $t('edit') }}</v-list-item-title>
+                  </v-list-item>
+              </v-list>
+          </v-menu>
+        </template>
+        <!-- ===== ОСТАЛЬНЫЕ КНОПКИ (ДЛЯ ДРУГИХ СТРАНИЦ) ===== -->
+        
+        <!-- Кнопка сохранения для страниц /add и /edit -->
+        <v-btn v-if="showSaveButton" icon="mdi-check" @click="triggerSave"></v-btn>
+        <!-- Кнопка редактирования для страницы "Молитвенное правило" -->
+        <v-btn
+          v-if="showPrayerRuleEditButton"
+          @click="toggleEditing"
+        >
+          <v-icon>{{ isEditing ? 'mdi-check' : 'mdi-pencil' }}</v-icon>
+        </v-btn>
+    </template>
+  </v-app-bar>
 
-          
-       <!-- ✅ НАША НОВАЯ КНОПКА РЕДАКТИРОВАНИЯ ПРАВИЛА -->
-      <v-btn
-        v-if="showPrayerRuleEditButton"
-  @click="toggleEditing"
-      >
-        <v-icon>{{ isEditing ? 'mdi-check' : 'mdi-pencil' }}</v-icon>
-
-      </v-btn>
-      </template>
-
-    </v-app-bar>
 
     <v-main>
       <router-view v-if="!authStore.loading" />
@@ -228,6 +265,35 @@ const showSaveButton = computed(() => ['ItemEdit', 'ItemAdd'].includes(route.nam
 
 const isItemViewPage = computed(() => route.name === 'ItemView');
 const currentItemId = computed(() => route.params.id); //
+const currentItem = computed(() => {
+  if (!currentItemId.value || !items.value) return null;
+  return items.value.find(i => i.id === currentItemId.value);
+});
+
+// ✅ ЛОГИКА ДЛЯ ФУНКЦИИ "ПОДЕЛИТЬСЯ"
+async function shareCurrentItem() {
+  if (!currentItem.value) return;
+  const shareData = {
+    title: getTitle(currentItem.value),
+    text: `Прочитайте молитву "${getTitle(currentItem.value)}"`,
+    url: window.location.href,
+  };
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData);
+    } catch (err) {
+      console.error('Share failed:', err);
+    }
+  } else {
+    // Fallback: копирование в буфер обмена
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      showSuccess(t('linkCopied'));
+    } catch (err) {
+      showError(t('shareError'));
+    }
+  }
+}
 
 function openTextSettings() {
   console.log(`[App.vue] Button clicked. 'isTextSettingsSheetOpen' is currently: ${isTextSettingsSheetOpen.value}`);

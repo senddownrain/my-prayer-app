@@ -659,75 +659,113 @@ const settings = useSettingsStore();
 ### src/components/Editor.vue
 ```
 <template>
- <div v-if="editor" class="editor-wrapper">
-    <!-- ✅ ОБНОВЛЕННАЯ ПАНЕЛЬ ИНСТРУМЕНТОВ -->
-    <div class="editor-toolbar">
-      <!-- Выпадающий список для стилей -->
-      <v-menu offset-y>
-        <template v-slot:activator="{ props }">
-          <v-btn v-bind="props" density="compact" class="mr-2" style="min-width: 130px;">
-            {{ currentStyleLabel }}
-            <v-icon right>mdi-menu-down</v-icon>
-          </v-btn>
-        </template>
-        <v-list density="compact">
-          <v-list-item @click="editor.chain().focus().setParagraph().run()" :active="editor.isActive('paragraph')">
-            <v-list-item-title>{{ $t('style.normal') }}</v-list-item-title>
-          </v-list-item>
-          <v-list-item @click="editor.chain().focus().toggleHeading({ level: 2 }).run()" :active="editor.isActive('heading', { level: 2 })">
-            <v-list-item-title>{{ $t('style.h2') }}</v-list-item-title>
-          </v-list-item>
-          <v-list-item @click="editor.chain().focus().toggleHeading({ level: 3 }).run()" :active="editor.isActive('heading', { level: 3 })">
-            <v-list-item-title>{{ $t('style.h3') }}</v-list-item-title>
-          </v-list-item>
-           <v-list-item @click="editor.chain().focus().toggleRubric().run()" :active="editor.isActive('rubric')">
-            <v-list-item-title>{{ $t('style.rubric') }}</v-list-item-title>
-          </v-list-item>
-        </v-list>
-      </v-menu>
+  <!-- ✅ ИСПРАВЛЕНИЕ 1: Оборачиваем весь компонент в один родительский div, 
+       чтобы решить проблему с "Extraneous non-props attributes" -->
+  <div>
+    <div v-if="editor" class="editor-wrapper">
+      <!-- Панель инструментов -->
+      <div class="editor-toolbar">
+        <!-- ... (меню стилей, кнопки bold/italic без изменений) ... -->
+        <v-menu offset-y>
+          <template v-slot:activator="{ props }">
+            <v-btn v-bind="props" density="compact" class="mr-2" style="min-width: 130px;">
+              {{ currentStyleLabel }}
+              <v-icon right>mdi-menu-down</v-icon>
+            </v-btn>
+          </template>
+          <v-list density="compact">
+            <v-list-item @click="editor.chain().focus().setParagraph().run()" :active="editor.isActive('paragraph')">
+              <v-list-item-title>{{ $t('style.normal') }}</v-list-item-title>
+            </v-list-item>
+            <v-list-item @click="editor.chain().focus().toggleHeading({ level: 2 }).run()" :active="editor.isActive('heading', { level: 2 })">
+              <v-list-item-title>{{ $t('style.h2') }}</v-list-item-title>
+            </v-list-item>
+            <v-list-item @click="editor.chain().focus().toggleHeading({ level: 3 }).run()" :active="editor.isActive('heading', { level: 3 })">
+              <v-list-item-title>{{ $t('style.h3') }}</v-list-item-title>
+            </v-list-item>
+            <!-- ✅ ИСПРАВЛЕНИЕ 4: Команда для рубрики теперь toggleClass -->
+            <v-list-item @click="editor.chain().focus().toggleClass('rubric').run()" :active="editor.isActive({ class: 'rubric' })">
+              <v-list-item-title>{{ $t('style.rubric') }}</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
 
-      <v-divider vertical class="mx-1"></v-divider>
-
-      <!-- Кнопки форматирования -->
-      <v-btn-toggle multiple density="compact" variant="text">
-        <v-btn @click="editor.chain().focus().toggleBold().run()" :class="{ 'v-btn--active': editor.isActive('bold') }" icon="mdi-format-bold"></v-btn>
-        <v-btn @click="editor.chain().focus().toggleItalic().run()" :class="{ 'v-btn--active': editor.isActive('italic') }" icon="mdi-format-italic"></v-btn>
+        <v-divider vertical class="mx-1"></v-divider>
+        <!-- (кнопки форматирования, списков, выравнивания) -->
+        <v-btn-toggle v-bind="null" multiple density="compact" variant="text">
+          <v-btn @click="editor.chain().focus().toggleBold().run()" :active="editor.isActive('bold')" icon="mdi-format-bold"></v-btn>
+          <v-btn @click="editor.chain().focus().toggleItalic().run()" :active="editor.isActive('italic')" icon="mdi-format-italic"></v-btn>
+        </v-btn-toggle>
+        <v-divider vertical class="mx-1"></v-divider>
+        <v-btn-toggle v-bind="null" multiple density="compact" variant="text">
+          <v-btn @click="editor.chain().focus().toggleBulletList().run()" :active="editor.isActive('bulletList')" icon="mdi-format-list-bulleted"></v-btn>
+          <v-btn @click="editor.chain().focus().toggleOrderedList().run()" :active="editor.isActive('orderedList')" icon="mdi-format-list-numbered"></v-btn>
+        </v-btn-toggle>
+        <v-divider vertical class="mx-1"></v-divider>
+        <v-btn-toggle v-bind="null" multiple density="compact" variant="text">
+          <v-btn @click="editor.chain().focus().setTextAlign('left').run()" :active="editor.isActive({ textAlign: 'left' })" icon="mdi-format-align-left"></v-btn>
+          <v-btn @click="editor.chain().focus().setTextAlign('center').run()" :active="editor.isActive({ textAlign: 'center' })" icon="mdi-format-align-center"></v-btn>
+          <v-btn @click="editor.chain().focus().setTextAlign('justify').run()" :active="editor.isActive({ textAlign: 'justify' })" icon="mdi-format-align-justify"></v-btn>
+        </v-btn-toggle>
+        <v-divider vertical class="mx-1"></v-divider>
+        
+        <v-btn 
+            @click="openLinkDialog" 
+            :disabled="editor.state.selection.empty"
+            icon="mdi-link-variant-plus"
+            density="compact"
+            variant="text"
+        ></v-btn>
+<template v-if="isNovena">
+  <v-divider vertical class="mx-1"></v-divider>
+  <div class="d-flex align-center ga-2">
+    <!-- Кнопки Старт/Финиш -->
+    <v-btn-toggle
+        :model-value="currentMarker"
+        @update:model-value="setMarker"
+        density="compact"
+        variant="outlined"
+    >
+      <v-btn value="start" title="Пазначыць як уступ">
+        <v-icon>mdi-play-circle-outline</v-icon>
+      </v-btn>
+      <v-btn value="finish" title="Пазначыць як заканчэнне">
+        <v-icon>mdi-flag-checkered</v-icon>
+      </v-btn>
+    </v-btn-toggle>
+    <!-- Кнопки Дней -->
+    <div class="d-flex align-center ga-1">
+      <span class="text-caption mr-1 text-disabled">Дзень:</span>
+      <v-btn-toggle
+        :model-value="currentDayMarker"
+        @update:model-value="setDayMarker"
+        density="compact"
+        variant="outlined"
+        divided
+      >
+        <v-btn v-for="day in 9" :key="day" :value="day" size="x-small">{{ day }}</v-btn>
       </v-btn-toggle>
-
-      <v-divider vertical class="mx-1"></v-divider>
-
-       <!-- Списки -->
-      <v-btn-toggle multiple density="compact" variant="text">
-        <v-btn @click="editor.chain().focus().toggleBulletList().run()" :class="{ 'v-btn--active': editor.isActive('bulletList') }" icon="mdi-format-list-bulleted"></v-btn>
-        <v-btn @click="editor.chain().focus().toggleOrderedList().run()" :class="{ 'v-btn--active': editor.isActive('orderedList') }" icon="mdi-format-list-numbered"></v-btn>
-      </v-btn-toggle>
-       <v-divider vertical class="mx-1"></v-divider>
-      <!-- Выравнивание -->
-      <v-btn-toggle multiple density="compact" variant="text">
-        <v-btn @click="editor.chain().focus().setTextAlign('left').run()" :class="{ 'v-btn--active': editor.isActive({ textAlign: 'left' }) }" icon="mdi-format-align-left"></v-btn>
-        <v-btn @click="editor.chain().focus().setTextAlign('center').run()" :class="{ 'v-btn--active': editor.isActive({ textAlign: 'center' }) }" icon="mdi-format-align-center"></v-btn>
-        <v-btn @click="editor.chain().focus().setTextAlign('justify').run()" :class="{ 'v-btn--active': editor.isActive({ textAlign: 'justify' }) }" icon="mdi-format-align-justify"></v-btn>
-      </v-btn-toggle>
-
-      <v-divider vertical class="mx-1"></v-divider>
-      <!-- ✅ НОВАЯ КНОПКА ДЛЯ ВСТАВКИ ССЫЛКИ -->
-      <v-btn 
-        @click="openLinkDialog" 
-        :disabled="editor.state.selection.empty"
-        icon="mdi-link-variant-plus"
+      <v-btn
+        icon="mdi-eraser-variant"
         density="compact"
         variant="text"
+        title="Сцерці метку дня"
+        @click="setDayMarker(null)"
       ></v-btn>
-
-    </div>
-
-    <div class="editor-content-wrapper">
-      <editor-content :editor="editor" />
     </div>
   </div>
+</template>
+      </div>
 
-   <v-dialog v-model="isLinkDialogOpen" max-width="600px" scrollable>
-    <v-card>
+      <!-- Контент редактора -->
+      <div class="editor-content-wrapper">
+        <editor-content :editor="editor" />
+      </div>
+    </div>
+
+    <!-- Диалог для вставки ссылок (без изменений) -->
+    <v-dialog v-model="isLinkDialogOpen" max-width="600px" scrollable>
+       <v-card>
       <v-card-title class="headline">{{ $t('linkedNotesSelect') }}</v-card-title>
       <v-card-text class="pa-4">
         <v-text-field
@@ -754,7 +792,8 @@ const settings = useSettingsStore();
         <div v-else class="text-center text-grey py-4">{{ $t('noNotesFound') }}</div>
       </v-card-text>
     </v-card>
-  </v-dialog>
+    </v-dialog>
+  </div>
 </template>
 
 <script setup>
@@ -762,38 +801,60 @@ import { computed, watch, onBeforeUnmount, ref } from 'vue';
 import { useEditor, EditorContent } from '@tiptap/vue-3';
 import StarterKit from '@tiptap/starter-kit';
 import TextAlign from '@tiptap/extension-text-align';
-import { Paragraph } from '@tiptap/extension-paragraph';
-import { Node } from '@tiptap/core';
-import { useI18n } from 'vue-i18n';
-
-import { getTitleByLang } from '@/utils/i18n'; // ✅ 1. Импортируем хелпер
-
 import Link from '@tiptap/extension-link';
+import { Paragraph } from '@tiptap/extension-paragraph';
+import { useI18n } from 'vue-i18n';
 import { useItems } from '@/composables/useItems';
-
-
-const { items } = useItems(); // ✅ Получаем все заметки
+import { getTitleByLang } from '@/utils/i18n';
 
 const { t } = useI18n();
-const props = defineProps({ modelValue: { type: String, default: '' } });
+const props = defineProps({
+  modelValue: { type: String, default: '' },
+  isNovena: { type: Boolean, default: false }
+});
 const emit = defineEmits(['update:modelValue']);
+const { items, getTitle } = useItems();
 
-// ✅ Пользовательское расширение для Рубрики
-const Rubric = Node.create({
-  name: 'rubric',
-  group: 'block',
-  content: 'inline*',
-  parseHTML() { return [{ tag: 'p.rubric', class: 'rubric' }]; },
-  renderHTML({ HTMLAttributes }) { return ['p', { ...HTMLAttributes, class: 'rubric' }, 0]; },
+// ✅ ИСПРАВЛЕНИЕ 3: Создаем ОДНО кастомное расширение для параграфа,
+// которое будет поддерживать и выравнивание, и рубрики, и метки дней новенны.
+const CustomParagraph = Paragraph.extend({
+  addAttributes() {
+    return {
+      // Атрибут для выравнивания
+      textAlign: {
+        default: 'left',
+        renderHTML: attributes => ({ style: `text-align: ${attributes.textAlign}` }),
+        parseHTML: element => element.style.textAlign || 'left',
+      },
+      // Атрибут для рубрик (хранится как CSS-класс)
+      class: {
+        default: null,
+        parseHTML: element => element.getAttribute('class'),
+        renderHTML: attributes => (attributes.class ? { class: attributes.class } : {}),
+      },
+      // Атрибут для дней новенны (data-day="...")
+      dayMarker: {
+        default: null,
+        parseHTML: element => element.getAttribute('data-day'),
+        renderHTML: attributes => (attributes.dayMarker ? { 'data-day': attributes.dayMarker } : {}),
+      },
+       marker: {
+        default: null,
+        parseHTML: element => element.getAttribute('data-marker'),
+        renderHTML: attributes => (attributes.marker ? { 'data-marker': attributes.marker } : {}),
+      },
+    };
+  },
+  // Добавляем команду для установки метки дня
   addCommands() {
     return {
-      toggleRubric: () => ({ commands, state }) => {
-        const isActive = this.editor.isActive('rubric');
-        if (isActive) {
-          return commands.setNode('paragraph');
-        }
-        return commands.setNode(this.name);
+      setDayMarker: (day) => ({ commands }) => {
+        return commands.updateAttributes('paragraph', { dayMarker: day });
       },
+      // ✅ НОВАЯ КОМАНДА для установки меток "старт" и "финиш"
+      setMarker: (type) => ({ commands }) => {
+        return commands.updateAttributes('paragraph', { marker: type, dayMarker: null }); // Сбрасываем дневной маркер
+      }
     };
   },
 });
@@ -802,15 +863,18 @@ const editor = useEditor({
   content: props.modelValue,
   extensions: [
     StarterKit.configure({
-      heading: { levels: [2, 3] }, // Заголовки h2 и h3
-      paragraph: false, // Отключаем стандартный, чтобы добавить свой
+      heading: { levels: [2, 3] },
+      paragraph: false, // ❗ Важно: отключаем стандартный параграф
+      link: false,      // ❗ Важно: отключаем стандартную ссылку
     }),
-    Paragraph, // Добавляем стандартный параграф
-    TextAlign.configure({ types: ['heading', 'paragraph', 'rubric'] }),
-    Rubric, // Наше расширение для рубрик
-     Link.configure({
-      openOnClick: false, // Не открывать ссылку в редакторе
-      autolink: true,     // Автоматически превращать URL в ссылки
+    Paragraph,
+    CustomParagraph,   // ✅ Используем наше кастомное расширение
+    TextAlign.configure({
+      types: ['heading', 'paragraph'],
+    }),
+    Link.configure({
+      openOnClick: false,
+      autolink: true,
     }),
   ],
   onUpdate: () => {
@@ -818,16 +882,16 @@ const editor = useEditor({
   },
 });
 
-// ✅ Логика для отображения текущего стиля в кнопке
+// Вычисляемое свойство для отображения текущего стиля (без изменений)
 const currentStyleLabel = computed(() => {
   if (!editor.value) return '';
   if (editor.value.isActive('heading', { level: 2 })) return t('style.h2');
   if (editor.value.isActive('heading', { level: 3 })) return t('style.h3');
-  if (editor.value.isActive('rubric')) return t('style.rubric');
+  if (editor.value.isActive({ class: 'rubric' })) return t('style.rubric'); // Проверяем по классу
   return t('style.normal');
 });
 
-// ✅ ЛОГИКА ДЛЯ ДИАЛОГА ВСТАВКИ ССЫЛКИ
+// --- Логика для диалога ссылок (без изменений) ---
 const isLinkDialogOpen = ref(false);
 const searchQuery = ref('');
 const filteredNotes = computed(() => {
@@ -835,11 +899,9 @@ const filteredNotes = computed(() => {
     return items.value;
   }
   return items.value.filter(note => 
-    getTitleByLang(note).toLowerCase().includes(searchQuery.value.toLowerCase())
+    getTitle(note).toLowerCase().includes(searchQuery.value.toLowerCase())
   );
 });
-// ✅ 3. Создаем хелпер для шаблона
-const getTitle = (item) => getTitleByLang(item);
 
 function openLinkDialog() {
   // Команда `isActive('link')` проверяет, стоит ли курсор на ссылке
@@ -857,6 +919,38 @@ function setLink(noteId) {
   searchQuery.value = ''; // Сбрасываем поиск
 }
 
+
+// --- Новая логика для меток дней новенны ---
+const currentDayMarker = computed(() => {
+  if (!editor.value || !editor.value.isActive('paragraph')) return null;
+  return editor.value.getAttributes('paragraph').dayMarker;
+});
+// ✅ ВЫЧИСЛЯЕМОЕ СВОЙСТВО ДЛЯ МЕТОК "СТАРТ/ФИНИШ"
+const currentMarker = computed(() => {
+    if (!editor.value || !editor.value.isActive('paragraph')) return null;
+    return editor.value.getAttributes('paragraph').marker;
+});
+
+function setDayMarker(day) {
+  // Если текущая метка совпадает с нажатой, снимаем выделение
+  if (currentDayMarker.value === day) {
+    editor.value.chain().focus().setDayMarker(null).run();
+  } else {
+    editor.value.chain().focus().setDayMarker(day).run();
+  }
+}
+
+// ✅ ФУНКЦИЯ ДЛЯ УСТАНОВКИ МЕТОК "СТАРТ/ФИНИШ"
+function setMarker(type) {
+    if (currentMarker.value === type) {
+        editor.value.chain().focus().setMarker(null).run();
+    } else {
+        editor.value.chain().focus().setMarker(type).run();
+    }
+}
+
+
+
 watch(() => props.modelValue, (value) => {
   if (editor.value && editor.value.getHTML() !== value) {
     editor.value.commands.setContent(value, false);
@@ -869,44 +963,34 @@ onBeforeUnmount(() => {
   }
 });
 </script>
-<!-- ... ваш <template> ... -->
-<!-- ... ваш <script setup> ... -->
 
 <style scoped>
-/* 1. Стили для контейнера-обертки */
+/* Стили остаются без изменений */
 .editor-wrapper {
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   border-radius: 4px;
-  /* Важно, чтобы sticky-позиционирование работало внутри этого блока */
   position: relative; 
   display: flex;
   flex-direction: column;
-  /* Ограничиваем максимальную высоту редактора. Подберите значение по вкусу */
   max-height: 70vh; 
 }
-/* 2. Стили для панели инструментов */
 .editor-toolbar {
   position: sticky;
-  top: 0; /* Прилипает к верху своего родителя .editor-wrapper */
+  top: 0;
   z-index: 10;
   background-color: rgb(var(--v-theme-surface));
   border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  /* Чтобы панель не сжималась по вертикали */
   flex-shrink: 0; 
-  
-  /* Стили из вашего предыдущего файла */
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   padding: 4px 8px;
   gap: 4px;
 }
-/* 3. Стили для прокручиваемого контейнера с текстом */
 .editor-content-wrapper {
-  overflow-y: auto; /* Создаем вертикальный скролл */
-  flex-grow: 1; /* Занимает все оставшееся место по высоте */
+  overflow-y: auto;
+  flex-grow: 1;
 }
-/* 4. Небольшие отступы для самого текста внутри */
 .editor-content-wrapper > :deep(.ProseMirror) {
   padding: 8px 12px;
 }
@@ -971,19 +1055,19 @@ const { allTags } = useItems();
       <v-window v-model="currentLangTab">
         <v-window-item value="be">
           <v-text-field v-model="form.titleVersions.be" :label="`${t('title')} (${t('langLabels.be')})`" variant="outlined" class="my-4"></v-text-field>
-          <Editor v-model="form.textVersions.be" />
+          <Editor v-model="form.textVersions.be" :is-novena="form.isNovenaPrayer"  />
         </v-window-item>
         <v-window-item value="ru">
           <v-text-field v-model="form.titleVersions.ru" :label="`${t('title')} (${t('langLabels.ru')})`" variant="outlined" class="my-4"></v-text-field>
-          <Editor v-model="form.textVersions.ru" />
+          <Editor v-model="form.textVersions.ru" :is-novena="form.isNovenaPrayer"  />
         </v-window-item>
         <v-window-item value="la">
           <v-text-field v-model="form.titleVersions.la" :label="`${t('title')} (${t('langLabels.la')})`" variant="outlined" class="my-4"></v-text-field>
-          <Editor v-model="form.textVersions.la" />
+          <Editor v-model="form.textVersions.la" :is-novena="form.isNovenaPrayer" />
         </v-window-item>
         <v-window-item value="pl">
            <v-text-field v-model="form.titleVersions.pl" :label="`${t('title')} (${t('langLabels.pl')})`" variant="outlined" class="my-4"></v-text-field>
-           <Editor v-model="form.textVersions.pl" />
+           <Editor v-model="form.textVersions.pl" :is-novena="form.isNovenaPrayer" />
         </v-window-item>
       </v-window>
 
@@ -1058,12 +1142,11 @@ import { useItems } from '@/composables/useItems';
 import Editor from '@/components/Editor.vue';
 import { useI18n } from 'vue-i18n';
 import { useNotifier } from '@/composables/useNotifier';
-import { getTitleByLang } from '@/utils/i18n'; // ✅ Импортируем наш хелпер
 
 const props = defineProps({ id: { type: String, required: false } });
 const router = useRouter();
 const { t } = useI18n();
-const { items, addItem, updateItem, allTags } = useItems();
+const { items, addItem, updateItem, allTags, getTitle } = useItems();
 const { showSuccess } = useNotifier();
 
 const registerSaveAction = inject('registerSaveAction');
@@ -1082,9 +1165,6 @@ const form = ref({
   recommendedDate: null,
   hidden: false
 });
-
-// ✅ Хелпер для отображения заголовков в этом компоненте
-const getTitle = (item) => getTitleByLang(item);
 
 const isLinkDialogOpen = ref(false);
 const linkSearchQuery = ref('');
@@ -1273,19 +1353,15 @@ import { useSettingsStore } from '@/stores/settings';
 import { useAuthStore } from '@/stores/auth';
 import { useNotifier } from '@/composables/useNotifier';
 import { useNovenaStore } from '@/stores/novena';
-import { getTitleByLang } from '@/utils/i18n'; // ✅ Импортируем наш хелпер
 
 const router = useRouter();
 const { t } = useI18n();
-const { items, isLoading, deleteItem } = useItems();
+const { items, isLoading, deleteItem, getTitle } = useItems();
 const { search, selectedTags } = useFilters();
 const settings = useSettingsStore();
 const authStore = useAuthStore();
 const novenaStore = useNovenaStore();
 const { showSuccess } = useNotifier();
-
-// ✅ Хелпер для отображения заголовков в этом компоненте
-const getTitle = (item) => getTitleByLang(item);
 
 const isDeleteDialogOpen = ref(false);
 const itemToDeleteId = ref(null);
@@ -1393,8 +1469,8 @@ function navigateToEdit(id) { router.push({ name: 'ItemEdit', params: { id } });
           </v-expansion-panel-text>
         </v-expansion-panel>
       </v-expansion-panels>
-      
-      <!-- ✅ ИЗМЕНЕНИЕ 2: БЫСТРАЯ НАВИГАЦИЯ ПО ЯЗЫКАМ -->
+
+      <!-- Быстрая навигация по языкам -->
       <v-chip-group v-if="sortedLangs.length > 1" class="mb-6">
         <v-chip
           v-for="lang in sortedLangs"
@@ -1405,8 +1481,7 @@ function navigateToEdit(id) { router.push({ name: 'ItemEdit', params: { id } });
         </v-chip>
       </v-chip-group>
 
-      <!-- Текст молитвы (с перехватом кликов по ссылкам и динамическими ref) -->
-      <!-- ✅ ИЗМЕНЕНИЕ 1 и 3: Итерация по отсортированному списку языков -->
+      <!-- Текст молитвы -->
       <div 
         v-for="lang in sortedLangs" 
         :key="lang" 
@@ -1415,7 +1490,7 @@ function navigateToEdit(id) { router.push({ name: 'ItemEdit', params: { id } });
         :ref="el => (langRefs[lang] = el)"
       >
         <div class="lang-label">{{ t('langLabels.' + lang) }}</div>
-        <div v-html="availableVersions[lang]" class="note-content-area ProseMirror"></div>
+        <div v-html="processedHtml[lang]" class="note-content-area"></div>
       </div>
 
       <!-- Связанные заметки -->
@@ -1436,7 +1511,7 @@ function navigateToEdit(id) { router.push({ name: 'ItemEdit', params: { id } });
         </v-list>
       </div>
 
-      <!-- Кнопка для старта новенны (видна, если новенна не активна) -->
+      <!-- Кнопка для старта новенны -->
       <div v-if="item.isNovenaPrayer && !novenaStore.isNovenaActive(props.id)"  class="text-center my-8">
         <v-btn
           @click="isNovenaDialogVisible = true"
@@ -1459,7 +1534,6 @@ function navigateToEdit(id) { router.push({ name: 'ItemEdit', params: { id } });
           <strong>{{ $t('tagsLabel') }}</strong> {{ item.tags.join(', ') }}
         </div>
       </div>
-
     </div>
 
     <!-- Загрузка и состояние "не найдено" -->
@@ -1473,6 +1547,68 @@ function navigateToEdit(id) { router.push({ name: 'ItemEdit', params: { id } });
       <v-progress-circular indeterminate color="primary"></v-progress-circular>
     </div>
 
+    <!-- БЛОК С ПЛАВАЮЩИМИ КНОПКАМИ "РИТУАЛА" -->
+    <div v-if="isNovenaActiveAndInProgress && !isTodayCompleted" class="fab-container">
+      <!-- Кнопка "К началу" -->
+      <v-btn
+        v-if="hasStartMarker"
+        icon="mdi-cross"
+        :color="hasScrolledToStart ? 'success' : 'secondary'"
+        variant="tonal"
+        class="mb-2"
+        @click="executeScrollStep('start')"
+        title="Да ўступу"
+      ></v-btn>
+
+      <!-- Кнопка "К текущему дню" -->
+      <v-btn
+        v-if="currentNovenaDay"
+        icon="mdi-crosshairs-gps"
+        :color="hasScrolledToDay ? 'success' : 'secondary'"
+        :disabled="!hasScrolledToStart"
+        variant="tonal"
+        class="mb-2"
+        @click="executeScrollStep('day')"
+        title="Да сённяшняга дня"
+      ></v-btn>
+
+      <!-- Кнопка "К окончанию" -->
+      <v-btn
+        v-if="hasFinishMarker"
+        icon="mdi-flag-checkered"
+        :color="hasScrolledToFinish ? 'success' : 'secondary'"
+        :disabled="!hasScrolledToDay"
+        variant="tonal"
+        class="mb-2"
+        @click="executeScrollStep('finish')"
+        title="Да заканчэння"
+      ></v-btn>
+      
+      <!-- Кнопка "Завершить день" -->
+      <v-expand-transition>
+          <v-btn
+            v-if="showCompleteButton"
+            icon="mdi-calendar-check"
+            color="primary"
+            variant="flat"
+            @click="novenaStore.toggleDayCompletion(props.id, novenaStore.getTodayDateString())"
+            title="Адзначыць дзень як выкананы"
+          ></v-btn>
+      </v-expand-transition>
+    </div>
+    
+    <!-- Если день уже завершен, показываем одну кнопку-галочку -->
+     <div v-if="isNovenaActiveAndInProgress && isTodayCompleted" class="fab-container">
+        <v-btn
+            icon="mdi-calendar-check"
+            color="success"
+            variant="flat"
+            title="Дзень выкананы!"
+            @click="novenaStore.toggleDayCompletion(props.id, novenaStore.getTodayDateString())"
+          ></v-btn>
+     </div>
+
+
     <!-- Диалог старта новенны -->
     <v-dialog v-model="isNovenaDialogVisible" max-width="400px">
       <v-card>
@@ -1482,7 +1618,6 @@ function navigateToEdit(id) { router.push({ name: 'ItemEdit', params: { id } });
           <v-chip-group v-model="novenaDays" mandatory class="mb-4">
             <v-chip v-for="d in [7, 9, 33, 54]" :key="d" :value="d" filter>{{ d }} {{ $t('days') }}</v-chip>
           </v-chip-group>
-
           <p class="text-subtitle-1 mb-2">{{ $t('novenaDurationInput') }}</p>
           <v-text-field
             v-model.number="novenaDays"
@@ -1499,65 +1634,58 @@ function navigateToEdit(id) { router.push({ name: 'ItemEdit', params: { id } });
         </v-card-actions>
       </v-card>
     </v-dialog>
+
   </v-container>
 </template>
 
 <script setup>
-import { watchEffect } from 'vue';
+import { ref, computed, watch, onBeforeUpdate, watchEffect, onUnmounted } from 'vue';
+import { useRouter, onBeforeRouteLeave } from 'vue-router';
+import { useItems } from '@/composables/useItems';
 import { useSettingsStore } from '@/stores/settings';
 import { useWakeLock } from '@/composables/useWakeLock';
-
-import { computed, ref, onBeforeUpdate } from 'vue';
-import { useRouter } from 'vue-router';
-import { useItems } from '@/composables/useItems';
-import { useAuthStore } from '@/stores/auth';
 import { useI18n } from 'vue-i18n';
 import { useNovenaStore } from '@/stores/novena';
 import NovenaTracker from '@/components/NovenaTracker.vue';
-import { getTitleByLang } from '@/utils/i18n'; // Добавьте этот импорт
 
 const props = defineProps({ id: { type: String, required: true } });
 const router = useRouter();
 const { t } = useI18n();
-const { items, isLoading } = useItems();
-const authStore = useAuthStore();
+const { items, isLoading, getTitle } = useItems();
 const novenaStore = useNovenaStore();
-// ✅ 2. Инициализируйте новые константы
 const settings = useSettingsStore();
 const { requestWakeLock, releaseWakeLock } = useWakeLock();
 
+const item = computed(() => items.value.find(i => i.id === props.id));
 const isNovenaDialogVisible = ref(false);
 const novenaDays = ref(9);
-const item = computed(() => items.value.find(i => i.id === props.id));
-const getTitle = (item) => getTitleByLang(item); // Добавьте эту строку
 
+// --- Логика для связанных заметок и ссылок в тексте ---
 const linkedNotes = computed(() => item.value?.linkedNoteIds?.map(id => items.value.find(note => note.id === id)).filter(Boolean) || []);
 
-// ✅ ИЗМЕНЕНИЕ 1: Улучшенная логика для `availableVersions`, чтобы скрывать пустые теги
+function handleContentClick(event) {
+  const link = event.target.closest('a');
+  if (link && link.pathname.startsWith('/item/')) {
+    event.preventDefault(); 
+    router.push(link.pathname);
+  }
+}
+
+// --- Логика для языковых версий ---
 const availableVersions = computed(() => {
   if (!item.value?.textVersions) return {};
   return Object.fromEntries(
-    Object.entries(item.value.textVersions).filter(([lang, text]) => {
-      // Отображаем, только если текст не пустой и не содержит лишь пустой тег <p>
-      return text && text.trim() !== '<p></p>';
-    })
+    Object.entries(item.value.textVersions).filter(([lang, text]) => text && text.trim() !== '<p></p>')
   );
 });
 
-// ✅ ИЗМЕНЕНИЕ 3: Создаем отсортированный список языков, где 'be' всегда первый
 const sortedLangs = computed(() => {
   const langs = Object.keys(availableVersions.value);
-  return langs.sort((a, b) => {
-    if (a === 'be') return -1;
-    if (b === 'be') return 1;
-    return a.localeCompare(b); // остальные сортируем по алфавиту
-  });
+  return langs.sort((a, b) => (a === 'be' ? -1 : b === 'be' ? 1 : a.localeCompare(b)));
 });
 
-// ✅ ИЗМЕНЕНИЕ 2: Логика для плавной прокрутки
 const langRefs = ref({});
 onBeforeUpdate(() => {
-  // Очищаем ссылки перед каждым обновлением, чтобы избежать утечек памяти
   langRefs.value = {};
 });
 
@@ -1568,24 +1696,98 @@ function scrollToLang(lang) {
   }
 }
 
-function handleContentClick(event) {
-  const link = event.target.closest('a');
-  if (link && link.pathname.startsWith('/item/')) {
-    event.preventDefault(); 
-    router.push(link.pathname);
-  }
+// --- Логика Новенн ---
+const isNovenaActiveAndInProgress = computed(() => novenaStore.isNovenaActive(props.id));
+
+const currentNovenaDay = computed(() => {
+  if (!isNovenaActiveAndInProgress.value) return null;
+  const data = novenaStore.getNovenaData(props.id);
+  if (!data) return null;
+  const startDate = new Date(data.startDate);
+  const today = new Date(novenaStore.getTodayDateString());
+  const diffTime = Math.abs(today.getTime() - startDate.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const dayNumber = diffDays + 1;
+  return dayNumber > 0 && dayNumber <= data.totalDays ? dayNumber : null;
+});
+
+// Логика "Ритуала"
+const hasScrolledToStart = ref(false);
+const hasScrolledToDay = ref(false);
+const hasScrolledToFinish = ref(false);
+const hasStartMarker = ref(false);
+const hasFinishMarker = ref(false);
+
+const isTodayCompleted = computed(() => {
+    if (!currentNovenaDay.value) return false;
+    const data = novenaStore.getNovenaData(props.id);
+    const todayStr = novenaStore.getTodayDateString();
+    return data?.completedDates.includes(todayStr) || false;
+});
+
+const showCompleteButton = computed(() => {
+    return hasScrolledToStart.value && hasScrolledToDay.value && hasScrolledToFinish.value;
+});
+
+function executeScrollStep(step) {
+    if (step === 'start') {
+        scrollToMarker('start');
+        hasScrolledToStart.value = true;
+    } else if (step === 'day') {
+        scrollToCurrentDay();
+        hasScrolledToDay.value = true;
+    } else if (step === 'finish') {
+        scrollToMarker('finish');
+        hasScrolledToFinish.value = true;
+    }
 }
 
-function handleStartNovena() {
-  novenaStore.startNovena(props.id, novenaDays.value);
-  isNovenaDialogVisible.value = false;
+function resetRitualState() {
+    hasScrolledToStart.value = false;
+    hasScrolledToDay.value = false;
+    hasScrolledToFinish.value = false;
 }
+
+onBeforeRouteLeave(() => { resetRitualState(); });
+onUnmounted(() => { resetRitualState(); });
+
+watchEffect(() => {
+  const versions = availableVersions.value;
+  if (typeof window === 'undefined' || !item.value || Object.keys(versions).length === 0) {
+    hasStartMarker.value = false;
+    hasFinishMarker.value = false;
+    return;
+  }
+  const firstLangHtml = versions[sortedLangs.value[0]];
+  if (!firstLangHtml) return;
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(firstLangHtml, 'text/html');
+  hasStartMarker.value = !!doc.querySelector('[data-marker="start"]');
+  hasFinishMarker.value = !!doc.querySelector('[data-marker="finish"]');
+});
+
+const processedHtml = computed(() => {
+  const versions = availableVersions.value;
+  const dayToHighlight = currentNovenaDay.value;
+  if (!dayToHighlight) return versions;
+
+  const processed = {};
+  for (const lang in versions) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(versions[lang], 'text/html');
+    const element = doc.querySelector(`[data-day="${dayToHighlight}"]`);
+    if (element) {
+      element.classList.add('current-day-marker');
+    }
+    processed[lang] = doc.body.innerHTML;
+  }
+  return processed;
+});
 
 const novenaProgress = computed(() => {
     const data = novenaStore.getNovenaData(props.id);
-    if (!data || !data.totalDays) {
-        return { percentage: 0, color: 'grey', completed: 0, total: 0 };
-    }
+    if (!data || !data.totalDays) return { percentage: 0, color: 'grey', completed: 0, total: 0 };
     const todayStr = novenaStore.getTodayDateString();
     const isTodayCompleted = data.completedDates.includes(todayStr);
     return {
@@ -1596,24 +1798,40 @@ const novenaProgress = computed(() => {
     };
 });
 
-// ✅ 3. Добавьте этот блок watchEffect
-// Он будет автоматически следить за изменением настройки и включать/выключать блокировку
+function handleStartNovena() {
+  novenaStore.startNovena(props.id, novenaDays.value);
+  isNovenaDialogVisible.value = false;
+}
+
+function scrollToCurrentDay() {
+  const el = document.querySelector('.current-day-marker');
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function scrollToMarker(markerType) {
+  const el = document.querySelector(`[data-marker="${markerType}"]`);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
 watchEffect(() => {
-  if (settings.keepScreenOn) {
-    requestWakeLock();
-  } else {
-    releaseWakeLock();
-  }
+  if (settings.keepScreenOn) requestWakeLock();
+  else releaseWakeLock();
 });
+
 </script>
+
 <style scoped>
 .note-view-container {
-  /* 
-    Стандартные отступы у v-container на мобильных - 16px.
-    Мы уменьшаем их до 8px, что ровно в два раза меньше.
-  */
   padding-left: 8px;
   padding-right: 8px;
+}
+.fab-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    z-index: 5;
 }
 </style>
 ```
@@ -2518,6 +2736,7 @@ import {
   orderBy
 } from 'firebase/firestore';
 import { useSettingsStore } from '@/stores/settings';
+import { getTitleByLang } from '@/utils/i18n'; // ✅ 1. ИМПОРТИРУЕМ
 
 const items = ref([]);
 const allTags = ref([]);
@@ -2576,6 +2795,13 @@ export function useItems() {
     await updateDoc(doc(db, 'items', id), dataToUpdate);
   };
 
+   // ✅ 2. СОЗДАЕМ И ЭКСПОРТИРУЕМ ФУНКЦИЮ
+  const getTitle = (item) => {
+    if (!item) return '';
+    // Можно указать предпочитаемый порядок языков прямо здесь
+    return getTitleByLang(item, ['be', 'ru', 'la', 'pl']);
+  };
+
   return {
     items: sortedItems, // ✅ Экспортируем уже отсортированный массив
     allTags,
@@ -2583,6 +2809,7 @@ export function useItems() {
     addItem,
     deleteItem,
     updateItem,
+    getTitle // ✅ 3. ЭКСПОРТИРУЕМ
   };
 }
 ```
@@ -3529,6 +3756,13 @@ html {
 .note-content-area h2 { font-size: calc(1.5rem * var(--font-size-multiplier)); }
 .note-content-area h3 { font-size: calc(1.15rem * var(--font-size-multiplier)); }
 .note-content-area p, .note-content-area div { font-size: calc(1rem * var(--font-size-multiplier)); }
+.note-content-area p {
+  margin-bottom: 1em !important; 
+}
+/* Убираем лишний отступ у последнего элемента, чтобы не было "висячего" пробела */
+.note-content-area > *:last-child {
+    margin-bottom: 0 !important;
+}
 /* ... (остальные стили для .note-content-area и другие правила остаются как были) ... */
 .note-content-area .rubric { color: rgb(var(--v-theme-error)); font-style: italic; text-align: center; }
 .note-content-area > *:first-child { margin-top: 0 !important; }
@@ -3578,6 +3812,74 @@ html {
   line-height: 1.4 !important;
 }
 
+
+/* ==========================================================================
+   СТИЛИ ДЛЯ НОВЕНН
+   ========================================================================== */
+.note-content-area .current-day-marker {
+  background-color: rgba(var(--v-theme-primary), 0.08);
+  border-left: 3px solid rgba(var(--v-theme-primary), 0.7);
+  /* Плавный переход для красоты */
+  transition: all 0.3s ease-in-out;
+  /* Отступы, чтобы текст не прилипал к рамке */
+  padding-left: 12px;
+  /* Компенсация отступа, чтобы текст визуально остался на месте */
+  margin-left: -15px; 
+}
+
+/* Добавляем немного больше отступа сверху и снизу для выделенного блока */
+.note-content-area .current-day-marker {
+    margin-top: 1em;
+    margin-bottom: 1em;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+/* Общие стили для всех меток в редакторе */
+.ProseMirror p[data-day]::before,
+.ProseMirror p[data-marker]::before {
+  font-family: "Material Design Icons"; /* ✅ Используем шрифт иконок */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2em; /* Размер иконки */
+  font-weight: normal;
+  color: rgb(var(--v-theme-primary));
+  background-color: rgba(var(--v-theme-primary), 0.1);
+  margin-right: 12px;
+  vertical-align: middle;
+  width: 26px;
+  height: 26px;
+  line-height: 26px;
+  text-align: center;
+  border-radius: 50%;
+  border: 1px solid rgba(var(--v-theme-primary), 0.2);
+}
+/* Иконка для метки дня */
+.ProseMirror p[data-day]::before {
+  content: attr(data-day); /* Оставляем номер для дней */
+  font-family: var(--app-font-family); /* Возвращаем обычный шрифт */
+  font-size: 0.8em;
+  font-weight: bold;
+}
+/* Иконка для метки "старт" */
+.ProseMirror p[data-marker="start"]::before {
+  content: "\F040A"; /* Код иконки mdi-play-circle-outline */
+}
+/* Иконка для метки "финиш" */
+.ProseMirror p[data-marker="finish"]::before {
+  content: "\F023C"; /* Код иконки mdi-flag-checkered */
+}
+/* ==========================================================================
+   СТИЛИ ДЛЯ ПЛАВАЮЩИХ КНОПОК
+   ========================================================================== */
+.fab-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    z-index: 5; /* Чуть ниже стандартных диалогов */
+}
 
 /* ==========================================================================
    Адаптивные стили для мобильных устройств

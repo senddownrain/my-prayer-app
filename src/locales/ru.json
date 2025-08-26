@@ -120,5 +120,42 @@
   "decline": "Отклонить",
 
   "novenaDurationChoice": "Выбери колличество дней",
-  "novenaDurationInput": "Или, введи"
+  "novenaDurationInput": "Или, введи",
+  "dataManagement": "Управление данными",
+  "exportToJson": "Экспорт в JSON",
+  "exportToCsv": "Экспорт в CSV",
+  "importFromFile": "Импорт из файла",
+  "exportSuccess": "Экспорт успешно завершен!",
+  "exportError": "Ошибка во время экспорта.",
+  "importParseError": "Не удалось прочитать файл. Убедитесь, что это корректный JSON-файл.",
+  "importDbError": "Произошла ошибка при сохранении данных.",
+  "importSuccess": "Импорт завершен. Добавлено: {added}, Обновлено: {updated}.",
+  "importConfirmationTitle": "Подтверждение импорта",
+  "importConfirmationMessage": "Вы собираетесь импортировать {count} записей из файла {fileName}.",
+  "importWarning": "Это действие нельзя отменить. Существующие записи могут быть перезаписаны в зависимости от выбранного режима.",
+  "importModeLabel": "Режим импорта:",
+  "importMode": {
+    "add": "Добавлять только новые",
+    "overwrite": "Добавлять новые и перезаписывать существующие"
+  },
+  "import": "Импортировать"
+  ,"noteLanguage": "Язык заметки",
+"languageCannotBeChanged": "Язык нельзя изменить после создания.",
+"translations": "Переводы",
+"addTranslation": "Добавить перевод",
+"selectTranslation": "Выберите перевод",
+"translationLinked": "Перевод успешно привязан!",
+"translationUnlinked": "Связь с переводом удалена.",
+"titleRequired": "Пожалуйста, введите название.",
+"langLabelsFull": {
+    "ru": "Русский",
+    "be": "Беларуская",
+    "la": "Latina",
+    "pl": "Polski"
+},
+"share": "Поделиться",
+  "copyLink": "Копировать ссылку",
+  "linkCopied": "Ссылка скопирована в буфер обмена!",
+  "shareError": "Не удалось поделиться. Возможно, ваш браузер не поддерживает эту функцию.",
+  "filters": "Фильтры"
 }

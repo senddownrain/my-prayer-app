@@ -1,8 +1,33 @@
 <template>
   <v-container class="note-view-container">
     <div v-if="!isLoading && item">
+    <!-- ✅ ИЗМЕНЕННЫЙ БЛОК С ФЛАГАМИ -->
+<div class="d-flex align-center justify-space-between flex-wrap gap-2 mb-4">
+  <v-chip label color="primary" variant="tonal">
+    <!-- ✅ ИЗМЕНЕНИЕ: Используем иконку и текст -->
+    <v-icon start>mdi-translate</v-icon>
+    {{ t('noteLanguage') }}: {{ t(`langLabelsFull.${item.lang}`) }}
+  </v-chip>
+
+  <v-chip-group v-if="translations.length > 0">
+      <v-chip
+        v-for="trans in translations"
+        :key="trans.id"
+        :to="{ name: 'ItemView', params: { id: trans.id } }"
+        label
+        size="small"
+        variant="outlined"
+      >
+          <!-- ✅ ИЗМЕНЕНИЕ: Короткий текстовый код языка -->
+        <strong class="text-uppercase mr-1">{{ trans.lang }}</strong>
+        <span>{{ t(`langLabels.${trans.lang}`) }}</span>
+      </v-chip>
+  </v-chip-group>
+</div>
+
       <!-- Заголовок -->
       <h2 class="text-h5 font-weight-bold mb-4 note-content-area">{{ getTitle(item) }}</h2>
+
 
       <!-- Панель Новенны -->
       <v-expansion-panels v-if="novenaStore.isNovenaActive(props.id)" class="my-6">
@@ -35,28 +60,15 @@
         </v-expansion-panel>
       </v-expansion-panels>
 
-      <!-- Быстрая навигация по языкам -->
-      <v-chip-group v-if="sortedLangs.length > 1" class="mb-6">
-        <v-chip
-          v-for="lang in sortedLangs"
-          :key="`chip-${lang}`"
-          @click="scrollToLang(lang)"
-        >
-          {{ t(`langLabels.${lang}`) }}
-        </v-chip>
-      </v-chip-group>
 
-      <!-- Текст молитвы -->
+      <!-- Текст молитвы (теперь только один) -->
       <div 
-        v-for="lang in sortedLangs" 
-        :key="lang" 
         class="mb-4"
         @click="handleContentClick"
-        :ref="el => (langRefs[lang] = el)"
       >
-        <div class="lang-label">{{ t('langLabels.' + lang) }}</div>
-        <div v-html="processedHtml[lang]" class="note-content-area"></div>
+        <div v-html="processedHtml" class="note-content-area"></div>
       </div>
+
 
       <!-- Связанные заметки -->
       <div v-if="linkedNotes.length > 0" class="mt-8">
@@ -213,6 +225,8 @@ import { useI18n } from 'vue-i18n';
 import { useNovenaStore } from '@/stores/novena';
 import NovenaTracker from '@/components/NovenaTracker.vue';
 
+
+
 const props = defineProps({ id: { type: String, required: true } });
 const router = useRouter();
 const { t } = useI18n();
@@ -222,6 +236,8 @@ const settings = useSettingsStore();
 const { requestWakeLock, releaseWakeLock } = useWakeLock();
 
 const item = computed(() => items.value.find(i => i.id === props.id));
+const translations = computed(() => item.value?.translationIds?.map(id => items.value.find(note => note.id === id)).filter(Boolean) || []);
+
 const isNovenaDialogVisible = ref(false);
 const novenaDays = ref(9);
 
@@ -233,31 +249,6 @@ function handleContentClick(event) {
   if (link && link.pathname.startsWith('/item/')) {
     event.preventDefault(); 
     router.push(link.pathname);
-  }
-}
-
-// --- Логика для языковых версий ---
-const availableVersions = computed(() => {
-  if (!item.value?.textVersions) return {};
-  return Object.fromEntries(
-    Object.entries(item.value.textVersions).filter(([lang, text]) => text && text.trim() !== '<p></p>')
-  );
-});
-
-const sortedLangs = computed(() => {
-  const langs = Object.keys(availableVersions.value);
-  return langs.sort((a, b) => (a === 'be' ? -1 : b === 'be' ? 1 : a.localeCompare(b)));
-});
-
-const langRefs = ref({});
-onBeforeUpdate(() => {
-  langRefs.value = {};
-});
-
-function scrollToLang(lang) {
-  const element = langRefs.value[lang];
-  if (element) {
-    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
 
@@ -316,38 +307,33 @@ function resetRitualState() {
 onBeforeRouteLeave(() => { resetRitualState(); });
 onUnmounted(() => { resetRitualState(); });
 
+// ✅ ИСПРАВЛЕННЫЙ БЛОК
 watchEffect(() => {
-  const versions = availableVersions.value;
-  if (typeof window === 'undefined' || !item.value || Object.keys(versions).length === 0) {
+  if (typeof window === 'undefined' || !item.value || !item.value.text) {
     hasStartMarker.value = false;
     hasFinishMarker.value = false;
     return;
   }
-  const firstLangHtml = versions[sortedLangs.value[0]];
-  if (!firstLangHtml) return;
 
   const parser = new DOMParser();
-  const doc = parser.parseFromString(firstLangHtml, 'text/html');
+  const doc = parser.parseFromString(item.value.text, 'text/html');
+  
   hasStartMarker.value = !!doc.querySelector('[data-marker="start"]');
   hasFinishMarker.value = !!doc.querySelector('[data-marker="finish"]');
 });
 
 const processedHtml = computed(() => {
-  const versions = availableVersions.value;
   const dayToHighlight = currentNovenaDay.value;
-  if (!dayToHighlight) return versions;
-
-  const processed = {};
-  for (const lang in versions) {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(versions[lang], 'text/html');
-    const element = doc.querySelector(`[data-day="${dayToHighlight}"]`);
-    if (element) {
-      element.classList.add('current-day-marker');
-    }
-    processed[lang] = doc.body.innerHTML;
+  const originalHtml = item.value?.text || '';
+  if (!dayToHighlight || !originalHtml) return originalHtml;
+  
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(originalHtml, 'text/html');
+  const element = doc.querySelector(`[data-day="${dayToHighlight}"]`);
+  if (element) {
+    element.classList.add('current-day-marker');
   }
-  return processed;
+  return doc.body.innerHTML;
 });
 
 const novenaProgress = computed(() => {

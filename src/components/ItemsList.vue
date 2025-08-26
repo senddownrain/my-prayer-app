@@ -11,7 +11,9 @@
             <v-icon v-if="novenaStore.isNovenaActive(item.id)" color="primary" class="mr-2">mdi-calendar-check</v-icon>
             <v-btn :icon="settings.isPinned(item.id) ? 'mdi-pin' : 'mdi-pin-outline'" :color="settings.isPinned(item.id) ? 'primary' : 'grey'" variant="text" size="small" class="mr-2" @click.stop="settings.togglePin(item.id)"></v-btn>
             <span @click="viewItem(item.id)" class="flex-grow-1" style="cursor: pointer;">{{ getTitle(item) }}</span>
-          </v-card-title>
+       <!-- ✅ ИЗМЕНЕНИЕ: Текстовая метка языка -->
+  <v-chip size="x-small" variant="tonal" class="ml-2 text-uppercase">{{ item.lang }}</v-chip>
+</v-card-title>
           <v-card-text class="pb-0" @click="viewItem(item.id)" style="cursor: pointer;">
             <p class="mb-4 text-medium-emphasis">{{ getPreviewText(item) }}</p>
             <v-chip-group><v-chip v-for="tag in item.tags" :key="tag" size="small" color="primary" variant="tonal">{{ tag }}</v-chip></v-chip-group>
@@ -32,10 +34,16 @@
           <!-- ✅ ИЗМЕНЕНИЕ: Используем хелпер getTitle -->
           <v-list-item-title>{{ getTitle(item) }}</v-list-item-title>
           <template v-if="!authStore.user" v-slot:append>
+        <!-- ✅ ИЗМЕНЕНИЕ: Текстовая метка языка -->
+        <v-chip size="x-small" variant="text" class="text-uppercase mr-2">{{ item.lang }}</v-chip>
+       
             <v-progress-circular v-if="novenaStore.isNovenaActive(item.id)" :model-value="getNovenaProgress(item.id).percentage" :color="getNovenaProgress(item.id).color" size="24" width="2" class="ml-2"><small>{{ getNovenaProgress(item.id).completed }}</small></v-progress-circular>
             <v-icon v-if="item.hidden" color="grey" class="ml-2">mdi-eye-off-outline</v-icon>
           </template>
           <template v-if="authStore.user" v-slot:append>
+           <!-- ✅ ИЗМЕНЕНИЕ: Текстовая метка языка -->
+        <v-chip size="x-small" variant="text" class="text-uppercase mr-2">{{ item.lang }}</v-chip>
+     
             <v-icon v-if="item.hidden" color="grey" class="ml-2">mdi-eye-off-outline</v-icon>
             <v-progress-circular v-if="novenaStore.isNovenaActive(item.id)" :model-value="getNovenaProgress(item.id).percentage" :color="getNovenaProgress(item.id).color" size="24" width="2" class="ml-2"><small>{{ getNovenaProgress(item.id).completed }}</small></v-progress-circular>
             <v-btn icon="mdi-pencil" variant="text" size="small" @click.stop="navigateToEdit(item.id)"></v-btn>
@@ -80,7 +88,7 @@ import { useNovenaStore } from '@/stores/novena';
 const router = useRouter();
 const { t } = useI18n();
 const { items, isLoading, deleteItem, getTitle } = useItems();
-const { search, selectedTags } = useFilters();
+const { search, selectedTags, selectedLangs } = useFilters();
 const settings = useSettingsStore();
 const authStore = useAuthStore();
 const novenaStore = useNovenaStore();
@@ -128,24 +136,29 @@ function getPreviewText(item) {
   const text = (doc.body.textContent || "").trim();
   return text.length > 150 ? text.substring(0, 150) + '...' : text;
 }
-
 const filteredItems = computed(() => {
   if (isLoading.value) return [];
-  const searchLower = search.value.toLowerCase().trim();
   return items.value.filter(item => {
+    // Фильтр по скрытым заметкам
     if (!settings.showHiddenItems && item.hidden) {
       return false;
     }
-    const tagMatch = selectedTags.value.length === 0 || (item.tags && selectedTags.value.some(tag => item.tags.includes(tag)));
+    
+    // ✅ ФИЛЬТР ПО ЯЗЫКАМ
+    const langMatch = selectedLangs.value.length === 0 || selectedLangs.value.includes(item.lang);
+    if (!langMatch) return false;
+    // Фильтр по тегам
+    const tagMatch = selectedTags.value.length === 0 || 
+                     (item.tags && selectedTags.value.every(tag => item.tags.includes(tag)));
     if (!tagMatch) return false;
+    // Фильтр по поисковому запросу
+    const searchLower = search.value.toLowerCase().trim();
     if (searchLower) {
-      // ✅ ИЗМЕНЕНИЕ: Поиск по всем версиям заголовков и текстов
-      const titles = Object.values(item.titleVersions || {}).join(' ');
-      const texts = Object.values(item.textVersions || {}).join(' ');
-      const fullText = (titles + ' ' + texts).toLowerCase();
+      const fullText = (item.title + ' ' + item.text).toLowerCase();
       return fullText.includes(searchLower);
     }
-    return true;
+    
+    return true; // Если все проверки пройдены
   });
 });
 

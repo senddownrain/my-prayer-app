@@ -11,22 +11,18 @@
         <p class="text-medium-emphasis">{{ $t('ruleIsEmptyHint') }}</p>
       </div>
       <div v-else>
-        <div v-for="(item, index) in prayerRule.ruleItems" :key="item.itemId" class="prayer-item-container">
-          <h3 class="text-h5 mb-3">{{ getItemTitle(item.itemId) }}</h3>
+        <div v-for="(itemId, index) in prayerRule.ruleItems" :key="itemId" class="prayer-item-container">
+          <h3 class="text-h5 mb-3">{{ getItemTitle(itemId) }}</h3>
+          <!-- ✅ ПАНЕЛЬ УПРАВЛЕНИЯ БЕЗ ВЫБОРА ЯЗЫКА -->
           <div class="d-flex align-center flex-wrap ga-2 mb-4 pa-2 control-panel">
             <div>
               <v-btn icon="mdi-arrow-up" variant="text" size="small" :disabled="index === 0" @click="prayerRule.moveItem(index, index - 1)"></v-btn>
               <v-btn icon="mdi-arrow-down" variant="text" size="small" :disabled="index === prayerRule.ruleItems.length - 1" @click="prayerRule.moveItem(index, index + 1)"></v-btn>
             </div>
             <v-spacer></v-spacer>
-            <v-btn-toggle :model-value="item.lang" @update:model-value="prayerRule.updateItemLanguage(index, $event)" variant="outlined" density="compact" mandatory>
-              <v-btn value="be" size="x-small">Бел</v-btn>
-              <v-btn value="ru" size="x-small">Рус</v-btn>
-              <v-btn value="la" size="x-small">Lat</v-btn>
-            </v-btn-toggle>
             <v-btn icon="mdi-delete-outline" variant="text" @click="prayerRule.removeItem(index)"></v-btn>
           </div>
-          <div v-html="getItemContent(item)" class="note-content-area ProseMirror"></div>
+          <div v-html="getItemContent(itemId)" class="note-content-area ProseMirror"></div>
           <v-divider class="my-8"></v-divider>
         </div>
       </div>
@@ -38,9 +34,9 @@
     <!-- ======================= -->
     <div v-else>
       <div v-if="prayerRule.ruleItems.length > 0">
-        <div v-for="(item, index) in prayerRule.ruleItems" :key="`view-${item.itemId}`">
-          <h3 class="text-h5 mb-3">{{ getItemTitle(item.itemId) }}</h3>
-          <div v-html="getItemContent(item)" class="note-content-area ProseMirror"></div>
+       <div v-for="itemId in prayerRule.ruleItems" :key="`view-${itemId}`">
+          <h3 class="text-h5 mb-3">{{ getItemTitle(itemId) }}</h3>
+          <div v-html="getItemContent(itemId)" class="note-content-area ProseMirror"></div>
           <v-divider class="my-8"></v-divider>
         </div>
       </div>
@@ -105,11 +101,9 @@ import { usePageMode } from '@/composables/usePageMode';
 import { usePrayerRuleStore } from '@/stores/prayerRule';
 import { useItems } from '@/composables/useItems';
 import { useI18n } from 'vue-i18n';
-import { getTitleByLang } from '@/utils/i18n';
-
 const { isEditing, setEditing } = usePageMode();
 const prayerRule = usePrayerRuleStore();
-const { items } = useItems();
+const { items, getTitle } = useItems();
 const { t } = useI18n();
 
 const isAddDialogOpen = ref(false);
@@ -119,11 +113,10 @@ onUnmounted(() => {
   setEditing(false);
 });
 
-// ✅ Хелпер для получения заголовка
-const getTitle = (item) => getTitleByLang(item);
 
+// ✅ Измененная логика
 const availableItems = computed(() => {
-    const ruleItemIds = new Set(prayerRule.ruleItems.map(i => i.itemId));
+    const ruleItemIds = new Set(prayerRule.ruleItems); // Теперь это просто массив ID
     return items.value.filter(item => !ruleItemIds.has(item.id));
 });
 
@@ -142,10 +135,11 @@ const getItemTitle = (itemId) => {
     return item ? getTitle(item) : `[${t('noteNotFound')}]`;
 };
 
-const getItemContent = (ruleItem) => {
-    const fullItem = items.value.find(i => i.id === ruleItem.itemId);
+// ✅ Измененная логика
+const getItemContent = (itemId) => {
+    const fullItem = items.value.find(i => i.id === itemId);
     if (!fullItem) return `[${t('noteNotFound')}]`;
-    return fullItem.textVersions[ruleItem.lang] || `[${t('noTextInLang')}]`;
+    return fullItem.text || `[${t('noTextInLang')}]`; // Просто берем поле text
 };
 
 // ✅ Обновленная функция добавления
@@ -156,9 +150,6 @@ function handleAddItem(item) {
     isAddDialogOpen.value = false; // Закрываем диалог
 }
 
-onMounted(() => {
-  console.log('%c[PrayerRuleView.vue] Компонент успешно смонтирован!', 'background: #28a745; color: white; padding: 2px 5px; border-radius: 3px;');
-});
 </script>
 
 <style scoped>

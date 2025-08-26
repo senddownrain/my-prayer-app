@@ -1,33 +1,29 @@
 <template>
   <v-container>
     <v-form v-if="isFormReady" @submit.prevent="handleSave">
-      
-      <!-- ✅ ИЗМЕНЕНИЕ: Вкладки теперь контролируют и заголовок, и текст -->
-      <v-tabs v-model="currentLangTab" bg-color="primary" class="mb-1">
-        <v-tab value="be">Бел</v-tab>
-        <v-tab value="ru">Рус</v-tab>
-        <v-tab value="la">Lat</v-tab>
-        <v-tab value="pl">Pol</v-tab>
-      </v-tabs>
 
-      <v-window v-model="currentLangTab">
-        <v-window-item value="be">
-          <v-text-field v-model="form.titleVersions.be" :label="`${t('title')} (${t('langLabels.be')})`" variant="outlined" class="my-4"></v-text-field>
-          <Editor v-model="form.textVersions.be" :is-novena="form.isNovenaPrayer"  />
-        </v-window-item>
-        <v-window-item value="ru">
-          <v-text-field v-model="form.titleVersions.ru" :label="`${t('title')} (${t('langLabels.ru')})`" variant="outlined" class="my-4"></v-text-field>
-          <Editor v-model="form.textVersions.ru" :is-novena="form.isNovenaPrayer"  />
-        </v-window-item>
-        <v-window-item value="la">
-          <v-text-field v-model="form.titleVersions.la" :label="`${t('title')} (${t('langLabels.la')})`" variant="outlined" class="my-4"></v-text-field>
-          <Editor v-model="form.textVersions.la" :is-novena="form.isNovenaPrayer" />
-        </v-window-item>
-        <v-window-item value="pl">
-           <v-text-field v-model="form.titleVersions.pl" :label="`${t('title')} (${t('langLabels.pl')})`" variant="outlined" class="my-4"></v-text-field>
-           <Editor v-model="form.textVersions.pl" :is-novena="form.isNovenaPrayer" />
-        </v-window-item>
-      </v-window>
+      <!-- ✅ НОВЫЙ БЛОК: Выбор языка и основной заголовок -->
+      <v-select
+        v-model="form.lang"
+        :items="langOptions"
+        item-title="title"
+        item-value="value"
+        :label="$t('noteLanguage')"
+        variant="outlined"
+        class="mb-4"
+        :disabled="isEditMode"
+        :hint="isEditMode ? $t('languageCannotBeChanged') : ''"
+        persistent-hint
+      ></v-select>
+      
+      <v-text-field
+        v-model="form.title"
+        :label="$t('title')"
+        variant="outlined"
+        class="mb-4"
+      ></v-text-field>
+
+      <Editor v-model="form.text" :is-novena="form.isNovenaPrayer" />
 
       <v-combobox
         v-model="form.tags"
@@ -39,9 +35,30 @@
         variant="outlined"
         class="mt-4"
       ></v-combobox>
-
-      <!-- Остальная часть формы без изменений... -->
+      
       <v-divider class="my-4"></v-divider>
+
+      <!-- ✅ НОВЫЙ БЛОК: Управление переводами -->
+      <h3 class="text-subtitle-1 mb-2">{{ $t('translations') }}</h3>
+      <div v-if="currentlyLinkedTranslations.length > 0" class="mb-3">
+        <v-chip
+          v-for="trans in currentlyLinkedTranslations"
+          :key="trans.id"
+          class="mr-2 mb-2"
+          closable
+          @click:close="removeTranslation(trans.id)"
+        >
+    <v-avatar color="grey-lighten-1" start size="22">
+    <span class="text-uppercase font-weight-bold text-white" style="font-size: 0.7rem;">{{ trans.lang }}</span>
+  </v-avatar>   
+        {{ getTitle(trans) }}
+        </v-chip>
+      </div>
+      <v-btn @click="isTranslationDialogOpen = true" prepend-icon="mdi-translate">{{ $t('addTranslation') }}</v-btn>
+
+      <v-divider class="my-4"></v-divider>
+      
+      <!-- Блок связанных заметок (остается без изменений) -->
       <h3 class="text-subtitle-1 mb-2">{{ $t('linkedNotesAdd') }}</h3>
       <div v-if="form.linkedNoteIds && form.linkedNoteIds.length > 0" class="mb-3">
         <v-chip
@@ -51,14 +68,14 @@
           closable
           @click:close="removeLink(linkedNote.id)"
         >
-          {{ getTitle(linkedNote) }} <!-- Используем хелпер -->
+          {{ getTitle(linkedNote) }}
         </v-chip>
       </div>
- <v-btn @click="isLinkDialogOpen = true" prepend-icon="mdi-link-plus">{{ $t('linkedNotesAdd') }}</v-btn>
+      <v-btn @click="isLinkDialogOpen = true" prepend-icon="mdi-link-plus">{{ $t('linkedNotesAdd') }}</v-btn>
 
       <v-divider class="my-4"></v-divider>
       <v-text-field v-model="form.source" :label="$t('source')" variant="outlined" class="mb-4" clearable></v-text-field>
-
+      
       <v-divider class="my-4"></v-divider>
       <h3 class="text-subtitle-1 mb-2">{{ $t('novenaSettings') }}</h3>
       <v-switch v-model="form.isNovenaPrayer" :label="$t('isNovenaPrayerLabel')" color="primary" inset class="mb-2"></v-switch>
@@ -76,7 +93,33 @@
       <v-progress-circular indeterminate color="primary"></v-progress-circular>
     </div>
 
-    <v-dialog v-model="isLinkDialogOpen" max-width="500px">
+    <!-- Диалог для переводов -->
+    <v-dialog v-model="isTranslationDialogOpen" max-width="500px">
+      <v-card>
+        <v-card-title>{{ $t('selectTranslation') }}</v-card-title>
+        <v-text-field v-model="translationSearchQuery" :placeholder="$t('searchPlaceholder')" variant="filled" density="compact" hide-details autofocus class="mx-4 mb-2"></v-text-field>
+        <v-list>
+          <v-list-item
+            v-for="note in availableNotesToTranslate"
+            :key="note.id"
+            :title="getTitle(note)"
+            :subtitle="`Язык: ${note.lang}`"
+            @click="addTranslation(note.id)"
+          >
+           <template v-slot:prepend>
+   <!-- ✅ ИЗМЕНЕНИЕ: Используем v-avatar -->
+    <v-avatar color="grey-lighten-3" size="32" class="mr-4">
+        <span class="text-uppercase font-weight-bold text-grey-darken-1">{{ note.lang }}</span>
+    </v-avatar>  
+  
+          </template>
+          </v-list-item>
+        </v-list>
+      </v-card>
+    </v-dialog>
+
+    <!-- Диалог для связей (остается) -->
+   <v-dialog v-model="isLinkDialogOpen" max-width="500px">
       <v-card>
         <v-card-title>{{ $t('linkedNotesSelect') }}</v-card-title>
          <v-text-field v-model="linkSearchQuery" :placeholder="$t('searchPlaceholder')" variant="filled" density="compact" hide-details autofocus class="mx-4 mb-2"></v-text-field>
@@ -92,7 +135,6 @@
     </v-dialog>
   </v-container>
 </template>
-
 <script setup>
 import { ref, watch, onMounted, onUnmounted, computed, inject } from 'vue';
 import { useRouter } from 'vue-router';
@@ -104,120 +146,129 @@ import { useNotifier } from '@/composables/useNotifier';
 const props = defineProps({ id: { type: String, required: false } });
 const router = useRouter();
 const { t } = useI18n();
-const { items, addItem, updateItem, allTags, getTitle } = useItems();
+const { items, addItem, updateItem, allTags, getTitle, linkTranslations } = useItems();
 const { showSuccess } = useNotifier();
-
 const registerSaveAction = inject('registerSaveAction');
+
 const isEditMode = computed(() => !!props.id);
 const isFormReady = ref(false);
-const currentLangTab = ref('be');
 
-// ✅ ИЗМЕНЕНИЕ: Обновляем структуру данных формы
+const langOptions = ref([
+    { title: 'Беларуская', value: 'be'},
+    { title: 'Русский', value: 'ru'},
+    { title: 'Latina', value: 'la'},
+    { title: 'Polski', value: 'pl'},
+]);
+
+
 const form = ref({
-  titleVersions: { ru: '', be: '', la: '', pl: '' },
-  textVersions: { ru: '', be: '', la: '', pl: '' },
+  title: '',
+  text: '',
+  lang: 'be',
   tags: [],
   source: '',
   linkedNoteIds: [],
+  translationIds: [],
   isNovenaPrayer: false,
   recommendedDate: null,
-  hidden: false
+  hidden: false,
 });
 
+// --- Логика для управления связями ---
 const isLinkDialogOpen = ref(false);
 const linkSearchQuery = ref('');
 const currentlyLinkedNotes = computed(() => form.value.linkedNoteIds?.map(id => items.value.find(item => item.id === id)).filter(Boolean) || []);
-
 const availableNotesToLink = computed(() => {
+    return items.value.filter(item => {
+        const isNotSelf = item.id !== props.id;
+        const isNotLinked = !form.value.linkedNoteIds?.includes(item.id);
+        const matchesSearch = linkSearchQuery.value ? getTitle(item).toLowerCase().includes(linkSearchQuery.value.toLowerCase()) : true;
+        return isNotSelf && isNotLinked && matchesSearch;
+    });
+});
+function addLink(noteId) { if (!form.value.linkedNoteIds) form.value.linkedNoteIds = []; form.value.linkedNoteIds.push(noteId); isLinkDialogOpen.value = false; linkSearchQuery.value = ''; }
+function removeLink(noteId) { form.value.linkedNoteIds = form.value.linkedNoteIds.filter(id => id !== noteId); }
+
+// --- Логика Управления переводами ---
+const isTranslationDialogOpen = ref(false);
+const translationSearchQuery = ref('');
+const currentlyLinkedTranslations = computed(() => form.value.translationIds?.map(id => items.value.find(item => item.id === id)).filter(Boolean) || []);
+const availableNotesToTranslate = computed(() => {
   return items.value.filter(item => {
-    const isNotSelf = item.id !== props.id;
-    const isNotLinked = !form.value.linkedNoteIds?.includes(item.id);
-    const matchesSearch = linkSearchQuery.value 
-      ? getTitle(item).toLowerCase().includes(linkSearchQuery.value.toLowerCase()) // Поиск по отображаемому заголовку
-      : true;
-    return isNotSelf && isNotLinked && matchesSearch;
+    if (item.id === props.id) return false;
+    if (form.value.translationIds?.includes(item.id)) return false;
+    if (item.lang === form.value.lang) return false;
+    const matchesSearch = translationSearchQuery.value ? getTitle(item).toLowerCase().includes(translationSearchQuery.value.toLowerCase()) : true;
+    return matchesSearch;
   });
 });
 
-function addLink(noteId) { 
-  if (!form.value.linkedNoteIds) form.value.linkedNoteIds = [];
-  form.value.linkedNoteIds.push(noteId); 
-  isLinkDialogOpen.value = false; 
-  linkSearchQuery.value = '';
+async function addTranslation(noteId) {
+    if (!form.value.translationIds) form.value.translationIds = [];
+    form.value.translationIds.push(noteId);
+    await linkTranslations(props.id, noteId);
+    showSuccess(t('translationLinked'));
+    isTranslationDialogOpen.value = false;
+    translationSearchQuery.value = '';
 }
 
-function removeLink(noteId) { form.value.linkedNoteIds = form.value.linkedNoteIds.filter(id => id !== noteId); }
+async function removeTranslation(noteId) {
+    form.value.translationIds = form.value.translationIds.filter(id => id !== noteId);
+    await linkTranslations(props.id, noteId, true);
+    showSuccess(t('translationUnlinked'));
+}
 
 async function handleSave() {
-  // ✅ Проверяем, есть ли хотя бы один заголовок
-  const hasAtLeastOneTitle = Object.values(form.value.titleVersions).some(title => title && title.trim() !== '');
-  if (!hasAtLeastOneTitle) {
-      alert('Пожалуйста, введите название хотя бы для одного языка.'); // Можно заменить на useNotifier
-      return;
+  if (!form.value.title || !form.value.title.trim()) {
+    alert(t('titleRequired'));
+    return;
   }
   
-  // Создаем объект для сохранения, только с непустыми полями
-  const dataToSave = {
-    titleVersions: {},
-    textVersions: {},
-    tags: form.value.tags || [],
-    source: form.value.source || '',
-    linkedNoteIds: form.value.linkedNoteIds || [],
-    isNovenaPrayer: form.value.isNovenaPrayer || false,
-    recommendedDate: form.value.recommendedDate || null,
-    hidden: form.value.hidden || false
-  };
-
-  for (const lang in form.value.titleVersions) {
-    if (form.value.titleVersions[lang]) {
-      dataToSave.titleVersions[lang] = form.value.titleVersions[lang];
-    }
-  }
-  for (const lang in form.value.textVersions) {
-    if (form.value.textVersions[lang] && form.value.textVersions[lang] !== '<p></p>') {
-      dataToSave.textVersions[lang] = form.value.textVersions[lang];
-    }
-  }
+  const dataToSave = { ...form.value };
 
   if (isEditMode.value) {
     await updateItem(props.id, dataToSave);
   } else {
-    await addItem(dataToSave);
+    const newDocRef = await addItem(dataToSave);
+    if (dataToSave.translationIds.length > 0) {
+        for (const transId of dataToSave.translationIds) {
+            await linkTranslations(newDocRef.id, transId);
+        }
+    }
   }
   showSuccess(t('noteSavedSuccess'));
   router.push({ name: 'ItemsList' });
 }
 
+// ✅ ✅ ✅ ИСПРАВЛЕННЫЙ БЛОК ✅ ✅ ✅
 onMounted(() => {
   registerSaveAction(handleSave);
   if (isEditMode.value) {
-    let stopWatch;
-    stopWatch = watch(items, (newItems) => {
+    // Объявляем переменную, которая будет хранить функцию для остановки наблюдателя
+    let unwatch = null;
+
+    // Присваиваем результат вызова watch этой переменной
+    unwatch = watch(items, (newItems) => {
       const itemToEdit = newItems.find(i => i.id === props.id);
       if (itemToEdit) {
-        // ✅ ИЗМЕНЕНИЕ: Заполняем новые структуры данных
         form.value = { 
-          titleVersions: { 
-            be: itemToEdit.titleVersions?.be || '',
-            ru: itemToEdit.titleVersions?.ru || '',
-            la: itemToEdit.titleVersions?.la || '',
-            pl: itemToEdit.titleVersions?.pl || ''
-          },
-          textVersions: {
-            be: itemToEdit.textVersions?.be || '',
-            ru: itemToEdit.textVersions?.ru || '',
-            la: itemToEdit.textVersions?.la || '',
-            pl: itemToEdit.textVersions?.pl || ''
-          },
-          source: itemToEdit.source || '',
+          title: itemToEdit.title || '',
+          text: itemToEdit.text || '',
+          lang: itemToEdit.lang || 'be',
           tags: itemToEdit.tags || [],
+          source: itemToEdit.source || '',
+          linkedNoteIds: itemToEdit.linkedNoteIds || [],
+          translationIds: itemToEdit.translationIds || [],
           isNovenaPrayer: itemToEdit.isNovenaPrayer || false,
           recommendedDate: itemToEdit.recommendedDate || null,
-          linkedNoteIds: itemToEdit.linkedNoteIds || [],
           hidden: itemToEdit.hidden || false
         };
         isFormReady.value = true;
-        if(stopWatch) stopWatch();
+        
+        // Проверяем, существует ли функция, и вызываем ее, чтобы остановить наблюдение
+        if (unwatch) {
+          unwatch();
+        }
       }
     }, { immediate: true });
   } else {
