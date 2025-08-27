@@ -19,12 +19,14 @@ const routes = [
   { path: '/login', name: 'Login', component: () => import('@/components/LoginView.vue') },
   { path: '/', name: 'ItemsList', component: () => import('@/components/ItemsList.vue') },
   { path: '/item/:id', name: 'ItemView', component: () => import('@/components/ItemView.vue'), props: true },
+  { path: '/p/:id', name: 'PublicItemView', component: () => import('@/components/ItemView.vue'), props: true },
   { path: '/settings', name: 'Settings', component: () => import('@/components/SettingsView.vue') },
   { path: '/edit/:id', name: 'ItemEdit', component: () => import('@/components/ItemForm.vue'), props: true, meta: { requiresAuth: true } },
   { path: '/add', name: 'ItemAdd', component: () => import('@/components/ItemForm.vue'), meta: { requiresAuth: true } },
   { path: '/admin', name: 'Admin', component: () => import('@/components/AdminView.vue'), meta: { requiresAuth: true } },
   { path: '/about', name: 'About', component: () => import('@/components/AboutView.vue') },
     { path: '/rule', name: 'PrayerRule', component: () => import('@/components/PrayerRuleView.vue') },
+     { path: '/mass', name: 'HolyMass', component: () => import('@/components/HolyMassView.vue') },
 ];
 
 const router = createRouter({

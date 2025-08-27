@@ -1,42 +1,38 @@
 <template>
   <v-container>
-    <h2 class="text-h5 font-weight-medium mb-6">{{ $t('myPrayerRule') }}</h2>
-    
-    <!-- ======================= -->
-    <!--    РЕЖИМ РЕДАКТИРОВАНИЯ   -->
-    <!-- ======================= -->
+     <h2 class="text-h5 font-weight-medium mb-6">{{ $t('myPrayerRule') }}</h2>
+    <!-- РЕЖИМ РЕДАКТИРОВАНИЯ -->
     <div v-if="isEditing">
       <div v-if="prayerRule.ruleItems.length === 0" class="text-center mt-16">
         <p class="text-h6">{{ $t('ruleIsEmpty') }}</p>
         <p class="text-medium-emphasis">{{ $t('ruleIsEmptyHint') }}</p>
       </div>
       <div v-else>
-        <div v-for="(itemId, index) in prayerRule.ruleItems" :key="itemId" class="prayer-item-container">
-          <h3 class="text-h5 mb-3">{{ getItemTitle(itemId) }}</h3>
-          <!-- ✅ ПАНЕЛЬ УПРАВЛЕНИЯ БЕЗ ВЫБОРА ЯЗЫКА -->
-          <div class="d-flex align-center flex-wrap ga-2 mb-4 pa-2 control-panel">
-            <div>
-              <v-btn icon="mdi-arrow-up" variant="text" size="small" :disabled="index === 0" @click="prayerRule.moveItem(index, index - 1)"></v-btn>
-              <v-btn icon="mdi-arrow-down" variant="text" size="small" :disabled="index === prayerRule.ruleItems.length - 1" @click="prayerRule.moveItem(index, index + 1)"></v-btn>
-            </div>
-            <v-spacer></v-spacer>
-            <v-btn icon="mdi-delete-outline" variant="text" @click="prayerRule.removeItem(index)"></v-btn>
-          </div>
-          <div v-html="getItemContent(itemId)" class="note-content-area ProseMirror"></div>
-          <v-divider class="my-8"></v-divider>
+        <!-- ✅✅✅ Рендерим карточки с кнопками управления порядком ✅✅✅ -->
+        <div v-for="(item, index) in ruleItemsWithDetails" :key="item.id" class="prayer-item-container">
+            <v-card variant="outlined" class="pa-4">
+              <div class="d-flex align-center mb-4">
+                <h3 class="text-h5">{{ getTitle(item) }}</h3>
+                <v-spacer></v-spacer>
+                <!-- Кнопки перемещения -->
+                <v-btn icon="mdi-arrow-up" variant="text" size="small" :disabled="index === 0" @click="prayerRule.moveItem(index, index - 1)"></v-btn>
+                <v-btn icon="mdi-arrow-down" variant="text" size="small" :disabled="index === ruleItemsWithDetails.length - 1" @click="prayerRule.moveItem(index, index + 1)"></v-btn>
+                <!-- Кнопка удаления -->
+                <v-btn icon="mdi-delete-outline" variant="text" size="small" @click="prayerRule.removeItem(index)"></v-btn>
+              </div>
+              <div v-html="getItemContent(item)" class="note-content-area ProseMirror"></div>
+            </v-card>
+            <v-divider class="my-4"></v-divider>
         </div>
       </div>
       <v-btn icon="mdi-plus" location="bottom right" size="large" color="primary" position="fixed" variant="elevated" elevation="8" class="ma-4" @click="isAddDialogOpen = true"></v-btn>
     </div>
-
-    <!-- ======================= -->
-    <!--    РЕЖИМ ПРОСМОТРА      -->
-    <!-- ======================= -->
+    <!-- РЕЖИМ ПРОСМОТРА -->
     <div v-else>
       <div v-if="prayerRule.ruleItems.length > 0">
-       <div v-for="itemId in prayerRule.ruleItems" :key="`view-${itemId}`">
-          <h3 class="text-h5 mb-3">{{ getItemTitle(itemId) }}</h3>
-          <div v-html="getItemContent(itemId)" class="note-content-area ProseMirror"></div>
+        <div v-for="item in ruleItemsWithDetails" :key="`view-${item.id}`">
+          <h3 class="text-h5 mb-3">{{ getTitle(item) }}</h3>
+          <div v-html="getItemContent(item)" class="note-content-area ProseMirror"></div>
           <v-divider class="my-8"></v-divider>
         </div>
       </div>
@@ -50,7 +46,6 @@
         </v-btn>
       </div>
     </div>
-
     <!-- ✅ ИЗМЕНЕНИЕ: НОВЫЙ ДИАЛОГ ВМЕСТО АВТОКОМПЛИТА -->
     <v-dialog
       v-model="isAddDialogOpen"
@@ -113,6 +108,10 @@ onUnmounted(() => {
   setEditing(false);
 });
 
+// ✅ Возвращаемся к более простой логике: получаем полные объекты на основе ID из стора
+const ruleItemsWithDetails = computed(() => {
+    return prayerRule.ruleItems.map(itemId => items.value.find(i => i.id === itemId)).filter(Boolean);
+});
 
 // ✅ Измененная логика
 const availableItems = computed(() => {
@@ -136,10 +135,14 @@ const getItemTitle = (itemId) => {
 };
 
 // ✅ Измененная логика
-const getItemContent = (itemId) => {
-    const fullItem = items.value.find(i => i.id === itemId);
-    if (!fullItem) return `[${t('noteNotFound')}]`;
-    return fullItem.text || `[${t('noTextInLang')}]`; // Просто берем поле text
+// const getItemContent = (itemId) => {
+//     const fullItem = items.value.find(i => i.id === itemId);
+//     if (!fullItem) return `[${t('noteNotFound')}]`;
+//     return fullItem.text || `[${t('noTextInLang')}]`; // Просто берем поле text
+// };
+const getItemContent = (item) => {
+    if (!item) return `[${t('noteNotFound')}]`;
+    return item.text || `[${t('noTextInLang')}]`;
 };
 
 // ✅ Обновленная функция добавления

@@ -37,6 +37,12 @@
         ></v-list-item>
         <v-divider></v-divider>
         <v-list-item 
+  prepend-icon="mdi-cross"
+  :title="$t('holyMass')"
+  :to="{ name: 'HolyMass' }"
+></v-list-item>
+ <v-divider></v-divider>
+        <v-list-item 
           prepend-icon="mdi-cog-outline" 
           :title="$t('settings')"
           :to="{ name: 'Settings' }"
@@ -118,16 +124,16 @@
                   <v-btn icon="mdi-dots-vertical" v-bind="props"></v-btn>
               </template>
               <!-- Содержимое выпадающего списка -->
-              <v-list density="compact">
+              <v-list density="compact" class="pa-0">
                   <!-- 1. Поделиться -->
-                  <v-list-item @click="shareCurrentItem">
+                  <v-list-item @click="shareCurrentItem"  >
                       <template v-slot:prepend>
                           <v-icon>mdi-share-variant-outline</v-icon>
                       </template>
                       <v-list-item-title>{{ $t('share') }}</v-list-item-title>
                   </v-list-item>
                   <!-- 2. Закрепить/Открепить -->
-                  <v-list-item @click="settings.togglePin(currentItemId)">
+                  <v-list-item @click="settings.togglePin(currentItemId)" >
                       <template v-slot:prepend>
                           <v-icon :color="settings.isPinned(currentItemId) ? 'primary' : ''">
                               {{ settings.isPinned(currentItemId) ? 'mdi-pin' : 'mdi-pin-outline' }}
@@ -136,7 +142,7 @@
                       <v-list-item-title>{{ settings.isPinned(currentItemId) ? $t('unpin') : $t('pin') }}</v-list-item-title>
                   </v-list-item>
                   <!-- 3. Настройки текста -->
-                  <v-list-item @click="openTextSettings">
+                  <v-list-item @click="openTextSettings" >
                       <template v-slot:prepend>
                           <v-icon>mdi-tune-variant</v-icon>
                       </template>
@@ -273,10 +279,13 @@ const currentItem = computed(() => {
 // ✅ ЛОГИКА ДЛЯ ФУНКЦИИ "ПОДЕЛИТЬСЯ"
 async function shareCurrentItem() {
   if (!currentItem.value) return;
+  // ✅ СОЗДАЕМ КОРОТКУЮ ССЫЛКУ
+  const shareUrl = `${window.location.origin}/p/${currentItem.value.id}`;
+
   const shareData = {
     title: getTitle(currentItem.value),
     text: `Прочитайте молитву "${getTitle(currentItem.value)}"`,
-    url: window.location.href,
+    url: shareUrl,
   };
   if (navigator.share) {
     try {
@@ -287,13 +296,15 @@ async function shareCurrentItem() {
   } else {
     // Fallback: копирование в буфер обмена
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      await navigator.clipboard.writeText(shareUrl);
       showSuccess(t('linkCopied'));
     } catch (err) {
       showError(t('shareError'));
     }
   }
 }
+
+
 
 function openTextSettings() {
   console.log(`[App.vue] Button clicked. 'isTextSettingsSheetOpen' is currently: ${isTextSettingsSheetOpen.value}`);
