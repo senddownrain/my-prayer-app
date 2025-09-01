@@ -10,7 +10,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "export-code": "node export-code.js",
-    "db:seed": "node seed-db.js"
+    "db:seed": "node seed-db.js",
+    "db:migrate": "node migration.js"
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",
@@ -282,6 +283,12 @@ seedDatabase();
         ></v-list-item>
         <v-divider></v-divider>
         <v-list-item 
+  prepend-icon="mdi-cross"
+  :title="$t('holyMass')"
+  :to="{ name: 'HolyMass' }"
+></v-list-item>
+ <v-divider></v-divider>
+        <v-list-item 
           prepend-icon="mdi-cog-outline" 
           :title="$t('settings')"
           :to="{ name: 'Settings' }"
@@ -313,70 +320,107 @@ seedDatabase();
       </v-list>
     </v-navigation-drawer>
 
-    <!-- AppBar остается без изменений -->
-    <v-app-bar 
-  :elevation="2" 
-  app
-  :scroll-behavior="isItemViewPage ? 'hide' : undefined"
->
-      <v-btn v-if="showBackButton" icon="mdi-arrow-left" @click="router.back()"></v-btn>
-      <v-btn v-else icon="mdi-menu" @click="isDrawerOpen = !isDrawerOpen"></v-btn>
-      <v-expand-x-transition>
-          <v-text-field
-              v-if="isSearchActive"
-              v-model="search"
-              :placeholder="$t('searchPlaceholder')"
-              variant="solo-inverted"
-              flat
-              hide-details
-              autofocus
-              density="compact"
-              class="mr-2"
-              @blur="isSearchActive = false"
-              clearable  
-              @click:clear="isSearchActive = false; search = '';"
-          ></v-text-field>
-      </v-expand-x-transition>
-      <v-toolbar-title 
-        v-if="!isSearchActive" 
-        @click="goHome" 
-        style="cursor: pointer;"
-        class="font-weight-medium"
-      >
-       <span class="wrappable-toolbar-title app-title non-selectable">{{ $t('appTitle') }}</span>
-      </v-toolbar-title>
-      <template v-if="!isSearchActive">
-          <template v-if="isHomePage">
-            <v-btn icon="mdi-magnify" @click="isSearchActive = true"></v-btn>
-            <v-btn icon="mdi-filter-variant" @click="isFilterSheetOpen = true"></v-btn>
-          </template>
-          <template v-if="isItemViewPage">
-            <v-btn 
-              :icon="settings.isPinned(currentItemId) ? 'mdi-pin' : 'mdi-pin-outline'"
-              :color="settings.isPinned(currentItemId) ? 'primary' : 'grey'"
-              @click="settings.togglePin(currentItemId)"
-            ></v-btn>
-            <v-btn icon="mdi-tune-variant" @click="openTextSettings"></v-btn>
-            <v-btn 
-        v-if="isItemViewPage && authStore.user" 
-        icon="mdi-pencil" 
-        @click="router.push({ name: 'ItemEdit', params: { id: currentItemId } })"
-      ></v-btn>
-          </template>
-          <v-btn v-if="showSaveButton" icon="mdi-check" @click="triggerSave"></v-btn>
+      <v-app-bar 
+    :elevation="2" 
+    app
+    :scroll-behavior="isItemViewPage ? 'hide' : undefined"
+  >
+    <!-- Кнопка назад или меню-гамбургер -->
+    <v-btn v-if="showBackButton" icon="mdi-arrow-left" @click="router.back()"></v-btn>
+    <v-btn v-else icon="mdi-menu" @click="isDrawerOpen = !isDrawerOpen"></v-btn>
+    <!-- Поле поиска, которое появляется при активации -->
+    <v-expand-x-transition>
+        <v-text-field
+            v-if="isSearchActive"
+            v-model="search"
+            :placeholder="$t('searchPlaceholder')"
+            variant="solo-inverted"
+            flat
+            hide-details
+            autofocus
+            density="compact"
+            class="mr-2"
+            @blur="isSearchActive = false"
+            clearable  
+            @click:clear="isSearchActive = false; search = '';"
+        ></v-text-field>
+    </v-expand-x-transition>
+    <!-- Заголовок приложения -->
+    <v-toolbar-title 
+      v-if="!isSearchActive" 
+      @click="goHome" 
+      style="cursor: pointer;"
+      class="font-weight-medium"
+    >
+     <span class="wrappable-toolbar-title app-title non-selectable">{{ $t('appTitle') }}</span>
+    </v-toolbar-title>
+    <!-- Динамическая правая часть AppBar -->
+    <template v-if="!isSearchActive">
+        <!-- ===== КНОПКИ ДЛЯ ГЛАВНОЙ СТРАНИЦЫ ===== -->
+        <template v-if="isHomePage">
+          <v-btn icon="mdi-magnify" @click="isSearchActive = true"></v-btn>
+          <v-btn icon="mdi-filter-variant" @click="isFilterSheetOpen = true"></v-btn>
+        </template>
+        <!-- ===== ✅✅✅ НОВОЕ ВЫПАДАЮЩЕЕ МЕНЮ ДЛЯ СТРАНИЦЫ ПРОСМОТРА ЗАМЕТКИ ✅✅✅ ===== -->
+        <template v-if="isItemViewPage">
+          <!-- Оборачиваем все действия в компонент v-menu -->
+          <v-menu location="bottom end" transition="slide-y-transition">
+              <template v-slot:activator="{ props }">
+                  <!-- Единственная видимая кнопка - "три точки" -->
+                  <v-btn icon="mdi-dots-vertical" v-bind="props"></v-btn>
+              </template>
+              <!-- Содержимое выпадающего списка -->
+              <v-list density="compact" class="pa-0">
+                  <!-- 1. Поделиться -->
+                  <v-list-item @click="shareCurrentItem"  >
+                      <template v-slot:prepend>
+                          <v-icon>mdi-share-variant-outline</v-icon>
+                      </template>
+                      <v-list-item-title>{{ $t('share') }}</v-list-item-title>
+                  </v-list-item>
+                  <!-- 2. Закрепить/Открепить -->
+                  <v-list-item @click="settings.togglePin(currentItemId)" >
+                      <template v-slot:prepend>
+                          <v-icon :color="settings.isPinned(currentItemId) ? 'primary' : ''">
+                              {{ settings.isPinned(currentItemId) ? 'mdi-pin' : 'mdi-pin-outline' }}
+                          </v-icon>
+                      </template>
+                      <v-list-item-title>{{ settings.isPinned(currentItemId) ? $t('unpin') : $t('pin') }}</v-list-item-title>
+                  </v-list-item>
+                  <!-- 3. Настройки текста -->
+                  <v-list-item @click="openTextSettings" >
+                      <template v-slot:prepend>
+                          <v-icon>mdi-tune-variant</v-icon>
+                      </template>
+                      <v-list-item-title>{{ $t('textSettings') }}</v-list-item-title>
+                  </v-list-item>
+                  <!-- 4. Редактировать (только для админа) -->
+                  <v-list-item
+                      v-if="authStore.user"
+                      @click="router.push({ name: 'ItemEdit', params: { id: currentItemId } })"
+                  >
+                      <template v-slot:prepend>
+                          <v-icon>mdi-pencil-outline</v-icon>
+                      </template>
+                      <v-list-item-title>{{ $t('edit') }}</v-list-item-title>
+                  </v-list-item>
+              </v-list>
+          </v-menu>
+        </template>
+        <!-- ===== ОСТАЛЬНЫЕ КНОПКИ (ДЛЯ ДРУГИХ СТРАНИЦ) ===== -->
+        
+        <!-- Кнопка сохранения для страниц /add и /edit -->
+        <v-btn v-if="showSaveButton" icon="mdi-check" @click="triggerSave"></v-btn>
+        <!-- Кнопка редактирования для страницы "Молитвенное правило" -->
+        <v-btn
+          v-if="showPrayerRuleEditButton"
+          @click="toggleEditing"
+        >
+          <v-icon>{{ isEditing ? 'mdi-check' : 'mdi-pencil' }}</v-icon>
+        </v-btn>
+    </template>
+  </v-app-bar>
 
-          
-       <!-- ✅ НАША НОВАЯ КНОПКА РЕДАКТИРОВАНИЯ ПРАВИЛА -->
-      <v-btn
-        v-if="showPrayerRuleEditButton"
-  @click="toggleEditing"
-      >
-        <v-icon>{{ isEditing ? 'mdi-check' : 'mdi-pencil' }}</v-icon>
-
-      </v-btn>
-      </template>
-
-    </v-app-bar>
 
     <v-main>
       <router-view v-if="!authStore.loading" />
@@ -473,6 +517,40 @@ const showSaveButton = computed(() => ['ItemEdit', 'ItemAdd'].includes(route.nam
 
 const isItemViewPage = computed(() => route.name === 'ItemView');
 const currentItemId = computed(() => route.params.id); //
+const currentItem = computed(() => {
+  if (!currentItemId.value || !items.value) return null;
+  return items.value.find(i => i.id === currentItemId.value);
+});
+
+// ✅ ЛОГИКА ДЛЯ ФУНКЦИИ "ПОДЕЛИТЬСЯ"
+async function shareCurrentItem() {
+  if (!currentItem.value) return;
+  // ✅ СОЗДАЕМ КОРОТКУЮ ССЫЛКУ
+  const shareUrl = `${window.location.origin}/p/${currentItem.value.id}`;
+
+  const shareData = {
+    title: getTitle(currentItem.value),
+    text: `Прочитайте молитву "${getTitle(currentItem.value)}"`,
+    url: shareUrl,
+  };
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData);
+    } catch (err) {
+      console.error('Share failed:', err);
+    }
+  } else {
+    // Fallback: копирование в буфер обмена
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      showSuccess(t('linkCopied'));
+    } catch (err) {
+      showError(t('shareError'));
+    }
+  }
+}
+
+
 
 function openTextSettings() {
   console.log(`[App.vue] Button clicked. 'isTextSettingsSheetOpen' is currently: ${isTextSettingsSheetOpen.value}`);
@@ -629,6 +707,7 @@ function onAddCategory() {
       </v-card-text>
     </v-card>
 
+    <!-- Секция общих настроек -->
     <v-list lines="two" subheader class="mt-4">
       <v-list-subheader>{{ $t('generalSettings') }}</v-list-subheader>
       <v-list-item 
@@ -647,12 +726,77 @@ function onAddCategory() {
         </template>
       </v-list-item>
     </v-list>
+    
+    <!-- ✅ НОВАЯ СЕКЦИЯ: Управление данными -->
+    <v-list lines="one" subheader class="mt-2">
+        <v-list-subheader>{{ $t('dataManagement') }}</v-list-subheader>
+        <v-card variant="tonal" class="mx-2 pa-2">
+            <div class="d-flex flex-wrap ga-2">
+                 <v-btn @click="exportToJson" prepend-icon="mdi-code-json" color="primary" variant="outlined">{{ $t('exportToJson') }}</v-btn>
+                 <v-btn @click="exportToCsv" prepend-icon="mdi-file-delimited-outline">{{ $t('exportToCsv') }}</v-btn>
+                 <v-spacer />
+                 <v-btn @click="triggerImport" prepend-icon="mdi-application-import" color="secondary" variant="flat">{{ $t('importFromFile') }}</v-btn>
+                 <input ref="fileInput" type="file" hidden @change="handleFileSelect">
+            </div>
+        </v-card>
+    </v-list>
+
+    <!-- Диалог подтверждения импорта -->
+    <v-dialog v-model="isImportDialogVisible" max-width="500px" persistent>
+        <v-card v-if="importFile">
+            <v-card-title class="text-h5">{{ $t('importConfirmationTitle') }}</v-card-title>
+            <v-card-text>
+                <p class="mb-2">{{ $t('importConfirmationMessage', { count: previewItems.length, fileName: importFile.name }) }}</p>
+                <p class="text-medium-emphasis text-caption">{{ $t('importWarning') }}</p>
+                
+                <v-radio-group v-model="importMode" inline class="mt-4">
+                    <template v-slot:label><div>{{ $t('importModeLabel') }}</div></template>
+                    <v-radio :label="$t('importMode.add')" value="add"></v-radio>
+                    <v-radio :label="$t('importMode.overwrite')" value="overwrite"></v-radio>
+                </v-radio-group>
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn text @click="cancelImport">{{ $t('cancel') }}</v-btn>
+                <v-btn color="primary" variant="flat" @click="confirmImport" :loading="isImporting">{{ $t('import') }}</v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
+
   </v-container>
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import { useSettingsStore } from '@/stores/settings';
+import { useDataManagement } from '@/composables/useDataManagement';
+
 const settings = useSettingsStore();
+const fileInput = ref(null);
+
+const { 
+  exportToCsv, 
+  exportToJson, 
+  importFromFile,
+  isImporting,
+  isImportDialogVisible,
+  importFile,
+  previewItems,
+  importMode,
+  confirmImport,
+  cancelImport
+} = useDataManagement();
+
+const triggerImport = () => {
+    fileInput.value.click();
+};
+
+const handleFileSelect = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+        importFromFile(file);
+    }
+};
 </script>
 ```
 
@@ -1002,8 +1146,29 @@ onBeforeUnmount(() => {
 <template>
   <v-bottom-sheet v-model="isFilterSheetOpen">
     <v-card class="pa-4">
-      <v-card-title>{{ $t('filterByTags') }}</v-card-title>
+      <v-card-title>{{ $t('filters') }}</v-card-title> <!-- Изменили заголовок -->
       <v-card-text>
+        <!-- ✅ НОВЫЙ БЛОК ДЛЯ ФИЛЬТРА ПО ЯЗЫКАМ -->
+        <!-- <div class="text-subtitle-1 font-weight-medium mb-2">{{ $t('language') }}</div> -->
+        <div v-if="allLangs.length === 0" class="text-grey pa-2">Нет языков для выбора</div>
+        <v-chip-group v-else v-model="selectedLangs" column multiple>
+          <v-chip
+            v-for="lang in allLangs"
+            :key="lang"
+            :value="lang"
+            filter
+            variant="outlined"
+            class="ma-1 text-uppercase"
+            size="small"
+          >
+            {{ lang }}
+          </v-chip>
+        </v-chip-group>
+
+        <v-divider class="my-4"></v-divider>
+
+        <!-- Существующий блок для тегов -->
+        <!-- <div class="text-subtitle-1 font-weight-medium mb-2">{{ $t('tags') }}</div> -->
         <div v-if="allTags.length === 0" class="text-grey pa-2">Нет тегов для выбора</div>
         <v-chip-group v-else v-model="selectedTags" column multiple>
           <v-chip
@@ -1013,7 +1178,7 @@ onBeforeUnmount(() => {
             filter
             variant="outlined"
             class="ma-1"
-            size="large"
+            size="default"
           >
             {{ tag }}
           </v-chip>
@@ -1033,9 +1198,152 @@ import { useFilters } from '@/composables/useFilters';
 import { useItems } from '@/composables/useItems';
 
 const { isFilterSheetOpen } = useAppBar();
-const { selectedTags } = useFilters();
-const { allTags } = useItems();
+const { selectedTags, selectedLangs } = useFilters(); // ✅ Получаем selectedLangs
+const { allTags, allLangs } = useItems(); // ✅ Получаем allLangs
 </script>
+```
+
+### src/components/HolyMassView.vue
+```
+<template>
+  <div class="holy-mass-container">
+    <div v-if="isLoading" class="text-center mt-16">
+        <v-progress-circular indeterminate color="primary" size="64"></v-progress-circular>
+    </div>
+    <div v-else-if="!massItem" class="text-center mt-16">
+        <v-icon size="64" class="mb-4">mdi-text-box-remove-outline</v-icon>
+        <h2 class="text-h5 mb-4">{{ $t('noteNotFound') }}</h2>
+        <p>{{ $t('noteNotFoundMessage') }}</p>
+    </div>
+    <div v-else ref="contentArea" class="content-wrapper">
+        <!-- ✅✅✅ ДОБАВЛЕН БЛОК ПЕРЕКЛЮЧЕНИЯ ЯЗЫКОВ ✅✅✅ -->
+        <v-chip-group class="mb-6">
+          <v-chip
+            v-for="version in allLanguageVersions"
+            :key="version.id"
+            label
+            :variant="version.id === massItem.id ? 'flat' : 'outlined'"
+            :color="version.id === massItem.id ? 'primary' : ''"
+            @click="router.push({ params: { id: version.id } })"
+          >
+            <strong class="text-uppercase mr-1">{{ version.lang }}</strong>
+            
+          </v-chip>
+        </v-chip-group>
+
+        <h2 class="text-h4 font-weight-bold mb-6">{{ getTitle(massItem) }}</h2>
+        <div v-html="massItem.text" class="note-content-area"></div>
+    </div>
+
+    <!-- ПЛАВАЮЩИЕ КНОПКИ НАВИГАЦИИ -->
+    <div v-if="headings.length > 1" class="fab-container-mass">
+        <v-btn icon="mdi-chevron-up" class="mb-2" @click="scrollToHeading('prev')" :disabled="currentHeadingIndex <= 0"></v-btn>
+        <v-btn icon="mdi-chevron-down" @click="scrollToHeading('next')" :disabled="currentHeadingIndex >= headings.length - 1"></v-btn>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'; // ✅ 1. Импортируем nextTick
+import { useRoute, useRouter } from 'vue-router';
+import { useItems } from '@/composables/useItems';
+import { useI18n } from 'vue-i18n';
+
+const route = useRoute();
+const router = useRouter();
+const { t } = useI18n();
+
+// ❗️ ВАЖНО: Укажите здесь ID "главной" версии Мессы
+const HOLY_MASS_BASE_ID = 'wPt0x7dgurGCe74hdl6C'; // Я вставил пример ID, замените на свой
+
+const { items, isLoading, getTitle } = useItems();
+
+const currentItemId = computed(() => route.params.id || HOLY_MASS_BASE_ID);
+const massItem = computed(() => items.value.find(i => i.id === currentItemId.value));
+const translations = computed(() => {
+    const baseItem = items.value.find(i => i.id === HOLY_MASS_BASE_ID);
+    return baseItem?.translationIds?.map(id => items.value.find(note => note.id === id)).filter(Boolean) || [];
+});
+const allLanguageVersions = computed(() => {
+  const base = items.value.find(i => i.id === HOLY_MASS_BASE_ID);
+  if (!base) return [];
+  const all = [base, ...translations.value];
+  return all.sort((a, b) => a.lang.localeCompare(b.lang));
+});
+
+
+const contentArea = ref(null);
+const headings = ref([]);
+const currentHeadingIndex = ref(-1);
+
+const findHeadings = () => {
+    if (contentArea.value) {
+        headings.value = Array.from(contentArea.value.querySelectorAll('.note-content-area h3'));
+        currentHeadingIndex.value = -1;
+        console.log(`[HolyMassView] Found ${headings.value.length} headings.`);
+    }
+};
+
+// ✅ 2. Используем watch вместо onMounted для поиска заголовков
+watch(massItem, (newItem) => {
+    // Этот наблюдатель сработает как при первой загрузке данных, так и при смене языка
+    if (newItem && newItem.text) {
+        // nextTick гарантирует, что мы будем искать заголовки
+        // ПОСЛЕ того, как Vue обновил v-html
+        nextTick(() => {
+            findHeadings();
+        });
+    }
+}, { immediate: true }); // immediate: true заставит watch сработать при первой же загрузке компонента
+
+const scrollToHeading = (direction) => {
+    if (headings.value.length === 0) return;
+    let nextIndex = currentHeadingIndex.value;
+    if (direction === 'next') {
+        nextIndex = Math.min(headings.value.length - 1, nextIndex + 1);
+    } else {
+        nextIndex = Math.max(0, nextIndex - 1);
+    }
+    headings.value[nextIndex]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+// Отслеживание текущего заголовка
+const onScroll = () => {
+    if(headings.value.length === 0) return;
+    const scrollPosition = window.scrollY + window.innerHeight / 2;
+    const newIndex = headings.value.findIndex(h => h.offsetTop > scrollPosition) - 1;
+    currentHeadingIndex.value = newIndex < 0 ? headings.value.length - 1 : newIndex;
+};
+
+
+// ✅ 3. Упрощаем onMounted - теперь он только добавляет слушатель скролла
+onMounted(() => {
+    window.addEventListener('scroll', onScroll, { passive: true });
+});
+
+onUnmounted(() => {
+    window.removeEventListener('scroll', onScroll);
+});
+</script>
+
+<style scoped>
+.holy-mass-container {
+    padding: 16px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+.content-wrapper {
+    padding-bottom: 100px; /* Отступ снизу, чтобы кнопки не перекрывали текст */
+}
+.fab-container-mass {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    z-index: 5;
+}
+</style>
 ```
 
 ### src/components/ItemForm.vue
@@ -1043,33 +1351,29 @@ const { allTags } = useItems();
 <template>
   <v-container>
     <v-form v-if="isFormReady" @submit.prevent="handleSave">
-      
-      <!-- ✅ ИЗМЕНЕНИЕ: Вкладки теперь контролируют и заголовок, и текст -->
-      <v-tabs v-model="currentLangTab" bg-color="primary" class="mb-1">
-        <v-tab value="be">Бел</v-tab>
-        <v-tab value="ru">Рус</v-tab>
-        <v-tab value="la">Lat</v-tab>
-        <v-tab value="pl">Pol</v-tab>
-      </v-tabs>
 
-      <v-window v-model="currentLangTab">
-        <v-window-item value="be">
-          <v-text-field v-model="form.titleVersions.be" :label="`${t('title')} (${t('langLabels.be')})`" variant="outlined" class="my-4"></v-text-field>
-          <Editor v-model="form.textVersions.be" :is-novena="form.isNovenaPrayer"  />
-        </v-window-item>
-        <v-window-item value="ru">
-          <v-text-field v-model="form.titleVersions.ru" :label="`${t('title')} (${t('langLabels.ru')})`" variant="outlined" class="my-4"></v-text-field>
-          <Editor v-model="form.textVersions.ru" :is-novena="form.isNovenaPrayer"  />
-        </v-window-item>
-        <v-window-item value="la">
-          <v-text-field v-model="form.titleVersions.la" :label="`${t('title')} (${t('langLabels.la')})`" variant="outlined" class="my-4"></v-text-field>
-          <Editor v-model="form.textVersions.la" :is-novena="form.isNovenaPrayer" />
-        </v-window-item>
-        <v-window-item value="pl">
-           <v-text-field v-model="form.titleVersions.pl" :label="`${t('title')} (${t('langLabels.pl')})`" variant="outlined" class="my-4"></v-text-field>
-           <Editor v-model="form.textVersions.pl" :is-novena="form.isNovenaPrayer" />
-        </v-window-item>
-      </v-window>
+      <!-- ✅ НОВЫЙ БЛОК: Выбор языка и основной заголовок -->
+      <v-select
+        v-model="form.lang"
+        :items="langOptions"
+        item-title="title"
+        item-value="value"
+        :label="$t('noteLanguage')"
+        variant="outlined"
+        class="mb-4"
+        :disabled="isEditMode"
+        :hint="isEditMode ? $t('languageCannotBeChanged') : ''"
+        persistent-hint
+      ></v-select>
+      
+      <v-text-field
+        v-model="form.title"
+        :label="$t('title')"
+        variant="outlined"
+        class="mb-4"
+      ></v-text-field>
+
+      <Editor v-model="form.text" :is-novena="form.isNovenaPrayer" />
 
       <v-combobox
         v-model="form.tags"
@@ -1081,9 +1385,30 @@ const { allTags } = useItems();
         variant="outlined"
         class="mt-4"
       ></v-combobox>
-
-      <!-- Остальная часть формы без изменений... -->
+      
       <v-divider class="my-4"></v-divider>
+
+      <!-- ✅ НОВЫЙ БЛОК: Управление переводами -->
+      <h3 class="text-subtitle-1 mb-2">{{ $t('translations') }}</h3>
+      <div v-if="currentlyLinkedTranslations.length > 0" class="mb-3">
+        <v-chip
+          v-for="trans in currentlyLinkedTranslations"
+          :key="trans.id"
+          class="mr-2 mb-2"
+          closable
+          @click:close="removeTranslation(trans.id)"
+        >
+    <v-avatar color="grey-lighten-1" start size="22">
+    <span class="text-uppercase font-weight-bold text-white" style="font-size: 0.7rem;">{{ trans.lang }}</span>
+  </v-avatar>   
+        {{ getTitle(trans) }}
+        </v-chip>
+      </div>
+      <v-btn @click="isTranslationDialogOpen = true" prepend-icon="mdi-translate">{{ $t('addTranslation') }}</v-btn>
+
+      <v-divider class="my-4"></v-divider>
+      
+      <!-- Блок связанных заметок (остается без изменений) -->
       <h3 class="text-subtitle-1 mb-2">{{ $t('linkedNotesAdd') }}</h3>
       <div v-if="form.linkedNoteIds && form.linkedNoteIds.length > 0" class="mb-3">
         <v-chip
@@ -1093,14 +1418,14 @@ const { allTags } = useItems();
           closable
           @click:close="removeLink(linkedNote.id)"
         >
-          {{ getTitle(linkedNote) }} <!-- Используем хелпер -->
+          {{ getTitle(linkedNote) }}
         </v-chip>
       </div>
- <v-btn @click="isLinkDialogOpen = true" prepend-icon="mdi-link-plus">{{ $t('linkedNotesAdd') }}</v-btn>
+      <v-btn @click="isLinkDialogOpen = true" prepend-icon="mdi-link-plus">{{ $t('linkedNotesAdd') }}</v-btn>
 
       <v-divider class="my-4"></v-divider>
       <v-text-field v-model="form.source" :label="$t('source')" variant="outlined" class="mb-4" clearable></v-text-field>
-
+      
       <v-divider class="my-4"></v-divider>
       <h3 class="text-subtitle-1 mb-2">{{ $t('novenaSettings') }}</h3>
       <v-switch v-model="form.isNovenaPrayer" :label="$t('isNovenaPrayerLabel')" color="primary" inset class="mb-2"></v-switch>
@@ -1118,7 +1443,33 @@ const { allTags } = useItems();
       <v-progress-circular indeterminate color="primary"></v-progress-circular>
     </div>
 
-    <v-dialog v-model="isLinkDialogOpen" max-width="500px">
+    <!-- Диалог для переводов -->
+    <v-dialog v-model="isTranslationDialogOpen" max-width="500px">
+      <v-card>
+        <v-card-title>{{ $t('selectTranslation') }}</v-card-title>
+        <v-text-field v-model="translationSearchQuery" :placeholder="$t('searchPlaceholder')" variant="filled" density="compact" hide-details autofocus class="mx-4 mb-2"></v-text-field>
+        <v-list>
+          <v-list-item
+            v-for="note in availableNotesToTranslate"
+            :key="note.id"
+            :title="getTitle(note)"
+            :subtitle="`Язык: ${note.lang}`"
+            @click="addTranslation(note.id)"
+          >
+           <template v-slot:prepend>
+   <!-- ✅ ИЗМЕНЕНИЕ: Используем v-avatar -->
+    <v-avatar color="grey-lighten-3" size="32" class="mr-4">
+        <span class="text-uppercase font-weight-bold text-grey-darken-1">{{ note.lang }}</span>
+    </v-avatar>  
+  
+          </template>
+          </v-list-item>
+        </v-list>
+      </v-card>
+    </v-dialog>
+
+    <!-- Диалог для связей (остается) -->
+   <v-dialog v-model="isLinkDialogOpen" max-width="500px">
       <v-card>
         <v-card-title>{{ $t('linkedNotesSelect') }}</v-card-title>
          <v-text-field v-model="linkSearchQuery" :placeholder="$t('searchPlaceholder')" variant="filled" density="compact" hide-details autofocus class="mx-4 mb-2"></v-text-field>
@@ -1134,7 +1485,6 @@ const { allTags } = useItems();
     </v-dialog>
   </v-container>
 </template>
-
 <script setup>
 import { ref, watch, onMounted, onUnmounted, computed, inject } from 'vue';
 import { useRouter } from 'vue-router';
@@ -1146,120 +1496,129 @@ import { useNotifier } from '@/composables/useNotifier';
 const props = defineProps({ id: { type: String, required: false } });
 const router = useRouter();
 const { t } = useI18n();
-const { items, addItem, updateItem, allTags, getTitle } = useItems();
+const { items, addItem, updateItem, allTags, getTitle, linkTranslations } = useItems();
 const { showSuccess } = useNotifier();
-
 const registerSaveAction = inject('registerSaveAction');
+
 const isEditMode = computed(() => !!props.id);
 const isFormReady = ref(false);
-const currentLangTab = ref('be');
 
-// ✅ ИЗМЕНЕНИЕ: Обновляем структуру данных формы
+const langOptions = ref([
+    { title: 'Беларуская', value: 'be'},
+    { title: 'Русский', value: 'ru'},
+    { title: 'Latina', value: 'la'},
+    { title: 'Polski', value: 'pl'},
+]);
+
+
 const form = ref({
-  titleVersions: { ru: '', be: '', la: '', pl: '' },
-  textVersions: { ru: '', be: '', la: '', pl: '' },
+  title: '',
+  text: '',
+  lang: 'be',
   tags: [],
   source: '',
   linkedNoteIds: [],
+  translationIds: [],
   isNovenaPrayer: false,
   recommendedDate: null,
-  hidden: false
+  hidden: false,
 });
 
+// --- Логика для управления связями ---
 const isLinkDialogOpen = ref(false);
 const linkSearchQuery = ref('');
 const currentlyLinkedNotes = computed(() => form.value.linkedNoteIds?.map(id => items.value.find(item => item.id === id)).filter(Boolean) || []);
-
 const availableNotesToLink = computed(() => {
+    return items.value.filter(item => {
+        const isNotSelf = item.id !== props.id;
+        const isNotLinked = !form.value.linkedNoteIds?.includes(item.id);
+        const matchesSearch = linkSearchQuery.value ? getTitle(item).toLowerCase().includes(linkSearchQuery.value.toLowerCase()) : true;
+        return isNotSelf && isNotLinked && matchesSearch;
+    });
+});
+function addLink(noteId) { if (!form.value.linkedNoteIds) form.value.linkedNoteIds = []; form.value.linkedNoteIds.push(noteId); isLinkDialogOpen.value = false; linkSearchQuery.value = ''; }
+function removeLink(noteId) { form.value.linkedNoteIds = form.value.linkedNoteIds.filter(id => id !== noteId); }
+
+// --- Логика Управления переводами ---
+const isTranslationDialogOpen = ref(false);
+const translationSearchQuery = ref('');
+const currentlyLinkedTranslations = computed(() => form.value.translationIds?.map(id => items.value.find(item => item.id === id)).filter(Boolean) || []);
+const availableNotesToTranslate = computed(() => {
   return items.value.filter(item => {
-    const isNotSelf = item.id !== props.id;
-    const isNotLinked = !form.value.linkedNoteIds?.includes(item.id);
-    const matchesSearch = linkSearchQuery.value 
-      ? getTitle(item).toLowerCase().includes(linkSearchQuery.value.toLowerCase()) // Поиск по отображаемому заголовку
-      : true;
-    return isNotSelf && isNotLinked && matchesSearch;
+    if (item.id === props.id) return false;
+    if (form.value.translationIds?.includes(item.id)) return false;
+    if (item.lang === form.value.lang) return false;
+    const matchesSearch = translationSearchQuery.value ? getTitle(item).toLowerCase().includes(translationSearchQuery.value.toLowerCase()) : true;
+    return matchesSearch;
   });
 });
 
-function addLink(noteId) { 
-  if (!form.value.linkedNoteIds) form.value.linkedNoteIds = [];
-  form.value.linkedNoteIds.push(noteId); 
-  isLinkDialogOpen.value = false; 
-  linkSearchQuery.value = '';
+async function addTranslation(noteId) {
+    if (!form.value.translationIds) form.value.translationIds = [];
+    form.value.translationIds.push(noteId);
+    await linkTranslations(props.id, noteId);
+    showSuccess(t('translationLinked'));
+    isTranslationDialogOpen.value = false;
+    translationSearchQuery.value = '';
 }
 
-function removeLink(noteId) { form.value.linkedNoteIds = form.value.linkedNoteIds.filter(id => id !== noteId); }
+async function removeTranslation(noteId) {
+    form.value.translationIds = form.value.translationIds.filter(id => id !== noteId);
+    await linkTranslations(props.id, noteId, true);
+    showSuccess(t('translationUnlinked'));
+}
 
 async function handleSave() {
-  // ✅ Проверяем, есть ли хотя бы один заголовок
-  const hasAtLeastOneTitle = Object.values(form.value.titleVersions).some(title => title && title.trim() !== '');
-  if (!hasAtLeastOneTitle) {
-      alert('Пожалуйста, введите название хотя бы для одного языка.'); // Можно заменить на useNotifier
-      return;
+  if (!form.value.title || !form.value.title.trim()) {
+    alert(t('titleRequired'));
+    return;
   }
   
-  // Создаем объект для сохранения, только с непустыми полями
-  const dataToSave = {
-    titleVersions: {},
-    textVersions: {},
-    tags: form.value.tags || [],
-    source: form.value.source || '',
-    linkedNoteIds: form.value.linkedNoteIds || [],
-    isNovenaPrayer: form.value.isNovenaPrayer || false,
-    recommendedDate: form.value.recommendedDate || null,
-    hidden: form.value.hidden || false
-  };
-
-  for (const lang in form.value.titleVersions) {
-    if (form.value.titleVersions[lang]) {
-      dataToSave.titleVersions[lang] = form.value.titleVersions[lang];
-    }
-  }
-  for (const lang in form.value.textVersions) {
-    if (form.value.textVersions[lang] && form.value.textVersions[lang] !== '<p></p>') {
-      dataToSave.textVersions[lang] = form.value.textVersions[lang];
-    }
-  }
+  const dataToSave = { ...form.value };
 
   if (isEditMode.value) {
     await updateItem(props.id, dataToSave);
   } else {
-    await addItem(dataToSave);
+    const newDocRef = await addItem(dataToSave);
+    if (dataToSave.translationIds.length > 0) {
+        for (const transId of dataToSave.translationIds) {
+            await linkTranslations(newDocRef.id, transId);
+        }
+    }
   }
   showSuccess(t('noteSavedSuccess'));
   router.push({ name: 'ItemsList' });
 }
 
+// ✅ ✅ ✅ ИСПРАВЛЕННЫЙ БЛОК ✅ ✅ ✅
 onMounted(() => {
   registerSaveAction(handleSave);
   if (isEditMode.value) {
-    let stopWatch;
-    stopWatch = watch(items, (newItems) => {
+    // Объявляем переменную, которая будет хранить функцию для остановки наблюдателя
+    let unwatch = null;
+
+    // Присваиваем результат вызова watch этой переменной
+    unwatch = watch(items, (newItems) => {
       const itemToEdit = newItems.find(i => i.id === props.id);
       if (itemToEdit) {
-        // ✅ ИЗМЕНЕНИЕ: Заполняем новые структуры данных
         form.value = { 
-          titleVersions: { 
-            be: itemToEdit.titleVersions?.be || '',
-            ru: itemToEdit.titleVersions?.ru || '',
-            la: itemToEdit.titleVersions?.la || '',
-            pl: itemToEdit.titleVersions?.pl || ''
-          },
-          textVersions: {
-            be: itemToEdit.textVersions?.be || '',
-            ru: itemToEdit.textVersions?.ru || '',
-            la: itemToEdit.textVersions?.la || '',
-            pl: itemToEdit.textVersions?.pl || ''
-          },
-          source: itemToEdit.source || '',
+          title: itemToEdit.title || '',
+          text: itemToEdit.text || '',
+          lang: itemToEdit.lang || 'be',
           tags: itemToEdit.tags || [],
+          source: itemToEdit.source || '',
+          linkedNoteIds: itemToEdit.linkedNoteIds || [],
+          translationIds: itemToEdit.translationIds || [],
           isNovenaPrayer: itemToEdit.isNovenaPrayer || false,
           recommendedDate: itemToEdit.recommendedDate || null,
-          linkedNoteIds: itemToEdit.linkedNoteIds || [],
           hidden: itemToEdit.hidden || false
         };
         isFormReady.value = true;
-        if(stopWatch) stopWatch();
+        
+        // Проверяем, существует ли функция, и вызываем ее, чтобы остановить наблюдение
+        if (unwatch) {
+          unwatch();
+        }
       }
     }, { immediate: true });
   } else {
@@ -1288,7 +1647,9 @@ onUnmounted(() => {
             <v-icon v-if="novenaStore.isNovenaActive(item.id)" color="primary" class="mr-2">mdi-calendar-check</v-icon>
             <v-btn :icon="settings.isPinned(item.id) ? 'mdi-pin' : 'mdi-pin-outline'" :color="settings.isPinned(item.id) ? 'primary' : 'grey'" variant="text" size="small" class="mr-2" @click.stop="settings.togglePin(item.id)"></v-btn>
             <span @click="viewItem(item.id)" class="flex-grow-1" style="cursor: pointer;">{{ getTitle(item) }}</span>
-          </v-card-title>
+       <!-- ✅ ИЗМЕНЕНИЕ: Текстовая метка языка -->
+  <v-chip size="x-small" variant="tonal" class="ml-2 text-uppercase">{{ item.lang }}</v-chip>
+</v-card-title>
           <v-card-text class="pb-0" @click="viewItem(item.id)" style="cursor: pointer;">
             <p class="mb-4 text-medium-emphasis">{{ getPreviewText(item) }}</p>
             <v-chip-group><v-chip v-for="tag in item.tags" :key="tag" size="small" color="primary" variant="tonal">{{ tag }}</v-chip></v-chip-group>
@@ -1309,10 +1670,16 @@ onUnmounted(() => {
           <!-- ✅ ИЗМЕНЕНИЕ: Используем хелпер getTitle -->
           <v-list-item-title>{{ getTitle(item) }}</v-list-item-title>
           <template v-if="!authStore.user" v-slot:append>
+        <!-- ✅ ИЗМЕНЕНИЕ: Текстовая метка языка -->
+        <v-chip size="x-small" variant="text" class="text-uppercase mr-2">{{ item.lang }}</v-chip>
+       
             <v-progress-circular v-if="novenaStore.isNovenaActive(item.id)" :model-value="getNovenaProgress(item.id).percentage" :color="getNovenaProgress(item.id).color" size="24" width="2" class="ml-2"><small>{{ getNovenaProgress(item.id).completed }}</small></v-progress-circular>
             <v-icon v-if="item.hidden" color="grey" class="ml-2">mdi-eye-off-outline</v-icon>
           </template>
           <template v-if="authStore.user" v-slot:append>
+           <!-- ✅ ИЗМЕНЕНИЕ: Текстовая метка языка -->
+        <v-chip size="x-small" variant="text" class="text-uppercase mr-2">{{ item.lang }}</v-chip>
+     
             <v-icon v-if="item.hidden" color="grey" class="ml-2">mdi-eye-off-outline</v-icon>
             <v-progress-circular v-if="novenaStore.isNovenaActive(item.id)" :model-value="getNovenaProgress(item.id).percentage" :color="getNovenaProgress(item.id).color" size="24" width="2" class="ml-2"><small>{{ getNovenaProgress(item.id).completed }}</small></v-progress-circular>
             <v-btn icon="mdi-pencil" variant="text" size="small" @click.stop="navigateToEdit(item.id)"></v-btn>
@@ -1357,7 +1724,7 @@ import { useNovenaStore } from '@/stores/novena';
 const router = useRouter();
 const { t } = useI18n();
 const { items, isLoading, deleteItem, getTitle } = useItems();
-const { search, selectedTags } = useFilters();
+const { search, selectedTags, selectedLangs } = useFilters();
 const settings = useSettingsStore();
 const authStore = useAuthStore();
 const novenaStore = useNovenaStore();
@@ -1405,24 +1772,29 @@ function getPreviewText(item) {
   const text = (doc.body.textContent || "").trim();
   return text.length > 150 ? text.substring(0, 150) + '...' : text;
 }
-
 const filteredItems = computed(() => {
   if (isLoading.value) return [];
-  const searchLower = search.value.toLowerCase().trim();
   return items.value.filter(item => {
+    // Фильтр по скрытым заметкам
     if (!settings.showHiddenItems && item.hidden) {
       return false;
     }
-    const tagMatch = selectedTags.value.length === 0 || (item.tags && selectedTags.value.some(tag => item.tags.includes(tag)));
+    
+    // ✅ ФИЛЬТР ПО ЯЗЫКАМ
+    const langMatch = selectedLangs.value.length === 0 || selectedLangs.value.includes(item.lang);
+    if (!langMatch) return false;
+    // Фильтр по тегам
+    const tagMatch = selectedTags.value.length === 0 || 
+                     (item.tags && selectedTags.value.every(tag => item.tags.includes(tag)));
     if (!tagMatch) return false;
+    // Фильтр по поисковому запросу
+    const searchLower = search.value.toLowerCase().trim();
     if (searchLower) {
-      // ✅ ИЗМЕНЕНИЕ: Поиск по всем версиям заголовков и текстов
-      const titles = Object.values(item.titleVersions || {}).join(' ');
-      const texts = Object.values(item.textVersions || {}).join(' ');
-      const fullText = (titles + ' ' + texts).toLowerCase();
+      const fullText = (item.title + ' ' + item.text).toLowerCase();
       return fullText.includes(searchLower);
     }
-    return true;
+    
+    return true; // Если все проверки пройдены
   });
 });
 
@@ -1436,8 +1808,27 @@ function navigateToEdit(id) { router.push({ name: 'ItemEdit', params: { id } });
 <template>
   <v-container class="note-view-container">
     <div v-if="!isLoading && item">
+      <!-- ✅ ИЗМЕНЕННЫЙ БЛОК С ФЛАГАМИ -->
+      <div class="d-flex align-center justify-space-between flex-wrap gap-1">
+        <!-- ✅ ИЗМЕНЕННЫЙ БЛОК ЯЗЫКОВ -->
+<v-chip-group class="mb-2">
+  <v-chip
+    v-for="version in allLanguageVersions"
+    :key="version.id"
+    :to="{ name: 'ItemView', params: { id: version.id } }"
+    label
+    :variant="version.id === item.id ? 'flat' : 'outlined'"
+    :color="version.id === item.id ? 'primary' : ''"
+  >
+    <strong class="text-uppercase mr-1">{{ version.lang }}</strong>
+    
+  </v-chip>
+</v-chip-group>
+      </div>
+
       <!-- Заголовок -->
       <h2 class="text-h5 font-weight-bold mb-4 note-content-area">{{ getTitle(item) }}</h2>
+
 
       <!-- Панель Новенны -->
       <v-expansion-panels v-if="novenaStore.isNovenaActive(props.id)" class="my-6">
@@ -1449,13 +1840,8 @@ function navigateToEdit(id) { router.push({ name: 'ItemEdit', params: { id } });
                 <span class="font-weight-medium">{{ $t('prayerNovena') }}</span>
               </div>
               <div class="d-flex align-center mr-2">
-                <v-progress-circular
-                  :model-value="novenaProgress.percentage"
-                  :color="novenaProgress.color"
-                  size="24"
-                  width="2"
-                  class="mr-2"
-                >
+                <v-progress-circular :model-value="novenaProgress.percentage" :color="novenaProgress.color" size="24"
+                  width="2" class="mr-2">
                   <small>{{ novenaProgress.completed }}</small>
                 </v-progress-circular>
                 <span class="text-body-2 text-medium-emphasis">
@@ -1470,56 +1856,31 @@ function navigateToEdit(id) { router.push({ name: 'ItemEdit', params: { id } });
         </v-expansion-panel>
       </v-expansion-panels>
 
-      <!-- Быстрая навигация по языкам -->
-      <v-chip-group v-if="sortedLangs.length > 1" class="mb-6">
-        <v-chip
-          v-for="lang in sortedLangs"
-          :key="`chip-${lang}`"
-          @click="scrollToLang(lang)"
-        >
-          {{ t(`langLabels.${lang}`) }}
-        </v-chip>
-      </v-chip-group>
 
-      <!-- Текст молитвы -->
-      <div 
-        v-for="lang in sortedLangs" 
-        :key="lang" 
-        class="mb-4"
-        @click="handleContentClick"
-        :ref="el => (langRefs[lang] = el)"
-      >
-        <div class="lang-label">{{ t('langLabels.' + lang) }}</div>
-        <div v-html="processedHtml[lang]" class="note-content-area"></div>
+      <!-- Текст молитвы (теперь только один) -->
+      <div class="mb-4" @click="handleContentClick">
+        <div v-html="processedHtml" class="note-content-area"></div>
       </div>
+
 
       <!-- Связанные заметки -->
       <div v-if="linkedNotes.length > 0" class="mt-8">
         <v-divider class="mb-4"></v-divider>
         <v-list lines="one" density="compact" class="pa-0 bg-transparent linked-notes-list">
-          <v-list-item
-            v-for="linkedNote in linkedNotes"
-            :key="linkedNote.id"
-            @click="router.push({ name: 'ItemView', params: { id: linkedNote.id } })"
-            class="mb-1"
-          >
+          <v-list-item v-for="linkedNote in linkedNotes" :key="linkedNote.id"
+            @click="router.push({ name: 'ItemView', params: { id: linkedNote.id } })" class="mb-1">
             <template v-slot:prepend>
               <v-icon color="grey-darken-1">mdi-link-variant</v-icon>
             </template>
-          <v-list-item-title class="text-primary font-weight-medium">{{ getTitle(linkedNote) }}</v-list-item-title>
+            <v-list-item-title class="text-primary font-weight-medium">{{ getTitle(linkedNote) }}</v-list-item-title>
           </v-list-item>
         </v-list>
       </div>
 
       <!-- Кнопка для старта новенны -->
-      <div v-if="item.isNovenaPrayer && !novenaStore.isNovenaActive(props.id)"  class="text-center my-8">
-        <v-btn
-          @click="isNovenaDialogVisible = true"
-          color="primary"
-          variant="tonal"
-          size="large"
-          prepend-icon="mdi-play-circle-outline"
-        >
+      <div v-if="item.isNovenaPrayer && !novenaStore.isNovenaActive(props.id)" class="text-center my-8">
+        <v-btn @click="isNovenaDialogVisible = true" color="primary" variant="tonal" size="large"
+          prepend-icon="mdi-play-circle-outline">
           {{ $t('startNovena') }}
         </v-btn>
       </div>
@@ -1538,10 +1899,10 @@ function navigateToEdit(id) { router.push({ name: 'ItemEdit', params: { id } });
 
     <!-- Загрузка и состояние "не найдено" -->
     <div v-else-if="!isLoading && !item" class="text-center mt-16">
-        <v-icon size="64" class="mb-4">mdi-file-question-outline</v-icon>
-        <h2 class="text-h5 mb-4">{{ $t('noteNotFound') }}</h2>
-        <p class="text-medium-emphasis mb-6">{{ $t('noteNotFoundMessage') }}</p>
-        <v-btn color="primary" :to="{ name: 'ItemsList' }">{{ $t('backToHome') }}</v-btn>
+      <v-icon size="64" class="mb-4">mdi-file-question-outline</v-icon>
+      <h2 class="text-h5 mb-4">{{ $t('noteNotFound') }}</h2>
+      <p class="text-medium-emphasis mb-6">{{ $t('noteNotFoundMessage') }}</p>
+      <v-btn color="primary" :to="{ name: 'ItemsList' }">{{ $t('backToHome') }}</v-btn>
     </div>
     <div v-else class="text-center text-grey-darken-1 mt-16">
       <v-progress-circular indeterminate color="primary"></v-progress-circular>
@@ -1550,63 +1911,32 @@ function navigateToEdit(id) { router.push({ name: 'ItemEdit', params: { id } });
     <!-- БЛОК С ПЛАВАЮЩИМИ КНОПКАМИ "РИТУАЛА" -->
     <div v-if="isNovenaActiveAndInProgress && !isTodayCompleted" class="fab-container">
       <!-- Кнопка "К началу" -->
-      <v-btn
-        v-if="hasStartMarker"
-        icon="mdi-cross"
-        :color="hasScrolledToStart ? 'success' : 'secondary'"
-        variant="tonal"
-        class="mb-2"
-        @click="executeScrollStep('start')"
-        title="Да ўступу"
-      ></v-btn>
+      <v-btn v-if="hasStartMarker" icon="mdi-cross" :color="hasScrolledToStart ? 'success' : 'secondary'"
+        variant="tonal" class="mb-2" @click="executeScrollStep('start')" title="Да ўступу"></v-btn>
 
       <!-- Кнопка "К текущему дню" -->
-      <v-btn
-        v-if="currentNovenaDay"
-        icon="mdi-crosshairs-gps"
-        :color="hasScrolledToDay ? 'success' : 'secondary'"
-        :disabled="!hasScrolledToStart"
-        variant="tonal"
-        class="mb-2"
-        @click="executeScrollStep('day')"
-        title="Да сённяшняга дня"
-      ></v-btn>
+      <v-btn v-if="currentNovenaDay" icon="mdi-crosshairs-gps" :color="hasScrolledToDay ? 'success' : 'secondary'"
+        :disabled="!hasScrolledToStart" variant="tonal" class="mb-2" @click="executeScrollStep('day')"
+        title="Да сённяшняга дня"></v-btn>
 
       <!-- Кнопка "К окончанию" -->
-      <v-btn
-        v-if="hasFinishMarker"
-        icon="mdi-flag-checkered"
-        :color="hasScrolledToFinish ? 'success' : 'secondary'"
-        :disabled="!hasScrolledToDay"
-        variant="tonal"
-        class="mb-2"
-        @click="executeScrollStep('finish')"
-        title="Да заканчэння"
-      ></v-btn>
-      
+      <v-btn v-if="hasFinishMarker" icon="mdi-flag-checkered" :color="hasScrolledToFinish ? 'success' : 'secondary'"
+        :disabled="!hasScrolledToDay" variant="tonal" class="mb-2" @click="executeScrollStep('finish')"
+        title="Да заканчэння"></v-btn>
+
       <!-- Кнопка "Завершить день" -->
       <v-expand-transition>
-          <v-btn
-            v-if="showCompleteButton"
-            icon="mdi-calendar-check"
-            color="primary"
-            variant="flat"
-            @click="novenaStore.toggleDayCompletion(props.id, novenaStore.getTodayDateString())"
-            title="Адзначыць дзень як выкананы"
-          ></v-btn>
+        <v-btn v-if="showCompleteButton" icon="mdi-calendar-check" color="primary" variant="flat"
+          @click="novenaStore.toggleDayCompletion(props.id, novenaStore.getTodayDateString())"
+          title="Адзначыць дзень як выкананы"></v-btn>
       </v-expand-transition>
     </div>
-    
+
     <!-- Если день уже завершен, показываем одну кнопку-галочку -->
-     <div v-if="isNovenaActiveAndInProgress && isTodayCompleted" class="fab-container">
-        <v-btn
-            icon="mdi-calendar-check"
-            color="success"
-            variant="flat"
-            title="Дзень выкананы!"
-            @click="novenaStore.toggleDayCompletion(props.id, novenaStore.getTodayDateString())"
-          ></v-btn>
-     </div>
+    <div v-if="isNovenaActiveAndInProgress && isTodayCompleted" class="fab-container">
+      <v-btn icon="mdi-calendar-check" color="success" variant="flat" title="Дзень выкананы!"
+        @click="novenaStore.toggleDayCompletion(props.id, novenaStore.getTodayDateString())"></v-btn>
+    </div>
 
 
     <!-- Диалог старта новенны -->
@@ -1619,13 +1949,8 @@ function navigateToEdit(id) { router.push({ name: 'ItemEdit', params: { id } });
             <v-chip v-for="d in [7, 9, 33, 54]" :key="d" :value="d" filter>{{ d }} {{ $t('days') }}</v-chip>
           </v-chip-group>
           <p class="text-subtitle-1 mb-2">{{ $t('novenaDurationInput') }}</p>
-          <v-text-field
-            v-model.number="novenaDays"
-            :label="$t('novenaDaysLabel')"
-            type="number"
-            variant="outlined"
-            autofocus
-          ></v-text-field>
+          <v-text-field v-model.number="novenaDays" :label="$t('novenaDaysLabel')" type="number" variant="outlined"
+            autofocus></v-text-field>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
@@ -1648,6 +1973,8 @@ import { useI18n } from 'vue-i18n';
 import { useNovenaStore } from '@/stores/novena';
 import NovenaTracker from '@/components/NovenaTracker.vue';
 
+
+
 const props = defineProps({ id: { type: String, required: true } });
 const router = useRouter();
 const { t } = useI18n();
@@ -1657,6 +1984,16 @@ const settings = useSettingsStore();
 const { requestWakeLock, releaseWakeLock } = useWakeLock();
 
 const item = computed(() => items.value.find(i => i.id === props.id));
+const translations = computed(() => item.value?.translationIds?.map(id => items.value.find(note => note.id === id)).filter(Boolean) || []);
+
+// ✅ НОВОЕ COMPUTED СВОЙСТВО: Объединяем текущую заметку и ее переводы в один массив
+const allLanguageVersions = computed(() => {
+  if (!item.value) return [];
+  const all = [item.value, ...translations.value];
+  // Сортируем, чтобы всегда был одинаковый порядок, например, по коду языка
+  return all.sort((a, b) => a.lang.localeCompare(b.lang));
+});
+
 const isNovenaDialogVisible = ref(false);
 const novenaDays = ref(9);
 
@@ -1666,33 +2003,8 @@ const linkedNotes = computed(() => item.value?.linkedNoteIds?.map(id => items.va
 function handleContentClick(event) {
   const link = event.target.closest('a');
   if (link && link.pathname.startsWith('/item/')) {
-    event.preventDefault(); 
+    event.preventDefault();
     router.push(link.pathname);
-  }
-}
-
-// --- Логика для языковых версий ---
-const availableVersions = computed(() => {
-  if (!item.value?.textVersions) return {};
-  return Object.fromEntries(
-    Object.entries(item.value.textVersions).filter(([lang, text]) => text && text.trim() !== '<p></p>')
-  );
-});
-
-const sortedLangs = computed(() => {
-  const langs = Object.keys(availableVersions.value);
-  return langs.sort((a, b) => (a === 'be' ? -1 : b === 'be' ? 1 : a.localeCompare(b)));
-});
-
-const langRefs = ref({});
-onBeforeUpdate(() => {
-  langRefs.value = {};
-});
-
-function scrollToLang(lang) {
-  const element = langRefs.value[lang];
-  if (element) {
-    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
 
@@ -1719,83 +2031,78 @@ const hasStartMarker = ref(false);
 const hasFinishMarker = ref(false);
 
 const isTodayCompleted = computed(() => {
-    if (!currentNovenaDay.value) return false;
-    const data = novenaStore.getNovenaData(props.id);
-    const todayStr = novenaStore.getTodayDateString();
-    return data?.completedDates.includes(todayStr) || false;
+  if (!currentNovenaDay.value) return false;
+  const data = novenaStore.getNovenaData(props.id);
+  const todayStr = novenaStore.getTodayDateString();
+  return data?.completedDates.includes(todayStr) || false;
 });
 
 const showCompleteButton = computed(() => {
-    return hasScrolledToStart.value && hasScrolledToDay.value && hasScrolledToFinish.value;
+  return hasScrolledToStart.value && hasScrolledToDay.value && hasScrolledToFinish.value;
 });
 
 function executeScrollStep(step) {
-    if (step === 'start') {
-        scrollToMarker('start');
-        hasScrolledToStart.value = true;
-    } else if (step === 'day') {
-        scrollToCurrentDay();
-        hasScrolledToDay.value = true;
-    } else if (step === 'finish') {
-        scrollToMarker('finish');
-        hasScrolledToFinish.value = true;
-    }
+  if (step === 'start') {
+    scrollToMarker('start');
+    hasScrolledToStart.value = true;
+  } else if (step === 'day') {
+    scrollToCurrentDay();
+    hasScrolledToDay.value = true;
+  } else if (step === 'finish') {
+    scrollToMarker('finish');
+    hasScrolledToFinish.value = true;
+  }
 }
 
 function resetRitualState() {
-    hasScrolledToStart.value = false;
-    hasScrolledToDay.value = false;
-    hasScrolledToFinish.value = false;
+  hasScrolledToStart.value = false;
+  hasScrolledToDay.value = false;
+  hasScrolledToFinish.value = false;
 }
 
 onBeforeRouteLeave(() => { resetRitualState(); });
 onUnmounted(() => { resetRitualState(); });
 
+// ✅ ИСПРАВЛЕННЫЙ БЛОК
 watchEffect(() => {
-  const versions = availableVersions.value;
-  if (typeof window === 'undefined' || !item.value || Object.keys(versions).length === 0) {
+  if (typeof window === 'undefined' || !item.value || !item.value.text) {
     hasStartMarker.value = false;
     hasFinishMarker.value = false;
     return;
   }
-  const firstLangHtml = versions[sortedLangs.value[0]];
-  if (!firstLangHtml) return;
 
   const parser = new DOMParser();
-  const doc = parser.parseFromString(firstLangHtml, 'text/html');
+  const doc = parser.parseFromString(item.value.text, 'text/html');
+
   hasStartMarker.value = !!doc.querySelector('[data-marker="start"]');
   hasFinishMarker.value = !!doc.querySelector('[data-marker="finish"]');
 });
 
 const processedHtml = computed(() => {
-  const versions = availableVersions.value;
   const dayToHighlight = currentNovenaDay.value;
-  if (!dayToHighlight) return versions;
+  const originalHtml = item.value?.text || '';
+  if (!dayToHighlight || !originalHtml) return originalHtml;
 
-  const processed = {};
-  for (const lang in versions) {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(versions[lang], 'text/html');
-    const element = doc.querySelector(`[data-day="${dayToHighlight}"]`);
-    if (element) {
-      element.classList.add('current-day-marker');
-    }
-    processed[lang] = doc.body.innerHTML;
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(originalHtml, 'text/html');
+  const element = doc.querySelector(`[data-day="${dayToHighlight}"]`);
+  if (element) {
+    element.classList.add('current-day-marker');
   }
-  return processed;
+  return doc.body.innerHTML;
 });
 
 const novenaProgress = computed(() => {
-    const data = novenaStore.getNovenaData(props.id);
-    if (!data || !data.totalDays) return { percentage: 0, color: 'grey', completed: 0, total: 0 };
-    const todayStr = novenaStore.getTodayDateString();
-    const isTodayCompleted = data.completedDates.includes(todayStr);
-    return {
-        percentage: (data.completedDates.length / data.totalDays) * 100,
-        completed: data.completedDates.length,
-        total: data.totalDays,
-        color: isTodayCompleted ? 'success' : 'warning'
-    };
+  const data = novenaStore.getNovenaData(props.id);
+  if (!data || !data.totalDays) return { percentage: 0, color: 'grey', completed: 0, total: 0 };
+  const todayStr = novenaStore.getTodayDateString();
+  const isTodayCompleted = data.completedDates.includes(todayStr);
+  return {
+    percentage: (data.completedDates.length / data.totalDays) * 100,
+    completed: data.completedDates.length,
+    total: data.totalDays,
+    color: isTodayCompleted ? 'success' : 'warning'
+  };
 });
 
 function handleStartNovena() {
@@ -1825,13 +2132,14 @@ watchEffect(() => {
   padding-left: 8px;
   padding-right: 8px;
 }
+
 .fab-container {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    display: flex;
-    flex-direction: column;
-    z-index: 5;
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  z-index: 5;
 }
 </style>
 ```
@@ -2186,46 +2494,38 @@ const formatDate = (dateString) => {
 ```
 <template>
   <v-container>
-    <h2 class="text-h5 font-weight-medium mb-6">{{ $t('myPrayerRule') }}</h2>
-    
-    <!-- ======================= -->
-    <!--    РЕЖИМ РЕДАКТИРОВАНИЯ   -->
-    <!-- ======================= -->
+     <h2 class="text-h5 font-weight-medium mb-6">{{ $t('myPrayerRule') }}</h2>
+    <!-- РЕЖИМ РЕДАКТИРОВАНИЯ -->
     <div v-if="isEditing">
       <div v-if="prayerRule.ruleItems.length === 0" class="text-center mt-16">
         <p class="text-h6">{{ $t('ruleIsEmpty') }}</p>
         <p class="text-medium-emphasis">{{ $t('ruleIsEmptyHint') }}</p>
       </div>
       <div v-else>
-        <div v-for="(item, index) in prayerRule.ruleItems" :key="item.itemId" class="prayer-item-container">
-          <h3 class="text-h5 mb-3">{{ getItemTitle(item.itemId) }}</h3>
-          <div class="d-flex align-center flex-wrap ga-2 mb-4 pa-2 control-panel">
-            <div>
-              <v-btn icon="mdi-arrow-up" variant="text" size="small" :disabled="index === 0" @click="prayerRule.moveItem(index, index - 1)"></v-btn>
-              <v-btn icon="mdi-arrow-down" variant="text" size="small" :disabled="index === prayerRule.ruleItems.length - 1" @click="prayerRule.moveItem(index, index + 1)"></v-btn>
-            </div>
-            <v-spacer></v-spacer>
-            <v-btn-toggle :model-value="item.lang" @update:model-value="prayerRule.updateItemLanguage(index, $event)" variant="outlined" density="compact" mandatory>
-              <v-btn value="be" size="x-small">Бел</v-btn>
-              <v-btn value="ru" size="x-small">Рус</v-btn>
-              <v-btn value="la" size="x-small">Lat</v-btn>
-            </v-btn-toggle>
-            <v-btn icon="mdi-delete-outline" variant="text" @click="prayerRule.removeItem(index)"></v-btn>
-          </div>
-          <div v-html="getItemContent(item)" class="note-content-area ProseMirror"></div>
-          <v-divider class="my-8"></v-divider>
+        <!-- ✅✅✅ Рендерим карточки с кнопками управления порядком ✅✅✅ -->
+        <div v-for="(item, index) in ruleItemsWithDetails" :key="item.id" class="prayer-item-container">
+            <v-card variant="outlined" class="pa-4">
+              <div class="d-flex align-center mb-4">
+                <h3 class="text-h5">{{ getTitle(item) }}</h3>
+                <v-spacer></v-spacer>
+                <!-- Кнопки перемещения -->
+                <v-btn icon="mdi-arrow-up" variant="text" size="small" :disabled="index === 0" @click="prayerRule.moveItem(index, index - 1)"></v-btn>
+                <v-btn icon="mdi-arrow-down" variant="text" size="small" :disabled="index === ruleItemsWithDetails.length - 1" @click="prayerRule.moveItem(index, index + 1)"></v-btn>
+                <!-- Кнопка удаления -->
+                <v-btn icon="mdi-delete-outline" variant="text" size="small" @click="prayerRule.removeItem(index)"></v-btn>
+              </div>
+              <div v-html="getItemContent(item)" class="note-content-area ProseMirror"></div>
+            </v-card>
+            <v-divider class="my-4"></v-divider>
         </div>
       </div>
       <v-btn icon="mdi-plus" location="bottom right" size="large" color="primary" position="fixed" variant="elevated" elevation="8" class="ma-4" @click="isAddDialogOpen = true"></v-btn>
     </div>
-
-    <!-- ======================= -->
-    <!--    РЕЖИМ ПРОСМОТРА      -->
-    <!-- ======================= -->
+    <!-- РЕЖИМ ПРОСМОТРА -->
     <div v-else>
       <div v-if="prayerRule.ruleItems.length > 0">
-        <div v-for="(item, index) in prayerRule.ruleItems" :key="`view-${item.itemId}`">
-          <h3 class="text-h5 mb-3">{{ getItemTitle(item.itemId) }}</h3>
+        <div v-for="item in ruleItemsWithDetails" :key="`view-${item.id}`">
+          <h3 class="text-h5 mb-3">{{ getTitle(item) }}</h3>
           <div v-html="getItemContent(item)" class="note-content-area ProseMirror"></div>
           <v-divider class="my-8"></v-divider>
         </div>
@@ -2240,7 +2540,6 @@ const formatDate = (dateString) => {
         </v-btn>
       </div>
     </div>
-
     <!-- ✅ ИЗМЕНЕНИЕ: НОВЫЙ ДИАЛОГ ВМЕСТО АВТОКОМПЛИТА -->
     <v-dialog
       v-model="isAddDialogOpen"
@@ -2291,11 +2590,9 @@ import { usePageMode } from '@/composables/usePageMode';
 import { usePrayerRuleStore } from '@/stores/prayerRule';
 import { useItems } from '@/composables/useItems';
 import { useI18n } from 'vue-i18n';
-import { getTitleByLang } from '@/utils/i18n';
-
 const { isEditing, setEditing } = usePageMode();
 const prayerRule = usePrayerRuleStore();
-const { items } = useItems();
+const { items, getTitle } = useItems();
 const { t } = useI18n();
 
 const isAddDialogOpen = ref(false);
@@ -2305,11 +2602,14 @@ onUnmounted(() => {
   setEditing(false);
 });
 
-// ✅ Хелпер для получения заголовка
-const getTitle = (item) => getTitleByLang(item);
+// ✅ Возвращаемся к более простой логике: получаем полные объекты на основе ID из стора
+const ruleItemsWithDetails = computed(() => {
+    return prayerRule.ruleItems.map(itemId => items.value.find(i => i.id === itemId)).filter(Boolean);
+});
 
+// ✅ Измененная логика
 const availableItems = computed(() => {
-    const ruleItemIds = new Set(prayerRule.ruleItems.map(i => i.itemId));
+    const ruleItemIds = new Set(prayerRule.ruleItems); // Теперь это просто массив ID
     return items.value.filter(item => !ruleItemIds.has(item.id));
 });
 
@@ -2328,10 +2628,15 @@ const getItemTitle = (itemId) => {
     return item ? getTitle(item) : `[${t('noteNotFound')}]`;
 };
 
-const getItemContent = (ruleItem) => {
-    const fullItem = items.value.find(i => i.id === ruleItem.itemId);
-    if (!fullItem) return `[${t('noteNotFound')}]`;
-    return fullItem.textVersions[ruleItem.lang] || `[${t('noTextInLang')}]`;
+// ✅ Измененная логика
+// const getItemContent = (itemId) => {
+//     const fullItem = items.value.find(i => i.id === itemId);
+//     if (!fullItem) return `[${t('noteNotFound')}]`;
+//     return fullItem.text || `[${t('noTextInLang')}]`; // Просто берем поле text
+// };
+const getItemContent = (item) => {
+    if (!item) return `[${t('noteNotFound')}]`;
+    return item.text || `[${t('noTextInLang')}]`;
 };
 
 // ✅ Обновленная функция добавления
@@ -2342,9 +2647,6 @@ function handleAddItem(item) {
     isAddDialogOpen.value = false; // Закрываем диалог
 }
 
-onMounted(() => {
-  console.log('%c[PrayerRuleView.vue] Компонент успешно смонтирован!', 'background: #28a745; color: white; padding: 2px 5px; border-radius: 3px;');
-});
 </script>
 
 <style scoped>
@@ -2702,6 +3004,140 @@ export function useAppBar() {
 }
 ```
 
+### src/composables/useDataManagement.js
+```
+// src/composables/useDataManagement.js
+import { ref } from 'vue';
+import { collection, doc, writeBatch, getDocs } from 'firebase/firestore';
+import { db } from '@/firebase';
+import { useItems } from '@/composables/useItems';
+import { useNotifier } from '@/composables/useNotifier';
+import { useI18n } from 'vue-i18n';
+
+export function useDataManagement() {
+  const { items } = useItems(); // Нам нужны items только для экспорта
+  const { showSuccess, showError } = useNotifier();
+  const { t } = useI18n();
+
+  const isImporting = ref(false);
+  const isImportDialogVisible = ref(false);
+  const importFile = ref(null);
+  const previewItems = ref([]);
+  const importMode = ref('add'); // 'add' или 'overwrite'
+
+  const exportToJson = () => {
+    try {
+      // Удаляем реактивность и лишние поля перед экспортом
+      const dataToExport = JSON.parse(JSON.stringify(items.value));
+      const dataStr = JSON.stringify(dataToExport, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `prayers_backup_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      showSuccess(t('exportSuccess'));
+    } catch (e) {
+      console.error("JSON Export Error:", e);
+      showError(t('exportError'));
+    }
+  };
+  
+  // Мы удаляем экспорт в CSV, так как он не подходит для новой структуры
+  const exportToCsv = () => {
+    showError('Экспорт в CSV больше не поддерживается.');
+  };
+
+  const importFromFile = (file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (!Array.isArray(data)) throw new Error("JSON must be an array.");
+
+        previewItems.value = data;
+        importFile.value = file;
+        isImportDialogVisible.value = true;
+      } catch (e) {
+        console.error("Import Error:", e);
+        showError(t('importParseError'));
+      }
+    };
+    reader.readAsText(file);
+  };
+  
+  const confirmImport = async () => {
+    isImporting.value = true;
+    const batch = writeBatch(db);
+    const itemsCollectionRef = collection(db, 'items');
+    
+    let addedCount = 0;
+    let updatedCount = 0;
+
+    try {
+      // Если режим "перезаписать", нам нужно получить текущие ID из базы
+      let existingIds = new Set();
+      if (importMode.value === 'overwrite') {
+        const querySnapshot = await getDocs(itemsCollectionRef);
+        querySnapshot.forEach(doc => existingIds.add(doc.id));
+      }
+
+      for (const item of previewItems.value) {
+        // У каждой записи должен быть ID. Если его нет, пропускаем.
+        if (!item.id) continue;
+        
+        const docRef = doc(db, 'items', item.id);
+
+        if (existingIds.has(item.id)) {
+          // Если ID существует и режим 'overwrite'
+          if (importMode.value === 'overwrite') {
+            batch.set(docRef, item); // set полностью перезаписывает документ
+            updatedCount++;
+          }
+        } else {
+          // Если ID не существует, всегда добавляем
+          batch.set(docRef, item);
+          addedCount++;
+        }
+      }
+
+      await batch.commit();
+      showSuccess(t('importSuccess', { added: addedCount, updated: updatedCount }));
+
+    } catch (e) {
+      console.error("Error during Firestore batch operation:", e);
+      showError(t('importDbError'));
+    } finally {
+      cancelImport();
+      isImporting.value = false;
+    }
+  };
+
+  const cancelImport = () => {
+    isImportDialogVisible.value = false;
+    importFile.value = null;
+    previewItems.value = [];
+    importMode.value = 'add';
+  };
+
+  return { 
+    exportToJson, 
+    exportToCsv,
+    importFromFile,
+    isImporting,
+    isImportDialogVisible,
+    importFile,
+    previewItems,
+    importMode,
+    confirmImport,
+    cancelImport
+  };
+}
+```
+
 ### src/composables/useFilters.js
 ```
 import { ref } from 'vue';
@@ -2710,12 +3146,15 @@ import { ref } from 'vue';
 const search = ref('');
 const selectedTags = ref([]);
 
+const selectedLangs = ref([]); // ✅ ДОБАВЬТЕ ЭТУ СТРОКУ
+
 // Экспортируем функцию, которая будет предоставлять доступ
 // к этим переменным в любом компоненте
 export function useFilters() {
   return {
     search,
     selectedTags,
+    selectedLangs, // ✅ И ЭТУ
   };
 }
 ```
@@ -2795,12 +3234,43 @@ export function useItems() {
     await updateDoc(doc(db, 'items', id), dataToUpdate);
   };
 
-   // ✅ 2. СОЗДАЕМ И ЭКСПОРТИРУЕМ ФУНКЦИЮ
-  const getTitle = (item) => {
-    if (!item) return '';
-    // Можно указать предпочитаемый порядок языков прямо здесь
-    return getTitleByLang(item, ['be', 'ru', 'la', 'pl']);
+   const linkTranslations = async (docId1, docId2, remove = false) => {
+    const doc1Ref = doc(db, 'items', docId1);
+    const doc2Ref = doc(db, 'items', docId2);
+    const doc1 = items.value.find(i => i.id === docId1);
+    const doc2 = items.value.find(i => i.id === docId2);
+    if (!doc1 || !doc2) return;
+    // Обновляем первый документ
+    let newTrans1 = doc1.translationIds ? [...doc1.translationIds] : [];
+    if (remove) {
+      newTrans1 = newTrans1.filter(id => id !== docId2);
+    } else if (!newTrans1.includes(docId2)) {
+      newTrans1.push(docId2);
+    }
+    await updateDoc(doc1Ref, { translationIds: newTrans1 });
+    // Обновляем второй документ
+    let newTrans2 = doc2.translationIds ? [...doc2.translationIds] : [];
+    if (remove) {
+      newTrans2 = newTrans2.filter(id => id !== docId1);
+    } else if (!newTrans2.includes(docId1)) {
+      newTrans2.push(docId1);
+    }
+    await updateDoc(doc2Ref, { translationIds: newTrans2 });
   };
+
+   const allLangs = computed(() => {
+    if (!items.value) return [];
+    // Собираем все уникальные языки из заметок
+    const langs = items.value.map(item => item.lang);
+    // Возвращаем отсортированный массив уникальных значений
+    return [...new Set(langs)].sort();
+  });
+
+
+  const getTitle = (item) => {
+    return item?.title || '';
+  };
+
 
   return {
     items: sortedItems, // ✅ Экспортируем уже отсортированный массив
@@ -2809,7 +3279,9 @@ export function useItems() {
     addItem,
     deleteItem,
     updateItem,
-    getTitle // ✅ 3. ЭКСПОРТИРУЕМ
+    getTitle, // ✅ 3. ЭКСПОРТИРУЕМ
+  linkTranslations,
+  allLangs
   };
 }
 ```
@@ -3182,7 +3654,45 @@ export default i18n;
   "decline": "Адхіліць",
 
   "novenaDurationChoice": "Выберы колькасць дзён",
-  "novenaDurationInput": "Альбо, напішы"
+  "novenaDurationInput": "Альбо, напішы",
+  "dataManagement": "Кіраванне данымі",
+  "exportToJson": "Экспарт у JSON",
+  "exportToCsv": "Экспарт у CSV",
+  "importFromFile": "Імпарт з файла",
+  "exportSuccess": "Экспарт паспяхова завершаны!",
+  "exportError": "Памылка падчас экспарту.",
+  "importParseError": "Не атрымалася прачытаць файл. Пераканайцеся, што гэта карэктны JSON-файл.",
+  "importDbError": "Адбылася памылка пры захаванні даных.",
+  "importSuccess": "Імпарт завершаны. Дададзена: {added}, Абноўлена: {updated}.",
+  "importConfirmationTitle": "Пацвярджэнне імпарту",
+  "importConfirmationMessage": "Вы збіраецеся імпартаваць {count} запісаў з файла {fileName}.",
+  "importWarning": "Гэта дзеянне нельга адмяніць. Існуючыя запісы могуць быць перазапісаны ў залежнасці ад абранага рэжыму.",
+  "importModeLabel": "Рэжым імпарту:",
+  "importMode": {
+    "add": "Дадаваць толькі новыя",
+    "overwrite": "Дадаваць новыя і перазапісваць існуючыя"
+  },
+  "import": "Імпартаваць",
+"noteLanguage": "Мова",
+"languageCannotBeChanged": "Мову нельга змяніць пасля стварэння.",
+"translations": "Пераклады",
+"addTranslation": "Дадаць пераклад",
+"selectTranslation": "Выберыце пераклад",
+"translationLinked": "Пераклад паспяхова прывязаны!",
+"translationUnlinked": "Сувязь з перакладам выдалена.",
+"titleRequired": "Калі ласка, ўвядзіце назву.",
+"langLabelsFull": {
+    "ru": "Русский",
+    "be": "Беларуская",
+    "la": "Latina",
+    "pl": "Polski"
+},
+ "share": "Падзяліцца",
+  "copyLink": "Капіяваць спасылку",
+  "linkCopied": "Спасылка скапіявана ў буфер абмену!",
+  "shareError": "Не атрымалася падзяліцца. Магчыма, ваш браўзер не падтрымлівае гэту функцыю.",
+  "filters": "Фільтры",
+  "holyMass": "Святая Імша"
 }
 ```
 
@@ -3310,7 +3820,45 @@ export default i18n;
   "decline": "Отклонить",
 
   "novenaDurationChoice": "Выбери колличество дней",
-  "novenaDurationInput": "Или, введи"
+  "novenaDurationInput": "Или, введи",
+  "dataManagement": "Управление данными",
+  "exportToJson": "Экспорт в JSON",
+  "exportToCsv": "Экспорт в CSV",
+  "importFromFile": "Импорт из файла",
+  "exportSuccess": "Экспорт успешно завершен!",
+  "exportError": "Ошибка во время экспорта.",
+  "importParseError": "Не удалось прочитать файл. Убедитесь, что это корректный JSON-файл.",
+  "importDbError": "Произошла ошибка при сохранении данных.",
+  "importSuccess": "Импорт завершен. Добавлено: {added}, Обновлено: {updated}.",
+  "importConfirmationTitle": "Подтверждение импорта",
+  "importConfirmationMessage": "Вы собираетесь импортировать {count} записей из файла {fileName}.",
+  "importWarning": "Это действие нельзя отменить. Существующие записи могут быть перезаписаны в зависимости от выбранного режима.",
+  "importModeLabel": "Режим импорта:",
+  "importMode": {
+    "add": "Добавлять только новые",
+    "overwrite": "Добавлять новые и перезаписывать существующие"
+  },
+  "import": "Импортировать"
+  ,"noteLanguage": "Язык заметки",
+"languageCannotBeChanged": "Язык нельзя изменить после создания.",
+"translations": "Переводы",
+"addTranslation": "Добавить перевод",
+"selectTranslation": "Выберите перевод",
+"translationLinked": "Перевод успешно привязан!",
+"translationUnlinked": "Связь с переводом удалена.",
+"titleRequired": "Пожалуйста, введите название.",
+"langLabelsFull": {
+    "ru": "Русский",
+    "be": "Беларуская",
+    "la": "Latina",
+    "pl": "Polski"
+},
+"share": "Поделиться",
+  "copyLink": "Копировать ссылку",
+  "linkCopied": "Ссылка скопирована в буфер обмена!",
+  "shareError": "Не удалось поделиться. Возможно, ваш браузер не поддерживает эту функцию.",
+  "filters": "Фильтры",
+  "holyMass": "Святая Месса"
 }
 ```
 
@@ -3375,12 +3923,14 @@ const routes = [
   { path: '/login', name: 'Login', component: () => import('@/components/LoginView.vue') },
   { path: '/', name: 'ItemsList', component: () => import('@/components/ItemsList.vue') },
   { path: '/item/:id', name: 'ItemView', component: () => import('@/components/ItemView.vue'), props: true },
+  { path: '/p/:id', name: 'PublicItemView', component: () => import('@/components/ItemView.vue'), props: true },
   { path: '/settings', name: 'Settings', component: () => import('@/components/SettingsView.vue') },
   { path: '/edit/:id', name: 'ItemEdit', component: () => import('@/components/ItemForm.vue'), props: true, meta: { requiresAuth: true } },
   { path: '/add', name: 'ItemAdd', component: () => import('@/components/ItemForm.vue'), meta: { requiresAuth: true } },
   { path: '/admin', name: 'Admin', component: () => import('@/components/AdminView.vue'), meta: { requiresAuth: true } },
   { path: '/about', name: 'About', component: () => import('@/components/AboutView.vue') },
     { path: '/rule', name: 'PrayerRule', component: () => import('@/components/PrayerRuleView.vue') },
+     { path: '/mass', name: 'HolyMass', component: () => import('@/components/HolyMassView.vue') },
 ];
 
 const router = createRouter({
@@ -3547,51 +4097,35 @@ const settings = useSettingsStore(); // ✅ Инициализируем setting
 
 ### src/stores/prayerRule.js
 ```
-// src/stores/prayerRuleStore.js
 import { defineStore } from 'pinia';
 import { ref, watch } from 'vue';
-
 export const usePrayerRuleStore = defineStore('prayerRule', () => {
+  // Теперь храним только ID заметки
   const ruleItems = ref(JSON.parse(localStorage.getItem('prayerRule') || '[]'));
-
   watch(ruleItems, (newRule) => {
     localStorage.setItem('prayerRule', JSON.stringify(newRule));
   }, { deep: true });
-
   function addItem(item) {
-    if (!item || ruleItems.value.some(rule => rule.itemId === item.id)) return;
-    ruleItems.value.push({
-      itemId: item.id,
-      lang: 'be', 
-    });
+    if (!item || ruleItems.value.some(itemId => itemId === item.id)) return;
+    ruleItems.value.push(item.id);
   }
-
   function removeItem(index) {
     ruleItems.value.splice(index, 1);
   }
-
-  function updateItemLanguage(index, newLang) {
-    if (ruleItems.value[index]) {
-      ruleItems.value[index].lang = newLang;
-    }
-  }
   
-  // ✅ ВОЗВРАЩАЕМ ЭТУ ФУНКЦИЮ ДЛЯ РАБОТЫ КНОПОК
+  // Функция updateItemLanguage больше не нужна
   function moveItem(fromIndex, toIndex) {
     if (fromIndex < 0 || fromIndex >= ruleItems.value.length || toIndex < 0 || toIndex >= ruleItems.value.length) {
       return;
     }
-    // Вырезаем элемент и вставляем его в новую позицию
     const [item] = ruleItems.value.splice(fromIndex, 1);
     ruleItems.value.splice(toIndex, 0, item);
   }
-
   return { 
     ruleItems, 
     addItem,
     removeItem,
-    updateItemLanguage,
-    moveItem // ✅ Убедитесь, что она экспортируется
+    moveItem
   };
 });
 ```
