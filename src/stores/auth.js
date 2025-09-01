@@ -9,11 +9,19 @@ export const useAuthStore = defineStore('auth', () => {
   const loading = ref(true);
 
   // --- ✅ ЛОГИРОВАНИЕ ВНУТРИ ХРАНИЛИЩА ---
-  console.log('[AUTH STORE] Initializing...');
+  if (import.meta.env.DEV) {
+    console.log('[AUTH STORE] Initializing...');
+  }
 
   const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
     // Этот лог покажет нам КАЖДЫЙ раз, когда Firebase меняет статус
-    console.log(`%c[FIREBASE AUTH STATE CHANGED] User status updated.`, 'color: #881391; font-weight: bold;', firebaseUser ? `Logged in as ${firebaseUser.email}` : 'Logged out.');
+    if (import.meta.env.DEV) {
+      console.log(
+        `%c[FIREBASE AUTH STATE CHANGED] User status updated.`,
+        'color: #881391; font-weight: bold;',
+        firebaseUser ? `Logged in as ${firebaseUser.email}` : 'Logged out.'
+      );
+    }
     user.value = firebaseUser;
     loading.value = false;
   });
