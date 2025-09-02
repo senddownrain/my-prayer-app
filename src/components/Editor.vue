@@ -24,9 +24,11 @@
               <v-list-item-title>{{ $t('style.h3') }}</v-list-item-title>
             </v-list-item>
             <!-- ✅ ИСПРАВЛЕНИЕ 4: Команда для рубрики теперь toggleClass -->
-            <v-list-item @click="editor.chain().focus().toggleClass('rubric').run()" :active="editor.isActive({ class: 'rubric' })">
-              <v-list-item-title>{{ $t('style.rubric') }}</v-list-item-title>
-            </v-list-item>
+            <v-list-item 
+  @click="editor.chain().focus().toggleRubric().run()" 
+  :active="editor.value?.getAttributes('paragraph').class === 'rubric'">
+  <v-list-item-title>{{ $t('style.rubric') }}</v-list-item-title>
+</v-list-item>
           </v-list>
         </v-menu>
 
@@ -188,6 +190,12 @@ const CustomParagraph = Paragraph.extend({
   // Добавляем команду для установки метки дня
   addCommands() {
     return {
+      toggleRubric: () => ({ commands, state }) => {
+        // Получаем текущий класс
+        const currentClass = state.selection.$anchor.node.attrs.class;
+        // Если уже rubric — убираем, иначе ставим
+        return commands.updateAttributes('paragraph', { class: currentClass === 'rubric' ? null : 'rubric' });
+      },
       setDayMarker: (day) => ({ commands }) => {
         return commands.updateAttributes('paragraph', { dayMarker: day });
       },
