@@ -54,9 +54,9 @@ html {
 .note-content-area h2 { font-size: calc(1.5rem * var(--font-size-multiplier)); }
 .note-content-area h3 { font-size: calc(1.15rem * var(--font-size-multiplier)); }
 .note-content-area p, .note-content-area div { font-size: calc(1rem * var(--font-size-multiplier)); }
-.note-content-area p {
-  margin-bottom: 1em !important; 
-}
+/* .note-content-area p {
+  margin: 0 0 1em !important; 
+} */
 /* Убираем лишний отступ у последнего элемента, чтобы не было "висячего" пробела */
 .note-content-area > *:last-child {
     margin-bottom: 0 !important;
@@ -83,10 +83,7 @@ html {
 /* ✅ RUBRIC в редакторе (уменьшенный размер, цвет, курсив, по центру) */
 .ProseMirror p.rubric {
   color: rgb(var(--v-theme-error));
-  font-style: italic;
-  text-align: center;
-  font-size: calc(0.85rem * var(--font-size-multiplier));
-  margin: 1em 0;
+  font-size: calc(0.80rem * var(--font-size-multiplier));
 }
 .ProseMirror-focused { 
   border-color: transparent; 
@@ -178,6 +175,25 @@ html {
 /* Иконка для метки "финиш" */
 .ProseMirror p[data-marker="finish"]::before {
   content: "\F023C"; /* Код иконки mdi-flag-checkered */
+}
+
+/* --- Нормализация отступов параграфов в редакторе (ProseMirror) --- */
+/* Устанавливаем аккуратный единообразный отступ между <p> внутри редактора */
+.editor-content-wrapper > :deep(.ProseMirror) p {
+  margin: 0 0 0.75rem;    /* нижний отступ (регулируйте: 0.5rem..1rem) */
+  padding: 0;
+  line-height: 1.45;      /* при желании можно подправить интерлиньяж */
+}
+
+/* На всякий случай убираем верхний отступ у последующего параграфа,
+   чтобы не складывались два отступа вместе */
+.editor-content-wrapper > :deep(.ProseMirror) p + p {
+  margin-top: 0;
+}
+
+/* Если нужно — уменьшаем отступ специально для рубрик внутри редактора */
+.editor-content-wrapper > :deep(.ProseMirror) p.rubric {
+  margin: 0 0 0.9rem; /* можно чуть больше/меньше, как вам нравится */
 }
 /* ==========================================================================
    СТИЛИ ДЛЯ ПЛАВАЮЩИХ КНОПОК
