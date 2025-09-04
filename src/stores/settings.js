@@ -45,6 +45,25 @@ const novenaNotificationsEnabled = ref(JSON.parse(localStorage.getItem('prayer-n
   watch(pinnedIds, (v) => localStorage.setItem('pinnedIds', JSON.stringify(v)), { deep: true });
   watch(menuCategories, (v) => localStorage.setItem('menuCategories', JSON.stringify(v)), { deep: true });
   watch(showHiddenItems, (v) => localStorage.setItem('showHiddenItems', v));
+  watch(
+    novenaNotificationsEnabled,
+    async (enabled) => {
+      localStorage.setItem('prayer-novena-notifications', enabled);
+      if (enabled && 'Notification' in window) {
+        if (Notification.permission !== 'granted') {
+          try {
+            const perm = await Notification.requestPermission();
+            if (perm !== 'granted') {
+              novenaNotificationsEnabled.value = false;
+            }
+          } catch (err) {
+            novenaNotificationsEnabled.value = false;
+          }
+        }
+      }
+    },
+    { immediate: true }
+  );
 
   // --- Функции для изменения состояний (Actions) ---
   function toggleTheme() { currentTheme.value = currentTheme.value === 'light' ? 'dark' : 'light'; }
