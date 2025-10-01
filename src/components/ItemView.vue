@@ -52,7 +52,7 @@
 
       <!-- Текст молитвы (теперь только один) -->
       <div class="mb-4" @click="handleContentClick">
-        <div v-html="processedHtml" class="note-content-area"></div>
+        <div v-html="processedHtml" class="note-content-area prose-view"></div>
       </div>
 
 
@@ -319,12 +319,66 @@ watchEffect(() => {
 });
 
 </script>
-
 <style scoped>
 .note-view-container {
   padding-left: 8px;
   padding-right: 8px;
 }
+
+.note-content-area {
+  line-height: 1.7; /* Задаем комфортный межстрочный интервал */
+}
+
+/* Убираем все отступы по умолчанию у параграфов и заголовков */
+.note-content-area :deep(p),
+.note-content-area :deep(h1),
+.note-content-area :deep(h2),
+.note-content-area :deep(h3) {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* Добавляем верхний отступ (создаем "дыхание") для любого блочного элемента, который идет ПОСЛЕ другого блочного элемента */
+.note-content-area :deep(p + p),
+.note-content-area :deep(p + h1),
+.note-content-area :deep(p + h2),
+.note-content-area :deep(p + h3),
+.note-content-area :deep(h1 + p),
+.note-content-area :deep(h2 + p),
+.note-content-area :deep(h3 + p),
+.note-content-area :deep(ul + p),
+.note-content-area :deep(ol + p),
+.note-content-area :deep(p + ul),
+.note-content-area :deep(p + ol) {
+  margin-top: 1rem; /* Это будет наш отступ между абзацами */
+}
+
+/* Отдельные, чуть большие отступы для заголовков, чтобы визуально их отделить */
+.note-content-area :deep(h1),
+.note-content-area :deep(h2),
+.note-content-area :deep(h3) {
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+}
+
+/* Убираем лишний отступ у первого заголовка в тексте */
+.note-content-area :deep(> :first-child) {
+    margin-top: 0 !important;
+}
+
+/* Стили для списков */
+.note-content-area :deep(ol),
+.note-content-area :deep(ul) {
+  padding-left: 1.5rem;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Стили для выравнивания (Tiptap использует inline-стили, поэтому это может не понадобиться, но оставляем на всякий случай) */
+.note-content-area :deep([style*="text-align: center"]) { text-align: center; }
+.note-content-area :deep([style*="text-align: right"]) { text-align: right; }
+.note-content-area :deep([style*="text-align: justify"]) { text-align: justify; }
 
 .fab-container {
   position: fixed;

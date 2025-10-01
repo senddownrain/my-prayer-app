@@ -37,6 +37,9 @@ html {
 /* ==========================================================================
    ТОЧЕЧНОЕ ПРИМЕНЕНИЕ ШРИФТОВ
    ========================================================================== */
+.editor-content-wrapper > :deep(.ProseMirror p) {
+  margin-bottom: 0.75em !important;
+}
 
 /* 1. Применяем шрифт к тексту внутри заметок и к редактору */
 .note-content-area, .ProseMirror {
@@ -63,13 +66,7 @@ html {
 }
 /* ... (остальные стили для .note-content-area и другие правила остаются как были) ... */
 
-/* ✅ РУБРИКА: красный, уменьшенный, курсивный, по центру */
-.note-content-area .rubric {
-  color: rgb(var(--v-theme-error));
-  font-style: italic;
-  text-align: center;
-  font-size: calc(0.85rem * var(--font-size-multiplier)); /* уменьшенный размер */
-}
+
 .note-content-area > *:first-child { margin-top: 0 !important; }
 
 .wrappable-toolbar-title { white-space: normal !important; line-height: 1.25 !important; font-size: 1.15rem !important; }
@@ -77,14 +74,7 @@ html {
 .ProseMirror { min-height: 200px; padding: 8px 12px; outline: none; }
 
 
-.ProseMirror p { 
-  margin-bottom: 0; 
-}
-/* ✅ RUBRIC в редакторе (уменьшенный размер, цвет, курсив, по центру) */
-.ProseMirror p.rubric {
-  color: rgb(var(--v-theme-error));
-  font-size: calc(0.80rem * var(--font-size-multiplier));
-}
+
 .ProseMirror-focused { 
   border-color: transparent; 
   box-shadow: none; 
@@ -177,24 +167,9 @@ html {
   content: "\F023C"; /* Код иконки mdi-flag-checkered */
 }
 
-/* --- Нормализация отступов параграфов в редакторе (ProseMirror) --- */
-/* Устанавливаем аккуратный единообразный отступ между <p> внутри редактора */
-.editor-content-wrapper > :deep(.ProseMirror) p {
-  margin: 0 0 0.75rem;    /* нижний отступ (регулируйте: 0.5rem..1rem) */
-  padding: 0;
-  line-height: 1.45;      /* при желании можно подправить интерлиньяж */
-}
 
-/* На всякий случай убираем верхний отступ у последующего параграфа,
-   чтобы не складывались два отступа вместе */
-.editor-content-wrapper > :deep(.ProseMirror) p + p {
-  margin-top: 0;
-}
 
-/* Если нужно — уменьшаем отступ специально для рубрик внутри редактора */
-.editor-content-wrapper > :deep(.ProseMirror) p.rubric {
-  margin: 0 0 0.9rem; /* можно чуть больше/меньше, как вам нравится */
-}
+
 /* ==========================================================================
    СТИЛИ ДЛЯ ПЛАВАЮЩИХ КНОПОК
    ========================================================================== */
