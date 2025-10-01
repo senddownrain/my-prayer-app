@@ -234,7 +234,7 @@ const currentStyleLabel = computed(() => {
   if (editor.value.isActive('heading', { level: 3 })) return t('style.h3', 'Заголовок 3');
   return t('style.normal', 'Обычный текст');
 });
-const DARK_RED_COLOR = '#D32F2F'; // Можно использовать любой hex-код, например,  #ff1000это Material Design Red 800
+const DARK_RED_COLOR = '#E53935'; // Можно использовать любой hex-код, например,  #ff1000это Material Design Red 800
 
 const isSelectionRed = computed(() => editor.value?.isActive('textStyle', { color: DARK_RED_COLOR  }));
 
