@@ -118,6 +118,7 @@ import Link from '@tiptap/extension-link';
 import Paragraph from '@tiptap/extension-paragraph';
 import { useI18n } from 'vue-i18n';
 import { useItems } from '@/composables/useItems';
+import HardBreak from '@tiptap/extension-hard-break';
 import * as TextStyleModule from '@tiptap/extension-text-style';
 import * as ColorModule from '@tiptap/extension-color';
 const TextStyle = TextStyleModule.default ?? TextStyleModule.TextStyle ?? TextStyleModule;
@@ -172,12 +173,19 @@ const CustomParagraph = Paragraph.extend({
       marker: { default: null, parseHTML: el => el.getAttribute('data-marker'), renderHTML: attrs => attrs.marker ? { 'data-marker': attrs.marker } : {} },
     };
   },
+  addKeyboardShortcuts() {
+    return {
+      'Shift-Enter': () => this.editor.commands.setHardBreak(), // Вставить <br>
+      // Можно также явно определить Enter, чтобы он создавал новый параграф (поведение по умолчанию)
+      'Enter': () => this.editor.commands.splitBlock(),
+    };}
+  
 });
 
 const editor = useEditor({
   content: props.modelValue,
   editorProps: {
-    transformPastedHTML(html) {
+   transformPastedHTML(html) {
       const div = document.createElement('div');
       div.innerHTML = html;
       div.querySelectorAll('*').forEach(el => {
@@ -187,8 +195,12 @@ const editor = useEditor({
       div.querySelectorAll('span, em, i, strong, b').forEach(el => {
         el.replaceWith(...el.childNodes);
       });
+      // 💡 Улучшенная очистка пустых параграфов: удаляем даже те, что содержат только &nbsp; или <br>
       div.querySelectorAll('p').forEach(p => {
-        if (p.textContent.trim() === '' && p.children.length === 0) {
+        const textContent = p.textContent || ''; // textContent может быть null для пустых элементов
+        const innerHTML = p.innerHTML || '';
+        // Считаем параграф пустым, если он не содержит текста, или содержит только теги <br>, или только &nbsp;
+        if (textContent.trim() === '' && innerHTML.replace(/<br\s*\/?>/gi, '').trim() === '&nbsp;') {
           p.remove();
         }
       });
@@ -199,12 +211,14 @@ const editor = useEditor({
     StarterKit.configure({
       heading: { levels: [1, 2, 3] },
       paragraph: false,
+      hardBreak: false,
     }),
     TextAlign.configure({ types: ['heading', 'paragraph'] }),
     Link.configure({ openOnClick: false, autolink: true }),
     CustomParagraph,
     TextStyle,
     Color,
+    HardBreak
   ],
   onUpdate: ({ editor }) => {
     const html = editor.getHTML();
@@ -220,12 +234,13 @@ const currentStyleLabel = computed(() => {
   if (editor.value.isActive('heading', { level: 3 })) return t('style.h3', 'Заголовок 3');
   return t('style.normal', 'Обычный текст');
 });
+const DARK_RED_COLOR = '#D32F2F'; // Можно использовать любой hex-код, например,  #ff1000это Material Design Red 800
 
-const isSelectionRed = computed(() => editor.value?.isActive('textStyle', { color: 'red' }));
+const isSelectionRed = computed(() => editor.value?.isActive('textStyle', { color: DARK_RED_COLOR  }));
 
 function toggleRedColor() {
   const chain = editor.value.chain().focus();
-  isSelectionRed.value ? chain.unsetColor().run() : chain.setColor('red').run();
+  isSelectionRed.value ? chain.unsetColor().run() : chain.setColor(DARK_RED_COLOR).run();
 }
 
 const isLinkDialogOpen = ref(false);

@@ -4,6 +4,7 @@
       <!-- ✅ ИЗМЕНЕННЫЙ БЛОК С ФЛАГАМИ -->
       <div class="d-flex align-center justify-space-between flex-wrap gap-1">
         <!-- ✅ ИЗМЕНЕННЫЙ БЛОК ЯЗЫКОВ -->
+<!-- ✅ ИЗМЕНЕННЫЙ БЛОК ЯЗЫКОВ -->
 <v-chip-group class="mb-2">
   <v-chip
     v-for="version in allLanguageVersions"
@@ -11,10 +12,9 @@
     :to="{ name: 'ItemView', params: { id: version.id } }"
     label
     :variant="version.id === item.id ? 'flat' : 'outlined'"
-    :color="version.id === item.id ? 'primary' : ''"
+    :active="version.id === item.id" 
   >
     <strong class="text-uppercase mr-1">{{ version.lang }}</strong>
-    
   </v-chip>
 </v-chip-group>
       </div>
@@ -326,7 +326,7 @@ watchEffect(() => {
 }
 
 .note-content-area {
-  line-height: 1.7; /* Задаем комфортный межстрочный интервал */
+  line-height: 1.5; /* Задаем комфортный межстрочный интервал */
 }
 
 /* Убираем все отступы по умолчанию у параграфов и заголовков */
@@ -338,8 +338,12 @@ watchEffect(() => {
   margin-bottom: 0;
 }
 
+/* 💡 НОВЫЙ СТИЛЬ ДЛЯ КРАСНОГО ТЕКСТА (соответствует Editor.vue) */
+.note-content-area :deep([style*="color: #C62828"]) {
+  color: #C62828 !important;
+}
 /* Добавляем верхний отступ (создаем "дыхание") для любого блочного элемента, который идет ПОСЛЕ другого блочного элемента */
-.note-content-area :deep(p + p),
+
 .note-content-area :deep(p + h1),
 .note-content-area :deep(p + h2),
 .note-content-area :deep(p + h3),
