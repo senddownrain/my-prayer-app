@@ -17,6 +17,7 @@ export default defineConfig({
       registerType: 'prompt',
       injectRegister: 'auto',
       strategies: 'generateSW',
+      devOptions: { enabled: true },
       workbox: {
         cleanupOutdatedCaches: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json,vue,txt,woff2,webmanifest}'],

@@ -7,6 +7,7 @@ import i18n from './i18n'
 import './firebase' // Импортируем для инициализации Firebase
 import '@mdi/font/css/materialdesignicons.css'
 import './styles/main.css'
+import { registerSW } from 'virtual:pwa-register'
 
 const app = createApp(App)
 
@@ -16,3 +17,5 @@ app.use(vuetify)
 app.use(i18n)
 
 app.mount('#app')
+
+registerSW({ immediate: true })
