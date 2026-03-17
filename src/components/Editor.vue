@@ -119,10 +119,8 @@ import Paragraph from '@tiptap/extension-paragraph';
 import { useI18n } from 'vue-i18n';
 import { useItems } from '@/composables/useItems';
 import HardBreak from '@tiptap/extension-hard-break';
-import * as TextStyleModule from '@tiptap/extension-text-style';
-import * as ColorModule from '@tiptap/extension-color';
-const TextStyle = TextStyleModule.default ?? TextStyleModule.TextStyle ?? TextStyleModule;
-const Color = ColorModule.default ?? ColorModule.Color ?? ColorModule;
+import { TextStyle } from '@tiptap/extension-text-style';
+import { Color } from '@tiptap/extension-color';
 
 
 const { t } = useI18n();
@@ -195,14 +193,16 @@ const editor = useEditor({
       div.querySelectorAll('span, em, i, strong, b').forEach(el => {
         el.replaceWith(...el.childNodes);
       });
+      div.querySelectorAll('div').forEach(block => {
+        const p = document.createElement('p');
+        p.innerHTML = block.innerHTML;
+        block.replaceWith(p);
+      });
       // 💡 Улучшенная очистка пустых параграфов: удаляем даже те, что содержат только &nbsp; или <br>
       div.querySelectorAll('p').forEach(p => {
-        const textContent = p.textContent || ''; // textContent может быть null для пустых элементов
-        const innerHTML = p.innerHTML || '';
-        // Считаем параграф пустым, если он не содержит текста, или содержит только теги <br>, или только &nbsp;
-        if (textContent.trim() === '' && innerHTML.replace(/<br\s*\/?>/gi, '').trim() === '&nbsp;') {
-          p.remove();
-        }
+        const textContent = (p.textContent || '').replace(/\u00a0/g, '').trim();
+        const htmlWithoutBreaks = (p.innerHTML || '').replace(/<br\s*\/?>/gi, '').replace(/&nbsp;/gi, '').trim();
+        if (textContent === '' && htmlWithoutBreaks === '') p.remove();
       });
       return div.innerHTML;
     },

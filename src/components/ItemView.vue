@@ -339,8 +339,10 @@ watchEffect(() => {
 }
 
 /* 💡 НОВЫЙ СТИЛЬ ДЛЯ КРАСНОГО ТЕКСТА (соответствует Editor.vue) */
-.note-content-area :deep([style*="color: #C62828"]) {
-  color: #C62828 !important;
+.note-content-area :deep([style*="color: #E53935"]),
+.note-content-area :deep([style*="color:#E53935"]),
+.note-content-area :deep([style*="color: rgb(229, 57, 53)"]) {
+  color: #E53935 !important;
 }
 /* Добавляем верхний отступ (создаем "дыхание") для любого блочного элемента, который идет ПОСЛЕ другого блочного элемента */
 
