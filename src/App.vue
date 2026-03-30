@@ -244,6 +244,7 @@ import { usePageMode } from '@/composables/usePageMode'; // ✅ Импорт
 import { useAuthStore } from '@/stores/auth';
 import { notifier } from '@/composables/useNotifier';
 import { useNovenaSuggestions } from '@/composables/useNovenaSuggestions';
+import { useNovenaNotifications } from '@/composables/useNovenaNotifications';
 import FilterSheet from '@/components/FilterSheet.vue';
 import NotificationSnackbar from '@/components/NotificationSnackbar.vue';
 import TextSettingsSheet from '@/components/TextSettingsSheet.vue'; // ✅ ИМПОРТ
@@ -261,6 +262,7 @@ const { items, isLoading } = useItems();
 const { isDrawerOpen, isSearchActive, isFilterSheetOpen, isTextSettingsSheetOpen  } = useAppBar();
 const { selectedTags, search } = useFilters();
 const { suggestion, checkSuggestions, viewSuggestedNovena, dismissSuggestion } = useNovenaSuggestions();
+const { scheduleTodayNotifications } = useNovenaNotifications();
 const { isEditing, toggleEditing } = usePageMode(); // ✅ Получаем состояние
 
 const snackbar = ref(null);
@@ -315,8 +317,18 @@ function openTextSettings() {
 watch(isLoading, (newIsLoading) => {
   if (!newIsLoading && settings.novenaNotificationsEnabled) {
     checkSuggestions();
+    scheduleTodayNotifications();
   }
 });
+
+watch(
+  () => settings.novenaNotificationsEnabled,
+  (enabled) => {
+    if (enabled && !isLoading.value) {
+      scheduleTodayNotifications();
+    }
+  }
+);
 
 watch(() => route.name, (newName) => {
   console.group(`[App.vue WATCHER] Имя маршрута изменилось!`);
