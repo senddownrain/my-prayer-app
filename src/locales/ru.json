@@ -2,12 +2,10 @@
   "appTitle": "Мои молитвы",
   "allPrayers": "Все молитвы",
   "myPrayerRule": "Молитвенное правило",
-
   "searchPlaceholder": "Поиск...",
   "filterByTags": "Фильтр по тегам",
   "viewMode": "Вид списка",
   "viewModeHint": "Карточки или компактный список",
-
   "done": "Готово",
   "edit": "Редактировать",
   "delete": "Удалить",
@@ -15,12 +13,10 @@
   "add": "Добавить",
   "start": "Начать",
   "days": "дней",
-
   "pin": "Закрепить",
   "unpin": "Открепить",
   "loading": "Загрузка...",
   "backToHome": "Вернуться на главную",
-
   "title": "Название",
   "source": "Источник",
   "tags": "Теги",
@@ -36,7 +32,6 @@
   "noteNotFoundMessage": "Возможно, она была удалена или ссылка неверна.",
   "confirmDeletion": "Подтвердите удаление",
   "deleteConfirmationMessage": "Вы уверены, что хотите навсегда удалить заметку \"{title}\"?",
-
   "style": {
     "normal": "Обычный",
     "h2": "Заголовок 1",
@@ -46,13 +41,15 @@
   "linkedNotesAdd": "Добавить связь",
   "linkedNotesSelect": "Выберите заметку для связи",
   "noTextInLang": "Текст на этом языке отсутствует",
-
   "settings": "Настройки",
   "generalSettings": "Общие настройки",
   "appearance": "Внешний вид",
   "darkTheme": "Тёмная тема",
   "themeIs": "Сейчас используется {themeName} тема",
-  "themeNames": { "light": "светлая", "dark": "тёмная" },
+  "themeNames": {
+    "light": "светлая",
+    "dark": "тёмная"
+  },
   "fontSize": "Размер текста",
   "fontSizeHint": "Настройте размер шрифта для чтения",
   "fontFamily": "Шрифт приложения",
@@ -66,17 +63,14 @@
   "categoryName": "Название категории",
   "categoryTags": "Выберите или введите теги",
   "textSettings": "Настройки текста",
-
   "admin": "Админка",
   "adminText": "Здесь будет панель администратора. Пока это лишь заготовка для будущих функций.",
   "showHiddenNotes": "Показывать скрытые заметки",
   "showHiddenNotesHint": "Влияет только на ваш вид списка",
-
   "about": "О приложении",
   "aboutText": "Это приложение создано для личного сбора молитв и заметок.",
   "version": "Версия: 1.0.0",
   "devWithLove": "Разработано с любовью.",
-
   "login": "Вход",
   "logout": "Выход",
   "loginTitle": "Вход для администратора",
@@ -85,14 +79,12 @@
   "password": "Пароль",
   "passwordRequired": "Пароль обязателен",
   "loginError": "Неверный email или пароль.",
-
   "langLabels": {
     "ru": "Рус",
     "be": "Бел",
     "la": "Lat",
     "pl": "Pl"
   },
-
   "novenaSettings": "Настройки новенны",
   "isNovenaPrayerLabel": "Это молитва-новенна",
   "recommendedDateLabel": "Дата праздника (для предложений)",
@@ -109,7 +101,6 @@
   "remindLater": "Позже",
   "enableNovenaSuggestions": "Предложения по новеннам",
   "enableNovenaSuggestionsHint": "Показывать уведомления, когда подходит время для рекомендованных новенн",
-
   "addPrayerToRule": "Добавить молитву в правило",
   "findPrayer": "Найти молитву...",
   "ruleIsEmpty": "Ваше правило пока пусто.",
@@ -118,7 +109,6 @@
   "noRuleCreatedHint": "Нажмите кнопку ниже, чтобы составить свой список ежедневных молитв.",
   "createRule": "Создать правило",
   "decline": "Отклонить",
-
   "novenaDurationChoice": "Выбери колличество дней",
   "novenaDurationInput": "Или, введи",
   "dataManagement": "Управление данными",
@@ -138,25 +128,26 @@
     "add": "Добавлять только новые",
     "overwrite": "Добавлять новые и перезаписывать существующие"
   },
-  "import": "Импортировать"
-  ,"noteLanguage": "Язык заметки",
-"languageCannotBeChanged": "Язык нельзя изменить после создания.",
-"translations": "Переводы",
-"addTranslation": "Добавить перевод",
-"selectTranslation": "Выберите перевод",
-"translationLinked": "Перевод успешно привязан!",
-"translationUnlinked": "Связь с переводом удалена.",
-"titleRequired": "Пожалуйста, введите название.",
-"langLabelsFull": {
+  "import": "Импортировать",
+  "noteLanguage": "Язык заметки",
+  "languageCannotBeChanged": "Язык нельзя изменить после создания.",
+  "translations": "Переводы",
+  "addTranslation": "Добавить перевод",
+  "selectTranslation": "Выберите перевод",
+  "translationLinked": "Перевод успешно привязан!",
+  "translationUnlinked": "Связь с переводом удалена.",
+  "titleRequired": "Пожалуйста, введите название.",
+  "langLabelsFull": {
     "ru": "Русский",
     "be": "Беларуская",
     "la": "Latina",
     "pl": "Polski"
-},
-"share": "Поделиться",
+  },
+  "share": "Поделиться",
   "copyLink": "Копировать ссылку",
   "linkCopied": "Ссылка скопирована в буфер обмена!",
   "shareError": "Не удалось поделиться. Возможно, ваш браузер не поддерживает эту функцию.",
   "filters": "Фильтры",
-  "holyMass": "Святая Месса"
+  "holyMass": "Святая Месса",
+  "noteSaveError": "Ошибка сохранения молитвы. Изменения не сохранены."
 }
