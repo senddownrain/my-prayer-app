@@ -45,6 +45,7 @@ const novenaNotificationsEnabled = ref(JSON.parse(localStorage.getItem('prayer-n
   watch(pinnedIds, (v) => localStorage.setItem('pinnedIds', JSON.stringify(v)), { deep: true });
   watch(menuCategories, (v) => localStorage.setItem('menuCategories', JSON.stringify(v)), { deep: true });
   watch(showHiddenItems, (v) => localStorage.setItem('showHiddenItems', v));
+  watch(novenaNotificationsEnabled, (v) => localStorage.setItem('prayer-novena-notifications', JSON.stringify(v)));
 
   // --- Функции для изменения состояний (Actions) ---
   function toggleTheme() { currentTheme.value = currentTheme.value === 'light' ? 'dark' : 'light'; }
