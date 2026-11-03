@@ -26,7 +26,7 @@ const routes = [
   { path: '/admin', name: 'Admin', component: () => import('@/components/AdminView.vue'), meta: { requiresAuth: true } },
   { path: '/about', name: 'About', component: () => import('@/components/AboutView.vue') },
     { path: '/rule', name: 'PrayerRule', component: () => import('@/components/PrayerRuleView.vue') },
-     { path: '/mass', name: 'HolyMass', component: () => import('@/components/HolyMassView.vue') },
+     { path: '/mass/:id?', name: 'HolyMass', component: () => import('@/components/HolyMassView.vue') },
 ];
 
 const router = createRouter({
