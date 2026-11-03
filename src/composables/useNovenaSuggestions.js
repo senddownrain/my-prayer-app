@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { useItems } from '@/composables/useItems';
 import { useNovenaStore } from '@/stores/novena';
 import { useRouter } from 'vue-router';
+import { parseLocalDateKey } from '@/utils/prayerDates.mjs';
 
 
 const suggestion = ref(null); // { item, days }
@@ -20,13 +21,13 @@ export function useNovenaSuggestions() {
    * @param {Date} [simulatedDate=new Date()] - Опциональная дата для симуляции "сегодняшнего дня" при тестировании.
    */
   const checkSuggestions = (simulatedDate) => {
-    const today = simulatedDate ? new Date(simulatedDate) : new Date();
+    const today = simulatedDate ? (typeof simulatedDate === 'string' ? parseLocalDateKey(simulatedDate) : new Date(simulatedDate)) : new Date();
     today.setHours(0, 0, 0, 0); // Обнуляем время для точного сравнения дат
 
     for (const item of items.value) {
       if (item.isNovenaPrayer && item.recommendedDate && !novenaStore.isNovenaActive(item.id)) {
         
-        const recommended = new Date(item.recommendedDate);
+        const recommended = typeof item.recommendedDate === 'string' ? parseLocalDateKey(item.recommendedDate) : new Date(item.recommendedDate);
         const recommendedMonth = recommended.getMonth();
         const recommendedDay = recommended.getDate();
 
