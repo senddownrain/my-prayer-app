@@ -59,7 +59,7 @@
             </v-card-text>
             <v-card-actions>
                 <v-spacer></v-spacer>
-                <v-btn text @click="cancelImport">{{ $t('cancel') }}</v-btn>
+                <v-btn text :disabled="isImporting" @click="cancelImport">{{ $t('cancel') }}</v-btn>
                 <v-btn color="primary" variant="flat" @click="confirmImport" :loading="isImporting">{{ $t('import') }}</v-btn>
             </v-card-actions>
         </v-card>
