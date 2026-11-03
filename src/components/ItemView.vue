@@ -162,6 +162,7 @@ import { useRouter, onBeforeRouteLeave } from 'vue-router';
 import { useItems } from '@/composables/useItems';
 import { useSettingsStore } from '@/stores/settings';
 import { useWakeLock } from '@/composables/useWakeLock';
+import { getNovenaDay } from '@/utils/prayerDates.mjs';
 import { useI18n } from 'vue-i18n';
 import { useNovenaStore } from '@/stores/novena';
 import NovenaTracker from '@/components/NovenaTracker.vue';
@@ -208,12 +209,7 @@ const currentNovenaDay = computed(() => {
   if (!isNovenaActiveAndInProgress.value) return null;
   const data = novenaStore.getNovenaData(props.id);
   if (!data) return null;
-  const startDate = new Date(data.startDate);
-  const today = new Date(novenaStore.getTodayDateString());
-  const diffTime = Math.abs(today.getTime() - startDate.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  const dayNumber = diffDays + 1;
-  return dayNumber > 0 && dayNumber <= data.totalDays ? dayNumber : null;
+  return getNovenaDay(data.startDate, novenaStore.getTodayDateString(), data.totalDays);
 });
 
 // Логика "Ритуала"
