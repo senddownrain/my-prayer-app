@@ -93,7 +93,7 @@ export function useDataManagement() {
       }
 
       showSuccess(t('importSuccess', { added: plan.added, updated: plan.updated }) +
-        (plan.skipped ? ` (${plan.skipped} skipped)` : ''));
+        (plan.skipped ? ` ${t('importSkipped', { count: plan.skipped })}` : ''));
       cancelImport();
     } catch (error) {
       // Keep the dialog and input on failure so the user can retry.
