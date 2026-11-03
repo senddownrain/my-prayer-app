@@ -1,13 +1,30 @@
-// src/composables/useDataManagement.js
 import { ref } from 'vue';
-import { collection, doc, writeBatch, getDocs } from 'firebase/firestore';
+import { collection, doc, writeBatch, getDocsFromServer, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/firebase';
 import { useItems } from '@/composables/useItems';
 import { useNotifier } from '@/composables/useNotifier';
 import { useI18n } from 'vue-i18n';
+import { validateBackup, createImportPlan } from '@/utils/importPlan.mjs';
+
+const BATCH_SIZE = 400; // Keep safely below Firestore's batch write limit.
+
+function restoreFirestoreFields(data) {
+  const result = { ...data };
+  const date = result.createdAt;
+  if (date && typeof date === 'object') {
+    const seconds = date.seconds ?? date._seconds;
+    const nanoseconds = date.nanoseconds ?? date._nanoseconds;
+    if (Number.isInteger(seconds) && Number.isInteger(nanoseconds)) {
+      result.createdAt = new Timestamp(seconds, nanoseconds);
+    }
+  } else if (!date) {
+    result.createdAt = serverTimestamp();
+  }
+  return result;
+}
 
 export function useDataManagement() {
-  const { items } = useItems(); // Нам нужны items только для экспорта
+  const { items } = useItems();
   const { showSuccess, showError } = useNotifier();
   const { t } = useI18n();
 
@@ -15,14 +32,12 @@ export function useDataManagement() {
   const isImportDialogVisible = ref(false);
   const importFile = ref(null);
   const previewItems = ref([]);
-  const importMode = ref('add'); // 'add' или 'overwrite'
+  const importMode = ref('add');
 
   const exportToJson = () => {
     try {
-      // Удаляем реактивность и лишние поля перед экспортом
       const dataToExport = JSON.parse(JSON.stringify(items.value));
-      const dataStr = JSON.stringify(dataToExport, null, 2);
-      const blob = new Blob([dataStr], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -32,78 +47,59 @@ export function useDataManagement() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       showSuccess(t('exportSuccess'));
-    } catch (e) {
-      console.error("JSON Export Error:", e);
+    } catch (error) {
+      console.error('JSON Export Error:', error);
       showError(t('exportError'));
     }
   };
-  
-  // Мы удаляем экспорт в CSV, так как он не подходит для новой структуры
-  const exportToCsv = () => {
-    showError('Экспорт в CSV больше не поддерживается.');
-  };
+
+  const exportToCsv = () => showError('Экспорт в CSV больше не поддерживается.');
 
   const importFromFile = (file) => {
+    if (!file || isImporting.value) return;
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = (event) => {
       try {
-        const data = JSON.parse(e.target.result);
-        if (!Array.isArray(data)) throw new Error("JSON must be an array.");
-
+        const data = validateBackup(JSON.parse(event.target.result));
         previewItems.value = data;
         importFile.value = file;
         isImportDialogVisible.value = true;
-      } catch (e) {
-        console.error("Import Error:", e);
-        showError(t('importParseError'));
+      } catch (error) {
+        console.error('Import validation error:', error);
+        showError(t('importParseError') + ': ' + error.message);
       }
     };
+    reader.onerror = () => showError(t('importParseError'));
     reader.readAsText(file);
   };
-  
+
   const confirmImport = async () => {
+    if (isImporting.value) return;
     isImporting.value = true;
-    const batch = writeBatch(db);
-    const itemsCollectionRef = collection(db, 'items');
-    
-    let addedCount = 0;
-    let updatedCount = 0;
 
     try {
-      // Если режим "перезаписать", нам нужно получить текущие ID из базы
-      let existingIds = new Set();
-      if (importMode.value === 'overwrite') {
-        const querySnapshot = await getDocs(itemsCollectionRef);
-        querySnapshot.forEach(doc => existingIds.add(doc.id));
-      }
+      // Always check the server, even in "add" mode. An offline cache is not
+      // authoritative enough to protect existing documents from replacement.
+      const snapshot = await getDocsFromServer(collection(db, 'items'));
+      const existingIds = new Set(snapshot.docs.map(item => item.id));
+      const plan = createImportPlan(previewItems.value, existingIds, importMode.value);
 
-      for (const item of previewItems.value) {
-        // У каждой записи должен быть ID. Если его нет, пропускаем.
-        if (!item.id) continue;
-        
-        const docRef = doc(db, 'items', item.id);
-
-        if (existingIds.has(item.id)) {
-          // Если ID существует и режим 'overwrite'
-          if (importMode.value === 'overwrite') {
-            batch.set(docRef, item); // set полностью перезаписывает документ
-            updatedCount++;
-          }
-        } else {
-          // Если ID не существует, всегда добавляем
-          batch.set(docRef, item);
-          addedCount++;
+      for (let index = 0; index < plan.operations.length; index += BATCH_SIZE) {
+        const batch = writeBatch(db);
+        for (const item of plan.operations.slice(index, index + BATCH_SIZE)) {
+          batch.set(doc(db, 'items', item.id), restoreFirestoreFields(item.data));
         }
+        await batch.commit();
       }
 
-      await batch.commit();
-      showSuccess(t('importSuccess', { added: addedCount, updated: updatedCount }));
-
-    } catch (e) {
-      console.error("Error during Firestore batch operation:", e);
-      showError(t('importDbError'));
-    } finally {
+      showSuccess(t('importSuccess', { added: plan.added, updated: plan.updated }) +
+        (plan.skipped ? ` (${plan.skipped} skipped)` : ''));
       cancelImport();
+    } catch (error) {
+      // Keep the dialog and input on failure so the user can retry.
+      console.error('Error during Firestore import:', error);
+      showError(t('importDbError') + ': ' + error.message);
+    } finally {
       isImporting.value = false;
     }
   };
@@ -115,16 +111,9 @@ export function useDataManagement() {
     importMode.value = 'add';
   };
 
-  return { 
-    exportToJson, 
-    exportToCsv,
-    importFromFile,
-    isImporting,
-    isImportDialogVisible,
-    importFile,
-    previewItems,
-    importMode,
-    confirmImport,
-    cancelImport
+  return {
+    exportToJson, exportToCsv, importFromFile,
+    isImporting, isImportDialogVisible, importFile, previewItems, importMode,
+    confirmImport, cancelImport,
   };
 }
