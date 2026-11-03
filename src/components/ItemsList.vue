@@ -128,14 +128,28 @@ async function confirmDeletion() {
   closeDeleteDialog();
 }
 
-function getPreviewText(item) {
-  if (!item.textVersions) return 'Нет содержимого';
-  const htmlContent = item.textVersions.be || item.textVersions.ru || item.textVersions.la || Object.values(item.textVersions).find(v => v) || '';
-  if (!htmlContent) return 'Нет содержимого';
-  const doc = new DOMParser().parseFromString(htmlContent, 'text/html');
-  const text = (doc.body.textContent || "").trim();
-  return text.length > 150 ? text.substring(0, 150) + '...' : text;
+function getPlainText(item) {
+  const versions = item.textVersions || {};
+  const html = item.text || versions[item.lang] || versions.be || versions.ru ||
+    Object.values(versions).find(value => typeof value === 'string' && value) || '';
+  if (typeof html !== 'string' || !html) return '';
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  return (doc.body.textContent || '').replace(/\s+/g, ' ').trim();
 }
+
+function getPreviewText(item) {
+  const text = getPlainText(item);
+  if (!text) return 'Нет содержимого';
+  return text.length > 150 ? text.slice(0, 150) + '...' : text;
+}
+
+// Build the searchable text once per Firestore snapshot, not on each keystroke.
+const searchIndex = computed(() => new Map(items.value.map(item => [
+  item.id,
+  [getTitle(item), getPlainText(item), item.source || '', ...(item.tags || [])]
+    .join(' ').toLocaleLowerCase(),
+])));
+
 const filteredItems = computed(() => {
   if (isLoading.value) return [];
   return items.value.filter(item => {
@@ -154,8 +168,7 @@ const filteredItems = computed(() => {
     // Фильтр по поисковому запросу
     const searchLower = search.value.toLowerCase().trim();
     if (searchLower) {
-      const fullText = (item.title + ' ' + item.text).toLowerCase();
-      return fullText.includes(searchLower);
+      return (searchIndex.value.get(item.id) || '').includes(searchLower);
     }
     
     return true; // Если все проверки пройдены
