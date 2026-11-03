@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { useAuthStore } from '@/stores/auth';
 
 const getCurrentUser = () => {
   return new Promise((resolve, reject) => {
@@ -47,17 +46,19 @@ const router = createRouter({
   },
 });
 
-// --- ✅ НАВИГАЦИОННЫЙ СТРАЖ С ПОДРОБНЫМ ЛОГИРОВАНИЕМ ---
-router.beforeEach(async (to, from, next) => {
-
-  const authStore = useAuthStore();
+// Wait for Firebase Auth to finish its initial refresh before protecting
+// admin routes. Otherwise an already-signed-in user can be redirected to login.
+router.beforeEach(async (to) => {
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
-  const userIsLoggedIn = !!authStore.user;
-  if (requiresAuth && !userIsLoggedIn) {
-    next({ name: 'Login' });
-  } else {
-    next();
+  if (!requiresAuth) return true;
+
+  try {
+    const user = await getCurrentUser();
+    if (user) return true;
+  } catch (error) {
+    console.error('Auth guard could not initialize Firebase:', error);
   }
+  return { name: 'Login', query: { redirect: to.fullPath } };
 });
 
 export default router;
