@@ -46,11 +46,11 @@
 import { computed } from 'vue';
 import { useNovenaStore } from '@/stores/novena';
 import { useI18n } from 'vue-i18n';
+import { addLocalDays, parseLocalDateKey } from '@/utils/prayerDates.mjs';
 
 const props = defineProps({ noteId: { type: String, required: true } });
 const { t, d } = useI18n(); // d - для форматирования дат
 const novenaStore = useNovenaStore();
-const today = new Date(novenaStore.getTodayDateString());
 
 const novena = computed(() => novenaStore.getNovenaData(props.noteId));
 
@@ -58,21 +58,19 @@ const novena = computed(() => novenaStore.getNovenaData(props.noteId));
 const daySlots = computed(() => {
   if (!novena.value) return [];
   const slots = [];
-  const startDate = new Date(novena.value.startDate);
+  const todayKey = novenaStore.getTodayDateString();
 
   for (let i = 0; i < novena.value.totalDays; i++) {
-    const currentDate = new Date(startDate);
-    currentDate.setDate(startDate.getDate() + i);
-    const dateString = currentDate.toISOString().split('T')[0];
+    const dateString = addLocalDays(novena.value.startDate, i);
     
     let status = 'pending';
     const isCompleted = novena.value.completedDates.includes(dateString);
 
     if (isCompleted) {
       status = 'completed';
-    } else if (currentDate < today) {
+    } else if (dateString < todayKey) {
       status = 'missed';
-    } else if (currentDate > today) {
+    } else if (dateString > todayKey) {
       status = 'future';
     } else {
       status = 'today';
@@ -82,7 +80,7 @@ const daySlots = computed(() => {
       dayNumber: i + 1,
       date: dateString,
       status: status, // 'completed', 'missed', 'today', 'future'
-      isToday: dateString === novenaStore.getTodayDateString(),
+      isToday: dateString === todayKey,
     });
   }
   return slots;
@@ -99,7 +97,7 @@ const progressText = computed(() => `${completedCount.value} / ${novena.value?.t
 
 const formatDate = (dateString) => {
   // Форматируем дату, например "14 авг"
-  const date = new Date(dateString);
+  const date = parseLocalDateKey(dateString);
   return d(date, 'short'); // Используем i18n для форматирования
 };
 </script>

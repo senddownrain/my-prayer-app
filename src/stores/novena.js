@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia';
 import { ref, watch, computed } from 'vue';
-import { useSettingsStore } from './settings'; // ✅ Импортируем хранилище настроек
+import { useSettingsStore } from './settings';
+import { localDateKey } from '@/utils/prayerDates.mjs'; // ✅ Импортируем хранилище настроек
 
 // Функция для получения даты в формате YYYY-MM-DD
-const getTodayDateString = () => new Date().toISOString().split('T')[0];
+const getTodayDateString = () => localDateKey();
 
 export const useNovenaStore = defineStore('novenas', () => {
   // Структура: { noteId: { startDate, totalDays, completedDates: ['YYYY-MM-DD'] } }
@@ -17,10 +18,11 @@ const settings = useSettingsStore(); // ✅ Инициализируем setting
   // --- ACTIONS (Действия) ---
 
   function startNovena(noteId, totalDays) {
-    if (!noteId || !totalDays) return;
+    const days = Number(totalDays);
+    if (!noteId || !Number.isInteger(days) || days < 1 || days > 365) return;
     novenas.value[noteId] = {
       startDate: getTodayDateString(),
-      totalDays: Number(totalDays),
+      totalDays: days,
       completedDates: [],
     };
     // ✅ АВТОМАТИЧЕСКИ ЗАКРЕПЛЯЕМ МОЛИТВУ

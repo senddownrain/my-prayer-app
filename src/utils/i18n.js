@@ -8,9 +8,8 @@
  * @returns {string} - Наиболее подходящий заголовок или пустая строка.
  */
 export function getTitleByLang(item, langOrder = ['be', 'ru', 'la', 'pl']) {
-  if (!item || !item.titleVersions) {
-    return '';
-  }
+  if (!item) return '';
+  if (!item.titleVersions) return item.title || '';
 
   // 1. Ищем заголовок в соответствии с порядком языков
   for (const lang of langOrder) {

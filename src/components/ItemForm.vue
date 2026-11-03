@@ -136,7 +136,7 @@
   </v-container>
 </template>
 <script setup>
-import { ref, watch, onMounted, onUnmounted, computed, inject } from 'vue';
+import { ref, watchEffect, onMounted, onUnmounted, computed, inject } from 'vue';
 import { useRouter } from 'vue-router';
 import { useItems } from '@/composables/useItems';
 import Editor from '@/components/Editor.vue';
@@ -146,12 +146,14 @@ import { useNotifier } from '@/composables/useNotifier';
 const props = defineProps({ id: { type: String, required: false } });
 const router = useRouter();
 const { t } = useI18n();
-const { items, addItem, updateItem, allTags, getTitle, linkTranslations } = useItems();
-const { showSuccess } = useNotifier();
+const { items, allTags, getTitle, saveItemWithTranslations } = useItems();
+const { showSuccess, showError } = useNotifier();
 const registerSaveAction = inject('registerSaveAction');
 
 const isEditMode = computed(() => !!props.id);
 const isFormReady = ref(false);
+const isSaving = ref(false);
+const originalTranslationIds = ref([]);
 
 const langOptions = ref([
     { title: 'Беларуская', value: 'be'},
@@ -203,80 +205,72 @@ const availableNotesToTranslate = computed(() => {
   });
 });
 
-async function addTranslation(noteId) {
+// Stage translation changes locally; do not write to Firestore until Save.
+function addTranslation(noteId) {
     if (!form.value.translationIds) form.value.translationIds = [];
-    form.value.translationIds.push(noteId);
-    await linkTranslations(props.id, noteId);
-    showSuccess(t('translationLinked'));
+    if (!form.value.translationIds.includes(noteId)) form.value.translationIds.push(noteId);
     isTranslationDialogOpen.value = false;
     translationSearchQuery.value = '';
 }
 
-async function removeTranslation(noteId) {
-    form.value.translationIds = form.value.translationIds.filter(id => id !== noteId);
-    await linkTranslations(props.id, noteId, true);
-    showSuccess(t('translationUnlinked'));
+function removeTranslation(noteId) {
+    form.value.translationIds = (form.value.translationIds || []).filter(id => id !== noteId);
 }
 
 async function handleSave() {
+  if (isSaving.value) return;
   if (!form.value.title || !form.value.title.trim()) {
     alert(t('titleRequired'));
     return;
   }
-  
-  const dataToSave = { ...form.value };
 
-  if (isEditMode.value) {
-    await updateItem(props.id, dataToSave);
-  } else {
-    const newDocRef = await addItem(dataToSave);
-    if (dataToSave.translationIds.length > 0) {
-        for (const transId of dataToSave.translationIds) {
-            await linkTranslations(newDocRef.id, transId);
-        }
-    }
+  isSaving.value = true;
+  try {
+    const dataToSave = {
+      ...form.value,
+      tags: [...(form.value.tags || [])],
+      linkedNoteIds: [...(form.value.linkedNoteIds || [])],
+      translationIds: [...(form.value.translationIds || [])],
+    };
+    await saveItemWithTranslations(props.id || null, dataToSave, originalTranslationIds.value);
+    showSuccess(t('noteSavedSuccess'));
+    router.push({ name: 'ItemsList' });
+  } catch (error) {
+    console.error('Error saving prayer:', error);
+    showError(t('noteSaveError'));
+  } finally {
+    isSaving.value = false;
   }
-  showSuccess(t('noteSavedSuccess'));
-  router.push({ name: 'ItemsList' });
 }
 
-// ✅ ✅ ✅ ИСПРАВЛЕННЫЙ БЛОК ✅ ✅ ✅
-onMounted(() => {
-  registerSaveAction(handleSave);
-  if (isEditMode.value) {
-    // Объявляем переменную, которая будет хранить функцию для остановки наблюдателя
-    let unwatch = null;
+// Initialize once, even when Firestore emits multiple snapshots while editing.
+watchEffect(() => {
+  if (!isEditMode.value || isFormReady.value) return;
+  const itemToEdit = items.value.find(item => item.id === props.id);
+  if (!itemToEdit) return;
 
-    // Присваиваем результат вызова watch этой переменной
-    unwatch = watch(items, (newItems) => {
-      const itemToEdit = newItems.find(i => i.id === props.id);
-      if (itemToEdit) {
-        form.value = { 
-          title: itemToEdit.title || '',
-          text: itemToEdit.text || '',
-          lang: itemToEdit.lang || 'be',
-          tags: itemToEdit.tags || [],
-          source: itemToEdit.source || '',
-          linkedNoteIds: itemToEdit.linkedNoteIds || [],
-          translationIds: itemToEdit.translationIds || [],
-          isNovenaPrayer: itemToEdit.isNovenaPrayer || false,
-          recommendedDate: itemToEdit.recommendedDate || null,
-          hidden: itemToEdit.hidden || false
-        };
-        isFormReady.value = true;
-        
-        // Проверяем, существует ли функция, и вызываем ее, чтобы остановить наблюдение
-        if (unwatch) {
-          unwatch();
-        }
-      }
-    }, { immediate: true });
-  } else {
-    isFormReady.value = true;
-  }
+  originalTranslationIds.value = [...(itemToEdit.translationIds || [])];
+  form.value = {
+    title: itemToEdit.title || '',
+    text: itemToEdit.text || '',
+    lang: itemToEdit.lang || 'be',
+    tags: [...(itemToEdit.tags || [])],
+    source: itemToEdit.source || '',
+    linkedNoteIds: [...(itemToEdit.linkedNoteIds || [])],
+    translationIds: [...(itemToEdit.translationIds || [])],
+    isNovenaPrayer: itemToEdit.isNovenaPrayer || false,
+    recommendedDate: itemToEdit.recommendedDate || null,
+    hidden: itemToEdit.hidden || false,
+  };
+  isFormReady.value = true;
+});
+
+onMounted(() => {
+  registerSaveAction?.(handleSave);
+  if (!isEditMode.value) isFormReady.value = true;
 });
 
 onUnmounted(() => {
-  registerSaveAction(null);
+  registerSaveAction?.(null);
 });
 </script>

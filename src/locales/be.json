@@ -2,12 +2,10 @@
   "appTitle": "Мае малітвы",
   "allPrayers": "Усе малітвы",
   "myPrayerRule": "Малітоўнае правіла",
-
   "searchPlaceholder": "Пошук...",
   "filterByTags": "Фільтр па тэгах",
   "viewMode": "Выгляд спісу",
   "viewModeHint": "Карткі ці кампактны спіс",
-
   "done": "Гатова",
   "edit": "Рэдагаваць",
   "delete": "Выдаліць",
@@ -15,12 +13,10 @@
   "add": "Дадаць",
   "start": "Пачаць",
   "days": "дзён",
-
   "pin": "Замацаваць",
   "unpin": "Адмацаваць",
   "loading": "Загрузка...",
   "backToHome": "Вярнуцца на галоўную",
-
   "title": "Назва",
   "source": "Крыніца",
   "tags": "Тэгі",
@@ -36,7 +32,6 @@
   "noteNotFoundMessage": "Магчыма, яна была выдаленая або спасылка няправільная.",
   "confirmDeletion": "Пацвердзіце выдаленне",
   "deleteConfirmationMessage": "Вы ўпэўнены, што хочаце назаўсёды выдаліць нататку \"{title}\"?",
-
   "style": {
     "normal": "Звычайны",
     "h2": "Загаловак 1",
@@ -46,13 +41,15 @@
   "linkedNotesAdd": "Дадаць сувязь",
   "linkedNotesSelect": "Абярыце нататку для сувязі",
   "noTextInLang": "Тэкст на гэтай мове адсутнічае",
-
   "settings": "Налады",
   "generalSettings": "Агульныя налады",
   "appearance": "Знешні выгляд",
   "darkTheme": "Цёмная тэма",
   "themeIs": "Зараз выкарыстоўваецца {themeName} тэма",
-  "themeNames": { "light": "светлая", "dark": "цёмная" },
+  "themeNames": {
+    "light": "светлая",
+    "dark": "цёмная"
+  },
   "fontSize": "Памер тэксту",
   "fontSizeHint": "Наладзьце памер шрыфту для чытання",
   "fontFamily": "Шрыфт праграмы",
@@ -66,17 +63,14 @@
   "categoryName": "Назва катэгорыі",
   "categoryTags": "Абярыце або ўвядзіце тэгі",
   "textSettings": "Налады тэксту",
-
   "admin": "Адмінка",
   "adminText": "Тут будзе панэль адміністратара. Пакуль гэта толькі нарыхтоўка для будучых функцый.",
   "showHiddenNotes": "Паказваць скрытыя нататкі",
   "showHiddenNotesHint": "Уплывае толькі на ваш выгляд спісу",
-
   "about": "Аб праграме",
   "aboutText": "Гэта праграма створана для асабістага збору малітваў і нататак.",
   "version": "Версія: 1.0.0",
   "devWithLove": "Распрацавана з любоўю.",
-
   "login": "Уваход",
   "logout": "Выхад",
   "loginTitle": "Уваход для адміністратара",
@@ -85,14 +79,12 @@
   "password": "Пароль",
   "passwordRequired": "Пароль абавязковы",
   "loginError": "Няправільны email або пароль.",
-
   "langLabels": {
     "ru": "Рус",
     "be": "Бел",
     "la": "Lat",
     "pl": "Pl"
   },
-
   "novenaSettings": "Налады навэнны",
   "isNovenaPrayerLabel": "Гэта малітва-навэнна",
   "recommendedDateLabel": "Дата свята (для прапаноў)",
@@ -109,7 +101,6 @@
   "remindLater": "Пазней",
   "enableNovenaSuggestions": "Прапановы па навэннах",
   "enableNovenaSuggestionsHint": "Паказваць апавяшчэнні, калі падыходзіць час для рэкамендаваных навэнн",
-
   "addPrayerToRule": "Дадаць малітву ў правіла",
   "findPrayer": "Знайсці малітву...",
   "ruleIsEmpty": "Ваша правіла пакуль пустое.",
@@ -118,7 +109,6 @@
   "noRuleCreatedHint": "Націсніце кнопку ніжэй, каб скласці свой спіс штодзённых малітваў.",
   "createRule": "Стварыць правіла",
   "decline": "Адхіліць",
-
   "novenaDurationChoice": "Выберы колькасць дзён",
   "novenaDurationInput": "Альбо, напішы",
   "dataManagement": "Кіраванне данымі",
@@ -139,24 +129,26 @@
     "overwrite": "Дадаваць новыя і перазапісваць існуючыя"
   },
   "import": "Імпартаваць",
-"noteLanguage": "Мова",
-"languageCannotBeChanged": "Мову нельга змяніць пасля стварэння.",
-"translations": "Пераклады",
-"addTranslation": "Дадаць пераклад",
-"selectTranslation": "Выберыце пераклад",
-"translationLinked": "Пераклад паспяхова прывязаны!",
-"translationUnlinked": "Сувязь з перакладам выдалена.",
-"titleRequired": "Калі ласка, ўвядзіце назву.",
-"langLabelsFull": {
+  "noteLanguage": "Мова",
+  "languageCannotBeChanged": "Мову нельга змяніць пасля стварэння.",
+  "translations": "Пераклады",
+  "addTranslation": "Дадаць пераклад",
+  "selectTranslation": "Выберыце пераклад",
+  "translationLinked": "Пераклад паспяхова прывязаны!",
+  "translationUnlinked": "Сувязь з перакладам выдалена.",
+  "titleRequired": "Калі ласка, ўвядзіце назву.",
+  "langLabelsFull": {
     "ru": "Русский",
     "be": "Беларуская",
     "la": "Latina",
     "pl": "Polski"
-},
- "share": "Падзяліцца",
+  },
+  "share": "Падзяліцца",
   "copyLink": "Капіяваць спасылку",
   "linkCopied": "Спасылка скапіявана ў буфер абмену!",
   "shareError": "Не атрымалася падзяліцца. Магчыма, ваш браўзер не падтрымлівае гэту функцыю.",
   "filters": "Фільтры",
-  "holyMass": "Святая Імша"
+  "holyMass": "Святая Імша",
+  "noteSaveError": "Памылка пры захаванні малітвы. Змены не захаваны.",
+  "importSkipped": "Прапушчана існуючых: {count}."
 }

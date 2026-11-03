@@ -9,7 +9,10 @@ import {
   doc,
   serverTimestamp,
   query,
-  orderBy
+  orderBy,
+  writeBatch,
+  arrayUnion,
+  arrayRemove
 } from 'firebase/firestore';
 import { useSettingsStore } from '@/stores/settings';
 import { getTitleByLang } from '@/utils/i18n'; // ✅ 1. ИМПОРТИРУЕМ
@@ -71,28 +74,41 @@ export function useItems() {
     await updateDoc(doc(db, 'items', id), dataToUpdate);
   };
 
-   const linkTranslations = async (docId1, docId2, remove = false) => {
-    const doc1Ref = doc(db, 'items', docId1);
-    const doc2Ref = doc(db, 'items', docId2);
-    const doc1 = items.value.find(i => i.id === docId1);
-    const doc2 = items.value.find(i => i.id === docId2);
-    if (!doc1 || !doc2) return;
-    // Обновляем первый документ
-    let newTrans1 = doc1.translationIds ? [...doc1.translationIds] : [];
-    if (remove) {
-      newTrans1 = newTrans1.filter(id => id !== docId2);
-    } else if (!newTrans1.includes(docId2)) {
-      newTrans1.push(docId2);
+  // Save a prayer and its reverse translation references in one Firestore batch.
+  const saveItemWithTranslations = async (id, data, previousTranslationIds = []) => {
+    const itemRef = id ? doc(db, 'items', id) : doc(itemsCollection);
+    const desired = [...new Set((data.translationIds || []).filter(Boolean))].filter(other => other !== itemRef.id);
+    const previous = [...new Set(previousTranslationIds.filter(Boolean))].filter(other => other !== itemRef.id);
+    const added = desired.filter(other => !previous.includes(other));
+    const removed = previous.filter(other => !desired.includes(other));
+
+    if (added.length + removed.length > 400) {
+      throw new Error('Too many translation link changes for a single save.');
     }
-    await updateDoc(doc1Ref, { translationIds: newTrans1 });
-    // Обновляем второй документ
-    let newTrans2 = doc2.translationIds ? [...doc2.translationIds] : [];
-    if (remove) {
-      newTrans2 = newTrans2.filter(id => id !== docId1);
-    } else if (!newTrans2.includes(docId1)) {
-      newTrans2.push(docId1);
+
+    const batch = writeBatch(db);
+    const payload = { ...data, translationIds: desired };
+    delete payload.id;
+    if (id) batch.update(itemRef, payload);
+    else batch.set(itemRef, { ...payload, createdAt: serverTimestamp() });
+
+    for (const other of added) {
+      batch.update(doc(db, 'items', other), { translationIds: arrayUnion(itemRef.id) });
     }
-    await updateDoc(doc2Ref, { translationIds: newTrans2 });
+    for (const other of removed) {
+      batch.update(doc(db, 'items', other), { translationIds: arrayRemove(itemRef.id) });
+    }
+    await batch.commit();
+    return itemRef;
+  };
+
+  const linkTranslations = async (docId1, docId2, remove = false) => {
+    if (!docId1 || !docId2 || docId1 === docId2) return;
+    const batch = writeBatch(db);
+    const operation = remove ? arrayRemove : arrayUnion;
+    batch.update(doc(db, 'items', docId1), { translationIds: operation(docId2) });
+    batch.update(doc(db, 'items', docId2), { translationIds: operation(docId1) });
+    await batch.commit();
   };
 
    const allLangs = computed(() => {
@@ -118,6 +134,7 @@ export function useItems() {
     updateItem,
     getTitle, // ✅ 3. ЭКСПОРТИРУЕМ
   linkTranslations,
+  saveItemWithTranslations,
   allLangs
   };
 }

@@ -32,6 +32,12 @@ async function clearCollection(db, collectionPath) {
 }
 
 async function seedDatabase() {
+  // This command deletes ALL existing prayers. Never run by accident.
+  if (process.env.CONFIRM_DESTRUCTIVE_SEED !== 'YES_DELETE_ALL_MOLITWY_ITEMS') {
+    console.error('Refusing to delete Firestore items. Set CONFIRM_DESTRUCTIVE_SEED=YES_DELETE_ALL_MOLITWY_ITEMS only for an intentional full reset.');
+    process.exitCode = 1;
+    return;
+  }
   try {
     console.log("Очистка коллекции 'items'...");
     await clearCollection(db, 'items');
