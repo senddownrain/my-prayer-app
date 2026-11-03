@@ -17,7 +17,7 @@
             label
             :variant="version.id === massItem.id ? 'flat' : 'outlined'"
             :color="version.id === massItem.id ? 'primary' : ''"
-            @click="router.push({ params: { id: version.id } })"
+            @click="router.push({ name: 'HolyMass', params: { id: version.id } })"
           >
             <strong class="text-uppercase mr-1">{{ version.lang }}</strong>
             
@@ -103,9 +103,9 @@ const scrollToHeading = (direction) => {
 // Отслеживание текущего заголовка
 const onScroll = () => {
     if(headings.value.length === 0) return;
-    const scrollPosition = window.scrollY + window.innerHeight / 2;
-    const newIndex = headings.value.findIndex(h => h.offsetTop > scrollPosition) - 1;
-    currentHeadingIndex.value = newIndex < 0 ? headings.value.length - 1 : newIndex;
+    const threshold = window.innerHeight / 2;
+    const firstBelow = headings.value.findIndex(h => h.getBoundingClientRect().top > threshold);
+    currentHeadingIndex.value = firstBelow === -1 ? headings.value.length - 1 : Math.max(0, firstBelow - 1);
 };
 
 
