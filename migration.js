@@ -15,6 +15,12 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 async function migrateData() {
+  // Migration deletes old records. Require deliberate confirmation.
+  if (process.env.CONFIRM_DESTRUCTIVE_MIGRATION !== 'YES_REPLACE_MOLITWY_ITEMS') {
+    console.error('Refusing to migrate and delete Firestore items without CONFIRM_DESTRUCTIVE_MIGRATION=YES_REPLACE_MOLITWY_ITEMS.');
+    process.exitCode = 1;
+    return;
+  }
     console.log("Starting migration...");
     const itemsCollection = collection(db, 'items');
     const snapshot = await getDocs(itemsCollection);
