@@ -233,6 +233,7 @@
 
 <script setup>
 import { ref, onMounted, provide, computed, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRouter, useRoute } from 'vue-router';
 
 import { useItems } from '@/composables/useItems';
@@ -242,7 +243,7 @@ import { useFilters } from '@/composables/useFilters';
 
 import { usePageMode } from '@/composables/usePageMode'; // ✅ Импорт
 import { useAuthStore } from '@/stores/auth';
-import { notifier } from '@/composables/useNotifier';
+import { notifier, useNotifier } from '@/composables/useNotifier';
 import { useNovenaSuggestions } from '@/composables/useNovenaSuggestions';
 import FilterSheet from '@/components/FilterSheet.vue';
 import NotificationSnackbar from '@/components/NotificationSnackbar.vue';
@@ -250,8 +251,10 @@ import TextSettingsSheet from '@/components/TextSettingsSheet.vue'; // ✅ ИМ�
 import { getTitleByLang } from '@/utils/i18n'; // Добавьте этот импорт
 import ReloadPrompt from '@/components/ReloadPrompt.vue'; // ✅ ДОБАВЬТЕ ЭТОТ ИМПОРТ
 
-const getTitle = (item) => getTitleByLang(item); // Добавьте эту строку
+const getTitle = (item) => item?.title || getTitleByLang(item); // Добавьте эту строку
 
+const { t } = useI18n();
+const { showSuccess, showError } = useNotifier();
 const settings = useSettingsStore();
 const router = useRouter();
 const route = useRoute();
@@ -269,7 +272,7 @@ const isHomePage = computed(() => route.name === 'ItemsList');
 const showBackButton = computed(() => !isHomePage.value);
 const showSaveButton = computed(() => ['ItemEdit', 'ItemAdd'].includes(route.name));
 
-const isItemViewPage = computed(() => route.name === 'ItemView');
+const isItemViewPage = computed(() => ['ItemView', 'PublicItemView'].includes(route.name));
 const currentItemId = computed(() => route.params.id); //
 const currentItem = computed(() => {
   if (!currentItemId.value || !items.value) return null;
